@@ -23,7 +23,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: edge-endpoint
+edge-endpoint
   labels:
     app: edge-endpoint
 spec:
@@ -41,7 +41,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
         - name: database-prep
-          image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: edge-endpoint-persistent-volume
@@ -52,7 +52,7 @@ spec:
 
       containers:
         - name: edge-endpoint
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           ports:
             - containerPort: 30101
@@ -98,7 +98,7 @@ spec:
             failureThreshold: 4 # after 40 seconds of failure, restart the pod
 
         - name: status-monitor
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           ports:
             - containerPort: 8123
@@ -119,7 +119,7 @@ spec:
               mountPath: /opt/intellioptics/device
 
         - name: inference-model-updater
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           command: ["/bin/bash", "-c"]
           args: ["poetry run python -m app.model_updater.update_models"]
@@ -178,4 +178,5 @@ spec:
           hostPath:
             path: /opt/intellioptics/device
             type: DirectoryOrCreate
+
 

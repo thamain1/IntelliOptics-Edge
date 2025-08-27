@@ -10,11 +10,10 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-        image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:latest
+
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
-        image: amazon/aws-cli:latest
-        # Sync models from S3 to the local hostmapped filesystem.
+
         command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
         env:
         - name: AWS_ACCESS_KEY_ID
@@ -38,3 +37,4 @@ spec:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
   backoffLimit: 2
+

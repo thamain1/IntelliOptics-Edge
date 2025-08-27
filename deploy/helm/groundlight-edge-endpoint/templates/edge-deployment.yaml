@@ -30,7 +30,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: edge-endpoint
+edge-endpoint
   namespace: {{ .Values.namespace }}
   labels:
     app: edge-endpoint
@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-        image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:{{ include "groundlight-edge-endpoint.edgeEndpointTag" . }}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -61,7 +61,7 @@ spec:
 
       containers:
       - name: nginx
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -98,7 +98,7 @@ spec:
           failureThreshold: 4  # after 40 seconds of failure, restart the pod
 
       - name: edge-endpoint
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -132,7 +132,7 @@ spec:
           mountPath: /opt/intellioptics/device
 
       - name: status-monitor
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -160,7 +160,7 @@ spec:
             mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -229,4 +229,5 @@ spec:
         hostPath:
           path: /opt/intellioptics/device
           type: DirectoryOrCreate
+
 

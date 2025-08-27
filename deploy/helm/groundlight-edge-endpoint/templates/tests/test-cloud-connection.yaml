@@ -11,7 +11,7 @@ metadata:
 spec:
   containers:
     - name: wget
-      image: busybox
+
       command: ['sh']
       # Note that we use port 30101 here which is the internal port and not the port exposed to the host
       args: 
@@ -25,3 +25,4 @@ spec:
             key: GROUNDLIGHT_API_TOKEN
             optional: true
   restartPolicy: Never
+

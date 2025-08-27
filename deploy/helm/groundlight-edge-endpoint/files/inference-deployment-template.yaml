@@ -48,8 +48,7 @@ spec:
       # NOTE: the sync-pinamod container is duplicated in the warmup_inference_model.yaml Job
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
-        image: amazon/aws-cli:latest
-        # Sync models from S3 to the local hostmapped filesystem.
+
         command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
         env:
         - name: PINAMOD_DIR
@@ -62,7 +61,7 @@ spec:
 
       containers:
       - name: inference-server
-        image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "groundlight-edge-endpoint.inferenceTag" . }}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
@@ -127,4 +126,5 @@ spec:
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file
+
 

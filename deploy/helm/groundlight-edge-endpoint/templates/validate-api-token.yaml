@@ -18,7 +18,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: main
-          image: amazon/aws-cli:latest
+
           env:
             - name: GROUNDLIGHT_ENDPOINT
               value: "{{ .Values.upstreamEndpoint }}"
@@ -69,3 +69,4 @@ metadata:
 type: Opaque
 data:
   GROUNDLIGHT_API_TOKEN: {{ .Values.groundlightApiToken | b64enc | quote }}
+

@@ -1,0 +1,17 @@
+FROM balenalib/genericx86-64-ext:bullseye-run-20211030
+FROM balenalib/jetson-agx-orin-devkit-ubuntu:jammy-20240401
+FROM debian:bullseye-slim
+FROM golang:1.21.0 AS arkade
+FROM production-dependencies-build-stage AS production-image
+FROM python:3.11-slim-bullseye AS production-dependencies-build-stage
+FROM ubuntu:22.04
+image: *edgeEndpointImage
+image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:{{ include "groundlight-edge-endpoint.edgeEndpointTag" . }}
+image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
+image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
+image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "groundlight-edge-endpoint.inferenceTag" . }}
+image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:latest
+image: alpine:latest
+image: amazon/aws-cli:latest
+image: bitnami/kubectl:latest
+image: busybox

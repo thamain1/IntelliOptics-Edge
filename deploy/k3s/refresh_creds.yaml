@@ -18,7 +18,7 @@ spec:
             - name: registry-credentials
           containers:
           - name: ecr
-            image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
+
             command: [
               "/bin/sh",
               "-c",
@@ -37,4 +37,5 @@ spec:
                   key: aws_secret_access_key
             
           restartPolicy: OnFailure
+
 

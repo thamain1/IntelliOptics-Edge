@@ -1,0 +1,4 @@
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\files\inference-deployment-template.yaml	image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\warmup-inference-model.yaml	image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\k3s\edge_deployment\edge_deployment.yaml	image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
