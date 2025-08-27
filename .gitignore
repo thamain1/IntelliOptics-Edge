@@ -151,3 +151,8 @@ docker-compose.yml.env.*
 !*.example
 _inventory/
 *.patch
+
+# Local backup artifacts
+*.bak
+*.orig
+*.old
