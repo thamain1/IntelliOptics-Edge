@@ -1,0 +1,51 @@
+
+.github\workflows\build-push-ee-image.yaml:14:      AWS_GL_PUBLIC_ACCESS_KEY_ID:
+.github\workflows\build-push-ee-image.yaml:16:      AWS_GL_PUBLIC_SECRET_ACCESS_KEY:
+.github\workflows\build-push-ee-image.yaml:28:        uses: aws-actions/configure-aws-credentials@v4
+.github\workflows\build-push-ee-image.yaml:30:          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\build-push-ee-image.yaml:31:          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\build-push-ee-image.yaml:32:          aws-region: us-west-2
+.github\workflows\build-push-ee-image.yaml:35:        uses: aws-actions/amazon-ecr-login@v1
+.github\workflows\pipeline.yaml:201:      AWS_GL_PUBLIC_ACCESS_KEY_ID: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\pipeline.yaml:202:      AWS_GL_PUBLIC_SECRET_ACCESS_KEY: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\pipeline.yaml:219:        uses: aws-actions/configure-aws-credentials@v4
+.github\workflows\pipeline.yaml:221:          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\pipeline.yaml:222:          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\pipeline.yaml:223:          aws-region: us-west-2
+.github\workflows\pipeline.yaml:291:        uses: aws-actions/configure-aws-credentials@v4
+.github\workflows\pipeline.yaml:293:          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\pipeline.yaml:294:          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\pipeline.yaml:295:          aws-region: us-west-2
+.github\workflows\pipeline.yaml:503:        uses: aws-actions/configure-aws-credentials@v4
+.github\workflows\pipeline.yaml:505:          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\pipeline.yaml:506:          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\pipeline.yaml:507:          aws-region: us-west-2
+.github\workflows\pipeline.yaml:510:        uses: aws-actions/amazon-ecr-login@v1
+.github\workflows\pipeline.yaml:532:        uses: aws-actions/configure-aws-credentials@v4
+.github\workflows\pipeline.yaml:534:          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
+.github\workflows\pipeline.yaml:535:          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+.github\workflows\pipeline.yaml:536:          aws-region: us-west-2
+.github\workflows\pipeline.yaml:539:        uses: aws-actions/amazon-ecr-login@v1
+.github\workflows\sweeper-eeut.yaml:33:        uses: aws-actions/configure-aws-credentials@v2
+.github\workflows\sweeper-eeut.yaml:35:          aws-region: us-west-2
+.github\workflows\sweeper-eeut.yaml:38:          #aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+.github\workflows\sweeper-eeut.yaml:39:          #aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+.github\workflows\sweeper-eeut.yaml:40:          #aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+cicd\pulumi\__main__.py:3:import boto3
+cicd\pulumi\__main__.py:27:    iam_client = boto3.client("iam")
+cicd\pulumi\fabfile.py:12:import boto3
+cicd\pulumi\fabfile.py:17:    client = boto3.client("secretsmanager", region_name="us-west-2")
+cicd\pulumi\pyproject.toml:9:    "boto3>=1.36.1",
+deploy\balena-k3s\README.md:61:AWS_ACCESS_KEY_ID - so we can pull the edge-endpoint and gl-edge-inference images from ECR
+deploy\balena-k3s\README.md:62:AWS_SECRET_ACCESS_KEY - needed along with AWS_ACCESS_KEY_ID
+deploy\bin\delete-old-deployment.sh:39:$K delete secret aws-credentials --ignore-not-found
+deploy\bin\make-aws-secret.sh:16:    AWS_ACCESS_KEY_ID_CMD=$(aws configure get aws_access_key_id 2>/dev/null)
+deploy\bin\make-aws-secret.sh:17:    AWS_SECRET_ACCESS_KEY_CMD=$(aws configure get aws_secret_access_key 2>/dev/null)
+deploy\bin\make-aws-secret.sh:20:AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_CMD:-$AWS_ACCESS_KEY_ID}
+deploy\bin\make-aws-secret.sh:21:AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_CMD:-$AWS_SECRET_ACCESS_KEY}
+deploy\bin\make-aws-secret.sh:24:if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+deploy\bin\make-aws-secret.sh:29:$K delete --ignore-not-found secret aws-credentials
+deploy\bin\make-aws-secret.sh:30:$K create secret generic aws-credentials \
+deploy\bin\make-aws-secret.sh:31:    --from-literal=aws_access_key_id=$AWS_ACCESS_KEY_ID \
+deploy\bin\make-aws-secret.sh:32:    --from-literal=aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
+deploy\bin\make-aws-secret.sh:40:if ! $K get secret aws-credentials; then
