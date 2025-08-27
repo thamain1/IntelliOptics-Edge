@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       # This is the NGINX proxy endpoint
-      GROUNDLIGHT_ENDPOINT: http://localhost:30101
+     INTELLIOPTICS_ENDPOINT: http://localhost:30101
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -60,8 +60,8 @@ jobs:
           # Point these tests to the cloud endpoint, because to test the edge-endpoint, they
           # dont actually issue requests. They interally setup a test client and server.
           # The cloud endpoint is needed so that the /me endpoint succeeds and we can actually
-          # use the GL client.
-          GROUNDLIGHT_ENDPOINT="https://api.groundlight.ai/"
+          # use the IO client.
+          INTELLIOPTICS_ENDPOINT="intellioptics-api-37558.azurewebsites.net"
           source test/setup_plain_test_env.sh
           poetry run pytest -vs -k "not _live"
 
@@ -87,12 +87,12 @@ jobs:
             -e LOG_LEVEL=DEBUG \
             -e EDGE_CONFIG \
             -d -p 30101:30101 \
-            groundlight-edge)
+            intellioptics-edge)
           echo "container_id=$container_id" >> $GITHUB_OUTPUT
 
       - name: Run Unit Tests (that do require docker)
         run: |
-          GROUNDLIGHT_ENDPOINT=http://localhost:30101
+          INTELLIOPTICS_ENDPOINT=http://localhost:30101
           source test/setup_plain_test_env.sh
           poetry run pytest -k "_live"
 
@@ -106,12 +106,12 @@ jobs:
         if: always()
         run: docker stop ${{ steps.start_container.outputs.container_id }}
 
-  # Run Groundlight SDK tests against the edge proxy endpoint
+  # Run IntelliOptics SDK tests against the edge proxy endpoint
   test-sdk:
     runs-on: ubuntu-22.04
     env:
       # This is the NGINX proxy endpoint
-      GROUNDLIGHT_ENDPOINT: http://localhost:30101
+      INTELLIOPTICS_ENDPOINT: http://localhost:30101
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -163,20 +163,20 @@ jobs:
 
       # Note that we're pulling the latest main from the SDK repo
       # This might be ahead of what's published to pypi, but it's useful to test things before they're released.
-      - name: Checkout Groundlight SDK
+      - name: Checkout IntelliOptics SDK
         uses: actions/checkout@v4
         with:
-          repository: groundlight/python-sdk
-          path: groundlight-sdk
+          repository: intellioptics/python-sdk
+          path: intellioptics-sdk
 
-      - name: Install Groundlight SDK dependencies
+      - name: Install IntelliOptics SDK dependencies
         run: |
-          cd groundlight-sdk
+          cd intellioptics-sdk
           make install
 
-      - name: Run Groundlight SDK tests against Prod API via Edge Proxy Endpoint
+      - name: Run IntelliOptics SDK tests against Prod API via Edge Proxy Endpoint
         run: |
-          cd groundlight-sdk
+          cd intellioptics-sdk
           make test-4edge
           cd ..
 
@@ -251,7 +251,7 @@ jobs:
     env:
       # associated with roxanne+test_edge account since for some reason it was failing with
       # prod biggies
-      GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_GROUNDLIGHT_API_TOKEN }}
+      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_ INTELLIOPTICS_API_TOKEN }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -278,7 +278,7 @@ jobs:
     env:
       # associated with roxanne+test_edge account since for some reason it was failing with
       # prod biggies
-      GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_GROUNDLIGHT_API_TOKEN }}
+      GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -328,7 +328,7 @@ jobs:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
     secrets:
-      K3S_TEST_GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_GROUNDLIGHT_API_TOKEN }}
+      K3S_TEST_GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
 
   G4-end-to-end:
     # Note this job can run multiple times in parallel because the stack name is unique
@@ -409,7 +409,7 @@ jobs:
           uv run pulumi config set ee-cicd:eeImageTag ${EE_IMAGE_TAG}
 
           # Inject the API token into the pulumi stack
-          uv run pulumi config set ee-cicd:groundlightApiToken ${GROUNDLIGHT_API_TOKEN} --secret
+          uv run pulumi config set ee-cicd:IntelliOpticsApiToken ${INTELLIOPTICS_API_TOKEN} --secret
 
       - name: Create the EEUT instance
         run: |
@@ -428,7 +428,7 @@ jobs:
       - name: Use groundlight sdk through EE
         run: |
           EEUT_IP=$(uv run pulumi stack output eeut_private_ip)
-          export GROUNDLIGHT_ENDPOINT=http://${EEUT_IP}:30101
+          export INTELLIOPTICS_ENDPOINT=http://${EEUT_IP}:30101
           uv run groundlight whoami
           uv run groundlight list-detectors
 
