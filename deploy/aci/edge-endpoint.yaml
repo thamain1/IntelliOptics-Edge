@@ -13,7 +13,7 @@ properties:
   containers:
     - name: edge-endpoint
       properties:
-        image: ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:latest
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         resources:
           requests:
             cpu: 2
