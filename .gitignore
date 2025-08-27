@@ -147,4 +147,7 @@ test_coverage_reports/
 sqlalchemy.log.*
 
 # Docker Compose - dont check in our temporary docker-compose.yml file
-docker-compose.yml
+docker-compose.yml.env.*
+!*.example
+_inventory/
+*.patch
