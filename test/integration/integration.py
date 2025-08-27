@@ -13,7 +13,7 @@ import os
 import time
 
 import ksuid
-from groundlight import Groundlight
+from intellioptics import IntelliOptics
 from model import Detector
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -29,14 +29,14 @@ NUM_IQS_PER_CLASS_TO_IMPROVE_MODEL = 10
 # ACCEPTABLE_TRAINED_CONFIDENCE = 0.75 NOTE: temporarily commented out, see Note below.
 
 if EDGE_SETUP:  # This flag exists so that we can create the detector before the edge is deployed
-    gl = Groundlight(endpoint=f"http://localhost:{ENDPOINT_PORT}")
+    io = IntelliOptics(endpoint=f"http://localhost:{ENDPOINT_PORT}")
 else:
-    gl = Groundlight()
+    io = IntelliOptics()
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Submit a dog and cat image to k3s Groundlight edge-endpoint for integration tests"
+        description="Submit a dog and cat image to k3s IntelliOptics edge-endpoint for integration tests"
     )
     parser.add_argument(
         "-m",
@@ -51,7 +51,7 @@ def main():
 
     detector = None
     if args.detector_id:
-        detector = gl.get_detector(args.detector_id)
+        detector = io.get_detector(args.detector_id)
 
     if detector is None and args.mode != "create_detector":
         raise ValueError("You must provide detector id unless mode is create detector")
@@ -71,7 +71,7 @@ def create_cat_detector() -> str:
     """Create the intial cat detector that we use for the integration tests. We create
     a new one each time."""
     random_id = ksuid.KsuidMs()
-    detector = gl.create_detector(name=f"cat_{random_id}", query="Is this a cat?")
+    detector = io.create_detector(name=f"cat_{random_id}", query="Is this a cat?")
     detector_id = detector.id
     return detector_id
 
@@ -104,9 +104,9 @@ def improve_model(detector: Detector):
         # we're submitting images from the edge which will get escalated to the cloud
         # and thus train our model. but this process is slow
         iq_yes = _submit_cat(detector, confidence_threshold=1, wait=0)
-        gl.add_label(image_query=iq_yes, label="YES")
+        io.add_label(image_query=iq_yes, label="YES")
         iq_no = _submit_dog(detector, confidence_threshold=1, wait=0)
-        gl.add_label(image_query=iq_no, label="NO")
+        io.add_label(image_query=iq_no, label="NO")
 
 
 def submit_final(detector: Detector):
@@ -160,7 +160,7 @@ def _submit_dog(detector: Detector, confidence_threshold: float, wait: int = Non
 
 
 def _submit_dog_or_cat(detector: Detector, confidence_threshold: float, img_file: str, wait: int = None):
-    image_query = gl.submit_image_query(
+    image_query = io.submit_image_query(
         detector=detector, confidence_threshold=confidence_threshold, image=img_file, wait=wait
     )
 
@@ -169,3 +169,4 @@ def _submit_dog_or_cat(detector: Detector, confidence_threshold: float, img_file
 
 if __name__ == "__main__":
     main()
+

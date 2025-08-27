@@ -25,7 +25,7 @@ def fetch_package_versions(package_name: str) -> List[str]:
 def run_test_in_venv(
     package: str, version: str, asset_path: str, endpoint: str, detector_id: str
 ) -> Tuple[str, bool, str]:
-    """Run the Groundlight test in a virtual environment with a specific package version."""
+    """Run the IntelliOptics test in a virtual environment with a specific package version."""
     with tempfile.TemporaryDirectory() as tempdir:
         venv_dir = os.path.join(tempdir, "venv")
         subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True)
@@ -52,12 +52,12 @@ def run_test_in_venv(
 
             # Create the test script inline
             test_script = f"""from pathlib import Path
-from groundlight import Groundlight
+from intellioptics import IntelliOptics
 
-gl = Groundlight(endpoint="{endpoint}")
+io = IntelliOptics(endpoint="{endpoint}")
 
 det = "{detector_id}"
-iq = gl.submit_image_query(detector=det, image="{asset_file_copy}", wait=0, confidence_threshold=0.5)
+iq = io.submit_image_query(detector=det, image="{asset_file_copy}", wait=0, confidence_threshold=0.5)
 print(iq)
 """
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         print(
             "Usage: python sdk_version_testing.py <package_name> <path_to_image_file> <endpoint> <detector_id> <max_versions>"
         )
-        print("Example: python sdk_version_testing.py groundlight cat.jpeg http://10.11.2.33:30101 det_xyz 10")
+        print("Example: python sdk_version_testing.py IntelliOptics cat.jpeg http://10.11.2.33:30101 det_xyz 10")
         sys.exit(1)
 
     package_name = sys.argv[1]
@@ -118,3 +118,4 @@ if __name__ == "__main__":
     detector_id = sys.argv[4]
     max_versions = int(sys.argv[5])
     main(package_name, asset_path, endpoint, detector_id, max_versions)
+
