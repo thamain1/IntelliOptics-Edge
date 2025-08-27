@@ -15,3 +15,7 @@ _inventory/
 # build noise
 dist/
 build/
+
+# Ignore legacy Groundlight artifacts
+legacy/
+
