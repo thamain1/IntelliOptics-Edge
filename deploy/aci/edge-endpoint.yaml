@@ -1,0 +1,42 @@
+location: eastus
+name: io-edge-endpoint
+type: Microsoft.ContainerInstance/containerGroups
+properties:
+  osType: Linux
+  restartPolicy: Always
+
+  imageRegistryCredentials:
+    - server: ${ACR_LOGIN_SERVER}       # e.g. acrintellioptics.azurecr.io
+      username: ${ACR_USERNAME}
+      password: ${ACR_PASSWORD}
+
+  containers:
+    - name: edge-endpoint
+      properties:
+        image: ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:latest
+        resources:
+          requests:
+            cpu: 2
+            memoryInGB: 4
+        ports:
+          - port: 6718                  # if your FastAPI exposes this; adjust if needed
+        environmentVariables:
+          # Non-secrets
+          - name: INTELLIOPTICS_ENDPOINT
+            value: https://intellioptics-api-37558.azurewebsites.net
+          - name: MODEL_CACHE_DIR
+            value: /tmp/model
+
+          # Secrets (supply at deploy time; DO NOT commit actual values)
+          - name: INTELLIOPTICS_API_TOKEN
+            secureValue: ${INTELLIOPTICS_API_TOKEN}
+          - name: SERVICE_BUS_CONN
+            secureValue: ${SERVICE_BUS_CONN}
+
+          # Optional
+          - name: SB_IMAGE_QUEUE
+            value: image-queries
+          - name: SB_RESULTS_QUEUE
+            value: inference-results
+          - name: SB_FEEDBACK_QUEUE
+            value: feedback
