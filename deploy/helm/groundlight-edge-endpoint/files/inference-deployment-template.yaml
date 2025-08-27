@@ -66,7 +66,7 @@ spec:
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
-          value: &modelRepository /opt/groundlight/edge/serving/model-repo
+          value: &modelRepository /opt/intellioptics/edge/serving/model-repo
         - name: MODEL_NAME
           value: placeholder-model-name
         - name: PINAMOD_DIR
@@ -122,8 +122,9 @@ spec:
           claimName: edge-endpoint-pvc
       - name: pina-models
         hostPath:
-          path: /opt/groundlight/edge/pinamod-public
+          path: /opt/intellioptics/edge/pinamod-public
           type: Directory
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file
+

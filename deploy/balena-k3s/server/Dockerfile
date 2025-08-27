@@ -65,10 +65,11 @@ RUN if [ "$ENABLE_GPU" = "true" ]; then \
 COPY manifests/nvidia-gpu-operator.yaml /opt/k3s/manifests/
 
 # Make pinamod-public directory for hostmapped volume
-RUN mkdir -p /opt/groundlight/edge/pinamod-public
+RUN mkdir -p /opt/intellioptics/edge/pinamod-public
 
 WORKDIR /workspace
 
 COPY server.sh ./server.sh
 
 CMD [ "bash", "server.sh" ]
+

@@ -184,7 +184,7 @@ if ! $K get pvc edge-endpoint-pvc; then
 fi
 
 # Make pinamod directory for hostmapped volume
-$MAYBE_SUDO mkdir -p /opt/groundlight/edge/pinamod-public
+$MAYBE_SUDO mkdir -p /opt/intellioptics/edge/pinamod-public
 
 #TODO: We should probably make this more automatic, like *.yaml or something.
 apply_yaml deploy/k3s/service_account.yaml

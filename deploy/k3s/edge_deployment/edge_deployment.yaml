@@ -45,7 +45,7 @@ spec:
           imagePullPolicy: Always
           volumeMounts:
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
             - name: sqlite-db-setup-script-volume
               mountPath: /scripts
           command: ["/bin/bash", "/scripts/setup_db.sh"]
@@ -70,11 +70,11 @@ spec:
               value: "1"
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
             - name: device-info-volume
-              mountPath: /opt/groundlight/device
+              mountPath: /opt/intellioptics/device
           startupProbe:
             httpGet:
               path: /health/live # Checks if the server is up
@@ -114,9 +114,9 @@ spec:
                   optional: true
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
             - name: device-info-volume
-              mountPath: /opt/groundlight/device
+              mountPath: /opt/intellioptics/device
 
         - name: inference-model-updater
           image: *edgeEndpointImage
@@ -136,24 +136,24 @@ spec:
                   optional: true
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
 
             # TODO: this should just be an environment variable
             - name: kubernetes-namespace
-              mountPath: /etc/groundlight/kubernetes-namespace
+              mountPath: /etc/intellioptics/kubernetes-namespace
 
             - name: inference-deployment-template-volume
-              mountPath: /etc/groundlight/inference-deployment
+              mountPath: /etc/intellioptics/inference-deployment
 
             # In this setup the edge-endpoint-persistent-volume is mounted to
             # two different paths in the inference-model-updater container.
             # This allows the container to access both the sqlite database and
             # the path to the model repository without needing to create an extra PV and PVC.
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
 
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/serving/model-repo
+              mountPath: /opt/intellioptics/edge/serving/model-repo
 
       imagePullSecrets:
         - name: registry-credentials
@@ -176,5 +176,6 @@ spec:
             claimName: edge-endpoint-pvc
         - name: device-info-volume
           hostPath:
-            path: /opt/groundlight/device
+            path: /opt/intellioptics/device
             type: DirectoryOrCreate
+

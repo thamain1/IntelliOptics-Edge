@@ -9,7 +9,7 @@ spec:
     - ReadWriteOnce 
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: /opt/groundlight/edge
+    path: /opt/intellioptics/edge
 ---
 apiVersion: v1 
 kind: PersistentVolumeClaim

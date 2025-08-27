@@ -10,7 +10,7 @@
 # Use the script as follows:
 # > docker build --tag edge-endpoint .
 # > source test/setup_plain_test_env.sh
-# > docker run --name groundlight-edge \
+# > docker run --name intellioptics-edge \
 #      -e LOG_LEVEL=DEBUG \
 #      -e EDGE_CONFIG \
 #      --rm -it -p 30101:30101 edge-endpoint

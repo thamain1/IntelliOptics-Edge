@@ -1,6 +1,6 @@
 """Simple device ID management.
 We need a way to identify the device, and we need to be able to generate a new one if needed.
-The device ID is stored in a JSON file, normally at /opt/groundlight/device/id.json
+The device ID is stored in a JSON file, normally at /opt/intellioptics/device/id.json
 When we generate it, it has a few fields:
 - uuid: The unique device ID
 - friendly_name: A friendly name for the device
@@ -9,7 +9,7 @@ When we generate it, it has a few fields:
 UUID is the only required field.  Customers are encouraged to update the friendly name, and
 even add extra fields if they want.
 
-For this to work robustly in a containerized environment, we need /opt/groundlight/device/
+For this to work robustly in a containerized environment, we need /opt/intellioptics/device/
 mounted on the host using hostPath.
 """
 
@@ -20,7 +20,7 @@ from datetime import datetime
 
 from app.core.utils import prefixed_ksuid
 
-WELL_KNOWN_PATH = "/opt/groundlight/device/"
+WELL_KNOWN_PATH = "/opt/intellioptics/device/"
 DEVICE_ID_FILE = f"{WELL_KNOWN_PATH}/id.json"
 
 logger = logging.getLogger(__name__)
@@ -79,3 +79,4 @@ def get_deviceid_metadata_dict() -> dict:
 def get_deviceid_str() -> str:
     """Get the unique device ID string."""
     return get_deviceid_metadata_dict()["uuid"]
+

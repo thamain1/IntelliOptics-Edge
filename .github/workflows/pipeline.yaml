@@ -76,7 +76,7 @@ jobs:
           sudo apt-get install docker-ce
 
       - name: Build Docker Image
-        run: docker build --tag groundlight-edge .
+        run: docker build --tag intellioptics-edge .
 
       - name: Start Docker Container
         id: start_container
@@ -132,7 +132,7 @@ jobs:
           sudo apt-get install docker-ce
 
       - name: Build Docker Image
-        run: docker build --tag groundlight-edge .
+        run: docker build --tag intellioptics-edge .
 
       - name: Start Docker Container
         id: start_container
@@ -143,7 +143,7 @@ jobs:
             -e LOG_LEVEL=DEBUG \
             -e EDGE_CONFIG \
             -d -p 30101:30101 \
-            groundlight-edge)
+            intellioptics-edge)
           echo "container_id=$container_id" >> $GITHUB_OUTPUT
 
       - name: Install poetry
@@ -585,3 +585,4 @@ jobs:
           git add .
           git commit -m "Publish Helm chart $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || echo "Nothing to commit"
           git push origin gh-pages
+

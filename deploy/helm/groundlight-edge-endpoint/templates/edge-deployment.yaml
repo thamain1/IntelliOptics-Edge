@@ -56,8 +56,8 @@ spec:
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
-        command: ["/bin/bash", "/groundlight-edge/deploy/bin/setup_db.sh"]
+          mountPath: /opt/intellioptics/edge/sqlite
+        command: ["/bin/bash", "/intellioptics-edge/deploy/bin/setup_db.sh"]
 
       containers:
       - name: nginx
@@ -121,15 +121,15 @@ spec:
           value: "{{ .Values.upstreamEndpoint }}"
         volumeMounts:
         - name: edge-config-volume
-          mountPath: /etc/groundlight/edge-config
+          mountPath: /etc/intellioptics/edge-config
         # TODO: Remove this once we have have removed nginx from the container
         - name: nginx-config-volume
           mountPath: /etc/nginx/nginx.conf
           subPath: dummy-nginx.conf
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
+          mountPath: /opt/intellioptics/edge/sqlite
         - name: device-info-volume
-          mountPath: /opt/groundlight/device
+          mountPath: /opt/intellioptics/device
 
       - name: status-monitor
         image: *edgeEndpointImage
@@ -155,9 +155,9 @@ spec:
           value: "{{ .Values.inferenceFlavor }}"
         volumeMounts:
           - name: edge-config-volume
-            mountPath: /etc/groundlight/edge-config
+            mountPath: /etc/intellioptics/edge-config
           - name: device-info-volume
-            mountPath: /opt/groundlight/device
+            mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
         image: *edgeEndpointImage
@@ -183,28 +183,28 @@ spec:
               key: GROUNDLIGHT_API_TOKEN
         volumeMounts:
         - name: edge-config-volume
-          mountPath: /etc/groundlight/edge-config
+          mountPath: /etc/intellioptics/edge-config
         - name: nginx-config-volume
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
         - name: kubernetes-namespace
-          mountPath: /etc/groundlight/kubernetes-namespace
+          mountPath: /etc/intellioptics/kubernetes-namespace
 
         - name: inference-deployment-template-volume
-          mountPath: /etc/groundlight/inference-deployment
+          mountPath: /etc/intellioptics/inference-deployment
 
         # In this setup the edge-endpoint-persistent-volume is mounted to
         # two different paths in the inference-model-updater container.
         # This allows the container to access both the sqlite database and
         # the path to the model repository without needing to create an extra PV and PVC.
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
+          mountPath: /opt/intellioptics/edge/sqlite
 
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/serving/model-repo
+          mountPath: /opt/intellioptics/edge/serving/model-repo
 
         - name: device-info-volume
-          mountPath: /opt/groundlight/device
+          mountPath: /opt/intellioptics/device
 
       imagePullSecrets:
       - name: registry-credentials
@@ -227,5 +227,6 @@ spec:
           claimName: edge-endpoint-pvc
       - name: device-info-volume
         hostPath:
-          path: /opt/groundlight/device
+          path: /opt/intellioptics/device
           type: DirectoryOrCreate
+

@@ -22,7 +22,7 @@ spec:
             command: [
               "/bin/sh",
               "-c",
-              "/groundlight-edge/deploy/bin/refresh-ecr-login.sh"
+              "/intellioptics-edge/deploy/bin/refresh-ecr-login.sh"
               ]
             env:
             - name: AWS_ACCESS_KEY_ID
@@ -37,3 +37,4 @@ spec:
                   key: aws_secret_access_key
             
           restartPolicy: OnFailure
+

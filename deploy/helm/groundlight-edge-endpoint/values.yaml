@@ -28,7 +28,7 @@ edgeEndpointPort: 30101
 # This is used as the base of the name for the PersistentVolume. The full name of the volume is 
 # created by appending the namespace to this value. Generally, this should not be overridden.
 # The PersistentVolume is used to store the model files and other data that the Edge Endpoint wants
-# to persist between restarts. It is mapped to `/opt/groundlight/edge` on the host.
+# to persist between restarts. It is mapped to `/opt/intellioptics/edge` on the host.
 persistentVolumeNameBase: "edge-endpoint-pv"
 
 # Edge Endpoint will default to using the GPU for inference. If you want to use the CPU instead,
