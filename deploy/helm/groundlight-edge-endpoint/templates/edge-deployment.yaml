@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -229,5 +229,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest . }}
         hostPath:
           path: /opt/intellioptics/device
           type: DirectoryOrCreate
+
 
 
