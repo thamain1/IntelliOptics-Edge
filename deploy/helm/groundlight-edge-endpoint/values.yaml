@@ -42,7 +42,7 @@ groundlightApiToken: ""
 # to the Groundlight service in the cloud. If you're testing against another version
 # of the Groundlight service (e.g., your own dev environment or the integ environment),
 # you can override this value.
-upstreamEndpoint: "https://api.groundlight.ai"
+upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
 # Currently, all Groundlight services are deployed in the us-west-2 region
 awsRegion: "us-west-2"
@@ -69,3 +69,4 @@ k3sConfig:
 serviceAccount:
   create: true
   name: ""
+

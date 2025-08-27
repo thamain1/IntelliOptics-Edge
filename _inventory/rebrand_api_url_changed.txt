@@ -1,0 +1,4 @@
+C:\Users\ThaMain1\IntelliOptics-Edge\app\core\edge_inference.py
+C:\Users\ThaMain1\IntelliOptics-Edge\cicd\edge-canaries\laptop\alerts.py
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\files\init-aws-access-retrieve.sh
+C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\values.yaml
