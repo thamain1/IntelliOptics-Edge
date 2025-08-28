@@ -118,3 +118,4 @@ if __name__ == "__main__":
     detector_id = sys.argv[4]
     max_versions = int(sys.argv[5])
     main(package_name, asset_path, endpoint, detector_id, max_versions)
+

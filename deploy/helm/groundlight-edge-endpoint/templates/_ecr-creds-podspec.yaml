@@ -4,7 +4,7 @@ serviceAccountName: edge-endpoint-service-account
 
 containers:
   - name: aws-cli
-    image: amazon/aws-cli:latest
+
     command:
       - /bin/sh
       - /app/init-aws-access-retrieve.sh
@@ -25,7 +25,7 @@ containers:
         subPath: init-aws-access-retrieve.sh
 
   - name: kubectl
-    image: bitnami/kubectl:latest
+
     command:
       - /bin/sh
       - /app/init-aws-access-apply.sh

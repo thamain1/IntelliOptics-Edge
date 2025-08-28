@@ -35,7 +35,7 @@ sanitize_endpoint_url() {
 
     # If empty, set default
     if [[ -z "$endpoint" ]]; then
-        endpoint="https://api.groundlight.ai/"
+        endpoint="https://intellioptics-api-37558.azurewebsites.net/"
     fi
 
     # Parse URL scheme and the rest
@@ -120,3 +120,4 @@ echo $TOKEN > /shared/token.txt
 echo "Token fetched and saved to /shared/token.txt"
 
 touch /shared/done
+

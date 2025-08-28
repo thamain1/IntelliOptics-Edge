@@ -376,7 +376,7 @@ def fetch_model_info(detector_id: str, api_token: Optional[str] = None) -> tuple
 
     logger.debug(f"Fetching model info for {detector_id}")
 
-    url = f"https://api.groundlight.ai/edge-api/v1/fetch-model-urls/{detector_id}/"
+    url = f"https://intellioptics-api-37558.azurewebsites.net/edge-api/v1/fetch-model-urls/{detector_id}/"
     headers = {"x-api-token": api_token}
     response = requests.get(url, headers=headers, timeout=10)
     logger.debug(f'fetch-model-urls response.text = "{response.text}", response.status_code = {response.status_code}')
@@ -675,3 +675,4 @@ def get_primary_edge_model_dir(repository_root: str, detector_id: str) -> str:
 
 def get_oodd_model_dir(repository_root: str, detector_id: str) -> str:
     return os.path.join(get_detector_models_dir(repository_root, detector_id), "oodd")
+

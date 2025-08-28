@@ -1,8 +1,21 @@
-.venv
-.coverage
-.pre-commit-config.yaml
-.git
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# git / local
+.git/
 .gitignore
-Dockerfile
-test_coverage_reports/
-deploy/balena-k3s/build
+.env
+.env.*
+_inventory/
+*.patch
+
+# build noise
+dist/
+build/
+
+# Ignore legacy Groundlight artifacts
+legacy/
+

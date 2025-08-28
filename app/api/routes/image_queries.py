@@ -3,14 +3,14 @@ import random
 from typing import Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
-from groundlight import Groundlight
+from intellioptics import IntelliOptics
 from model import ImageQuery
 
 from app.core.app_state import (
     AppState,
     get_app_state,
     get_detector_metadata,
-    get_groundlight_sdk_instance,
+    get_intellioptics_sdk_instance,
     refresh_detector_metadata_if_needed,
 )
 from app.core.edge_inference import get_edge_inference_model_name
@@ -60,7 +60,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
     confidence_threshold: Optional[float] = Query(None, ge=0, le=1),
     human_review: Optional[Literal["DEFAULT", "ALWAYS", "NEVER"]] = Query(None),
     want_async: bool = Query(False),
-    gl: Groundlight = Depends(get_groundlight_sdk_instance),
+    io: IntelliOptics = Depends(get_intellioptics_sdk_instance),
     app_state: AppState = Depends(get_app_state),
 ):
     """
@@ -75,7 +75,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         image_bytes (bytes): The raw binary data of the image.
         patience_time (Optional[float]): Maximum time (in seconds) to wait for a confident answer.
             Longer patience times increase the likelihood of obtaining a confident answer.
-            During this period, Groundlight may update ML predictions and prioritize human review if necessary.
+            During this period, IntelliOptics may update ML predictions and prioritize human review if necessary.
             This is a soft server-side timeout. If not set, the detector's default patience time is used.
         confidence_threshold (Optional[float]): The minimum confidence level required for an answer.
             If not set, the detector's default confidence threshold is used.
@@ -87,7 +87,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
             The returned ImageQuery will have a 'result' of None. Requires 'wait' to be set to 0.
 
     Dependencies:
-        gl (Groundlight): Application's Groundlight SDK instance.
+        io (IntelliOptics): Application's IntelliOptics SDK instance.
         app_state (AppState): Application's state manager.
         background_tasks (BackgroundTasks): FastAPI background tasks manager for asynchronous operations.
 
@@ -125,7 +125,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         logger.debug(f"Submitting ask_async image query to cloud API server for {detector_id=}")
         record_activity_for_metrics(detector_id, activity_type="escalations")
         return safe_call_sdk(
-            gl.ask_async,
+            io.ask_async,
             detector=detector_id,
             image=image_bytes,
             patience_time=patience_time,
@@ -134,9 +134,9 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         )
 
     # Confirm the existence of the detector in GL, get relevant metadata
-    detector_metadata = get_detector_metadata(detector_id=detector_id, gl=gl)  # NOTE: API call (once, then cached)
+    detector_metadata = get_detector_metadata(detector_id=detector_id, io=io)  # NOTE: API call (once, then cached)
     # Schedule a background task to refresh the detector metadata if it's too old
-    background_tasks.add_task(refresh_detector_metadata_if_needed, detector_id, gl)
+    background_tasks.add_task(refresh_detector_metadata_if_needed, detector_id, io)
 
     confidence_threshold = confidence_threshold or detector_metadata.confidence_threshold
 
@@ -188,7 +188,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
                     record_activity_for_metrics(detector_id, activity_type="audits")
                     background_tasks.add_task(
                         safe_call_sdk,
-                        gl.submit_image_query,
+                        io.submit_image_query,
                         detector=detector_id,
                         image=image_bytes,
                         wait=0,
@@ -214,7 +214,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
                     record_activity_for_metrics(detector_id, activity_type="escalations")
                     background_tasks.add_task(
                         safe_call_sdk,
-                        gl.submit_image_query,  # This has to be submit_image_query in order to specify image_query_id
+                        io.submit_image_query,  # This has to be submit_image_query in order to specify image_query_id
                         detector=detector_id,
                         image=image_bytes,
                         wait=0,
@@ -237,7 +237,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         # -- Edge-inference is not available --
         # Create an edge-inference deployment record, which may be used to spin up an edge-inference server.
         logger.debug(f"Local inference not available for {detector_id=}. Creating inference deployment record.")
-        api_token = gl.api_client.configuration.api_key["ApiToken"]
+        api_token = io.api_client.configuration.api_key["ApiToken"]
         primary_model_name = get_edge_inference_model_name(detector_id=detector_id, is_oodd=False)
         oodd_model_name = get_edge_inference_model_name(detector_id=detector_id, is_oodd=True)
 
@@ -273,7 +273,7 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
     logger.debug(f"Submitting image query to cloud for {detector_id=}")
     record_activity_for_metrics(detector_id, activity_type="escalations")
     return safe_call_sdk(
-        gl.submit_image_query,
+        io.submit_image_query,
         detector=detector_id,
         image=image_bytes,
         wait=0,  # wait on the client, not here
@@ -282,3 +282,4 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         human_review=human_review,
         metadata=generate_metadata_dict(results=results, is_edge_audit=False),
     )
+

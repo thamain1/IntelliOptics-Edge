@@ -30,7 +30,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: edge-endpoint
+edge-endpoint
   namespace: {{ .Values.namespace }}
   labels:
     app: edge-endpoint
@@ -52,16 +52,16 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-        image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:{{ include "groundlight-edge-endpoint.edgeEndpointTag" . }}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
-        command: ["/bin/bash", "/groundlight-edge/deploy/bin/setup_db.sh"]
+          mountPath: /opt/intellioptics/edge/sqlite
+        command: ["/bin/bash", "/intellioptics-edge/deploy/bin/setup_db.sh"]
 
       containers:
       - name: nginx
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -98,7 +98,7 @@ spec:
           failureThreshold: 4  # after 40 seconds of failure, restart the pod
 
       - name: edge-endpoint
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -121,18 +121,18 @@ spec:
           value: "{{ .Values.upstreamEndpoint }}"
         volumeMounts:
         - name: edge-config-volume
-          mountPath: /etc/groundlight/edge-config
+          mountPath: /etc/intellioptics/edge-config
         # TODO: Remove this once we have have removed nginx from the container
         - name: nginx-config-volume
           mountPath: /etc/nginx/nginx.conf
           subPath: dummy-nginx.conf
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
+          mountPath: /opt/intellioptics/edge/sqlite
         - name: device-info-volume
-          mountPath: /opt/groundlight/device
+          mountPath: /opt/intellioptics/device
 
       - name: status-monitor
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -155,12 +155,12 @@ spec:
           value: "{{ .Values.inferenceFlavor }}"
         volumeMounts:
           - name: edge-config-volume
-            mountPath: /etc/groundlight/edge-config
+            mountPath: /etc/intellioptics/edge-config
           - name: device-info-volume
-            mountPath: /opt/groundlight/device
+            mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
-        image: *edgeEndpointImage
+
         imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -183,28 +183,28 @@ spec:
               key: GROUNDLIGHT_API_TOKEN
         volumeMounts:
         - name: edge-config-volume
-          mountPath: /etc/groundlight/edge-config
+          mountPath: /etc/intellioptics/edge-config
         - name: nginx-config-volume
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
         - name: kubernetes-namespace
-          mountPath: /etc/groundlight/kubernetes-namespace
+          mountPath: /etc/intellioptics/kubernetes-namespace
 
         - name: inference-deployment-template-volume
-          mountPath: /etc/groundlight/inference-deployment
+          mountPath: /etc/intellioptics/inference-deployment
 
         # In this setup the edge-endpoint-persistent-volume is mounted to
         # two different paths in the inference-model-updater container.
         # This allows the container to access both the sqlite database and
         # the path to the model repository without needing to create an extra PV and PVC.
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/sqlite
+          mountPath: /opt/intellioptics/edge/sqlite
 
         - name: edge-endpoint-persistent-volume
-          mountPath: /opt/groundlight/edge/serving/model-repo
+          mountPath: /opt/intellioptics/edge/serving/model-repo
 
         - name: device-info-volume
-          mountPath: /opt/groundlight/device
+          mountPath: /opt/intellioptics/device
 
       imagePullSecrets:
       - name: registry-credentials
@@ -227,5 +227,8 @@ spec:
           claimName: edge-endpoint-pvc
       - name: device-info-volume
         hostPath:
-          path: /opt/groundlight/device
+          path: /opt/intellioptics/device
           type: DirectoryOrCreate
+
+
+

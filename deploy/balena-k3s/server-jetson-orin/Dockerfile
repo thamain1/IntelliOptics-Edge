@@ -93,7 +93,7 @@ RUN if [ "$ENABLE_GPU" = "true" ]; then \
 COPY manifests/nvidia-gpu-operator.yaml /opt/k3s/manifests/
 
 # Make pinamod-public directory for hostmapped volume
-RUN mkdir -p /opt/groundlight/edge/pinamod-public
+RUN mkdir -p /opt/intellioptics/edge/pinamod-public
 
 # Create a shell script for launching NVIDIA DRM
 RUN printf 'modules=("nvidia_drm"); for module in "${modules[@]}"; do if lsmod | grep -q ${module} ; then echo "Found $module"; rmmod $module; fi; done;' > /usr/src/drm-script.sh && chmod +x /usr/src/drm-script.sh
@@ -108,3 +108,4 @@ COPY server.sh ./server.sh
 RUN chmod +x server.sh
 
 CMD ["/bin/bash", "-c", "/usr/src/drm-script.sh && ./server.sh"]
+

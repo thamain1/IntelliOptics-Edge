@@ -23,7 +23,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: edge-endpoint
+edge-endpoint
   labels:
     app: edge-endpoint
 spec:
@@ -41,18 +41,18 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
         - name: database-prep
-          image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
+image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
             - name: sqlite-db-setup-script-volume
               mountPath: /scripts
           command: ["/bin/bash", "/scripts/setup_db.sh"]
 
       containers:
         - name: edge-endpoint
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           ports:
             - containerPort: 30101
@@ -70,11 +70,11 @@ spec:
               value: "1"
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
             - name: device-info-volume
-              mountPath: /opt/groundlight/device
+              mountPath: /opt/intellioptics/device
           startupProbe:
             httpGet:
               path: /health/live # Checks if the server is up
@@ -98,7 +98,7 @@ spec:
             failureThreshold: 4 # after 40 seconds of failure, restart the pod
 
         - name: status-monitor
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           ports:
             - containerPort: 8123
@@ -114,12 +114,12 @@ spec:
                   optional: true
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
             - name: device-info-volume
-              mountPath: /opt/groundlight/device
+              mountPath: /opt/intellioptics/device
 
         - name: inference-model-updater
-          image: *edgeEndpointImage
+
           imagePullPolicy: Always
           command: ["/bin/bash", "-c"]
           args: ["poetry run python -m app.model_updater.update_models"]
@@ -136,24 +136,24 @@ spec:
                   optional: true
           volumeMounts:
             - name: edge-config-volume
-              mountPath: /etc/groundlight/edge-config
+              mountPath: /etc/intellioptics/edge-config
 
             # TODO: this should just be an environment variable
             - name: kubernetes-namespace
-              mountPath: /etc/groundlight/kubernetes-namespace
+              mountPath: /etc/intellioptics/kubernetes-namespace
 
             - name: inference-deployment-template-volume
-              mountPath: /etc/groundlight/inference-deployment
+              mountPath: /etc/intellioptics/inference-deployment
 
             # In this setup the edge-endpoint-persistent-volume is mounted to
             # two different paths in the inference-model-updater container.
             # This allows the container to access both the sqlite database and
             # the path to the model repository without needing to create an extra PV and PVC.
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/sqlite
+              mountPath: /opt/intellioptics/edge/sqlite
 
             - name: edge-endpoint-persistent-volume
-              mountPath: /opt/groundlight/edge/serving/model-repo
+              mountPath: /opt/intellioptics/edge/serving/model-repo
 
       imagePullSecrets:
         - name: registry-credentials
@@ -176,5 +176,7 @@ spec:
             claimName: edge-endpoint-pvc
         - name: device-info-volume
           hostPath:
-            path: /opt/groundlight/device
+            path: /opt/intellioptics/device
             type: DirectoryOrCreate
+
+

@@ -141,7 +141,7 @@ class StatusFileChecker(InfrequentUpdater):
 def wait_for_ee_setup(c, wait_minutes: int = 10):
     """Waits for the EEUT to finish setup.  If it fails, prints the log."""
     conn = connect_server()
-    checker = StatusFileChecker(conn, "/opt/groundlight/ee-install-status")
+    checker = StatusFileChecker(conn, "/opt/intellioptics/ee-install-status")
     print("Waiting for any status file to appear...")
     checker.wait_for_any_status(wait_minutes=wait_minutes/2)
     print("Waiting for success status file to appear...")

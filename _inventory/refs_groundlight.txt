@@ -1,0 +1,51 @@
+
+.github\reviewer-lottery.yml:11:      - brandon-groundlight
+.github\workflows\auto-format.yaml:42:          git config --global user.email 'autoformatbot@groundlight.ai'
+.github\workflows\pipeline.yaml:79:        run: docker build --tag groundlight-edge .
+.github\workflows\pipeline.yaml:135:        run: docker build --tag groundlight-edge .
+.github\workflows\pipeline.yaml:146:            groundlight-edge)
+.github\workflows\pipeline.yaml:428:      - name: Use groundlight sdk through EE
+.github\workflows\pipeline.yaml:432:          uv run groundlight whoami
+.github\workflows\pipeline.yaml:433:          uv run groundlight list-detectors
+.github\workflows\pipeline.yaml:478:          repository: groundlight/glhub
+.github\workflows\pipeline.yaml:491:          git push https://edge-glhub-bot:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/groundlight/glhub.git main
+.github\workflows\pipeline.yaml:521:    #   https://github.com/groundlight/edge-endpoint/settings/environments/5838966020/edit
+.github\workflows\pipeline.yaml:574:          helm package ./deploy/helm/groundlight-edge-endpoint --destination .deploy
+.github\workflows\pipeline.yaml:579:            --url https://code.groundlight.ai/edge-endpoint/ \
+app\api\routes\image_queries.py:6:from groundlight import Groundlight
+app\api\routes\image_queries.py:63:    gl: Groundlight = Depends(get_groundlight_sdk_instance),
+app\api\routes\image_queries.py:78:            During this period, Groundlight may update ML predictions and prioritize human review if necessary.
+app\api\routes\image_queries.py:90:        gl (Groundlight): Application's Groundlight SDK instance.
+app\api\routes\image_queries.py:128:            gl.ask_async,
+app\api\routes\image_queries.py:191:                        gl.submit_image_query,
+app\api\routes\image_queries.py:217:                        gl.submit_image_query,  # This has to be submit_image_query in order to specify image_query_id
+app\api\routes\image_queries.py:240:        api_token = gl.api_client.configuration.api_key["ApiToken"]
+app\api\routes\image_queries.py:276:        gl.submit_image_query,
+app\core\app_state.py:9:from groundlight import Groundlight
+app\core\app_state.py:87:    return Groundlight(api_token=api_token)
+app\core\app_state.py:92:    Returns a (cached) Groundlight SDK instance given an API token.
+app\core\app_state.py:100:def refresh_detector_metadata_if_needed(detector_id: str, gl: Groundlight) -> None:
+app\core\app_state.py:135:def get_detector_metadata(detector_id: str, gl: Groundlight) -> Detector:
+app\core\app_state.py:137:    Returns detector metadata from the Groundlight API.
+app\core\app_state.py:140:    detector = safe_call_sdk(gl.get_detector, id=detector_id)
+app\core\deviceid.py:3:The device ID is stored in a JSON file, normally at /opt/groundlight/device/id.json
+app\core\deviceid.py:12:For this to work robustly in a containerized environment, we need /opt/groundlight/device/
+app\core\deviceid.py:23:WELL_KNOWN_PATH = "/opt/groundlight/device/"
+app\core\edge_inference.py:311:        Request a new model from Groundlight. If there is a new model available, download it and
+app\core\edge_inference.py:379:    url = f"https://api.groundlight.ai/edge-api/v1/fetch-model-urls/{detector_id}/"
+app\core\file_paths.py:1:DEFAULT_EDGE_CONFIG_PATH = "/etc/groundlight/edge-config/edge-config.yaml"
+app\core\file_paths.py:2:INFERENCE_DEPLOYMENT_TEMPLATE_PATH = "/etc/groundlight/inference-deployment/inference_deployment_template.yaml"
+app\core\file_paths.py:6:KUBERNETES_NAMESPACE_PATH = "/etc/groundlight/kubernetes-namespace/namespace"
+app\core\file_paths.py:10:DATABASE_FILEPATH = "/opt/groundlight/edge/sqlite/sqlite.db"
+app\core\file_paths.py:13:MODEL_REPOSITORY_PATH = "/opt/groundlight/edge/serving/model-repo"
+app\core\utils.py:58:    :param is_done_processing: Whether Groundlight has completed all planned escalations.
+app\core\utils.py:158:    # except groundlight.NotFoundError as ex:
+app\escalation_queue\constants.py:1:DEFAULT_QUEUE_BASE_DIR = "/opt/groundlight/queue"  # Default base directory for escalation queue files.
+app\metrics\iq_activity.py:5:/opt/groundlight/edge-metrics/
+app\metrics\iq_activity.py:177:    return FilesystemActivityTrackingHelper(base_dir="/opt/groundlight/device/edge-metrics")
+app\metrics\metric_reporting.py:13:from groundlight import Groundlight
+app\metrics\metric_reporting.py:22:def _groundlight_client() -> Groundlight:
+app\metrics\metric_reporting.py:23:    """Returns a Groundlight client instance with EE-wide credentials for reporting metrics."""
+app\metrics\metric_reporting.py:25:    return Groundlight()
+ARCHITECTURE.md:5:The edge endpoint provides a way for clients to use the existing Groundlight API in a hybrid mode: most inference requests will be handled locally while all other requests will be forwarded to the Groundlight cloud service. This enables client programs to get low-latency results for most requests while still being able to use the full Groundlight API.
+ARCHITECTURE.md:9:The edge endpoint is implemented as a set of Kubernetes resources (defined by the helm chart in the [helm directory](deploy/helm/groundlight-edge-endpoint/)).

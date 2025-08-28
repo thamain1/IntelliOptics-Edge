@@ -5,13 +5,13 @@ import random
 from io import BytesIO
 
 import requests
-from groundlight import Groundlight
+from intellioptics import IntelliOptics
 from PIL import Image
 
 """
 Usage Instructions:
 -------------------
-This script submits an image to a Groundlight edge-endpoint for analysis.
+This script submits an image to a IntelliOptics edge-endpoint for analysis.
 
 Options:
 -d, --detector_id   : The detector ID to use for submitting the image. (Required)
@@ -27,7 +27,7 @@ Example Usage:
 
 Note:
 -----
-Ensure that the Groundlight edge-endpoint is running locally on http://localhost:30101.
+Ensure that the IntelliOptics edge-endpoint is running locally on http://localhost:30101.
 """
 
 
@@ -42,7 +42,7 @@ def submit_image_to_local_edge_endpoint(image, detector_id):
     image.save(buffered, format="JPEG")
     image_bytes = buffered.getvalue()
 
-    client = Groundlight(endpoint="http://localhost:30101")
+    client = IntelliOptics(endpoint="http://localhost:30101")
 
     detector = client.get_detector(detector_id)
     response = client.ask_ml(detector=detector, image=image_bytes)
@@ -50,7 +50,7 @@ def submit_image_to_local_edge_endpoint(image, detector_id):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Submit an image to a Groundlight edge-endpoint running locally.")
+    parser = argparse.ArgumentParser(description="Submit an image to a IntelliOptics edge-endpoint running locally.")
     parser.add_argument("-d", "--detector_id", type=str, help="The detector ID to use for submitting the image.")
     parser.add_argument("-i", "--image", type=str, help="The URL of the image to submit.", required=False)
     args = parser.parse_args()
@@ -62,8 +62,9 @@ def main():
         image = generate_random_image()
 
     response = submit_image_to_local_edge_endpoint(image, args.detector_id)
-    print("Response from Groundlight:", response)
+    print("Response from IntelliOptics:", response)
 
 
 if __name__ == "__main__":
     main()
+

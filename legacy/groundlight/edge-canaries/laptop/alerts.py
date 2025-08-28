@@ -8,7 +8,7 @@ PAGER_DUTY_INBOX = 'edge-canary@groundlight.ai'
 logger = logging.getLogger(__name__)
 
 # Connect to Groundlight Cloud
-cloud_endpoint = 'https://api.groundlight.ai/device-api'
+cloud_endpoint = 'https://intellioptics-api-37558.azurewebsites.net/device-api'
 gl = groundlight.ExperimentalApi(endpoint=cloud_endpoint)
 
 def create_heartbeat_alert(detector: Detector, heartbeat_timeout_minutes: int) -> None:

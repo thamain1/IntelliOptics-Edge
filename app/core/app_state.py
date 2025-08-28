@@ -6,7 +6,7 @@ from functools import lru_cache
 import cachetools
 import yaml
 from fastapi import Request
-from groundlight import Groundlight
+from intellioptics import IntelliOptics
 from model import Detector
 
 from .configs import EdgeInferenceConfig, RootEdgeConfig
@@ -83,21 +83,21 @@ def get_detector_inference_configs(
 
 
 @lru_cache(maxsize=MAX_SDK_INSTANCES_CACHE_SIZE)
-def _get_groundlight_sdk_instance_internal(api_token: str):
-    return Groundlight(api_token=api_token)
+def _get_intellioptics_sdk_instance_internal(api_token: str):
+    return IntelliOptics(api_token=api_token)
 
 
-def get_groundlight_sdk_instance(request: Request):
+def get_intellioptics_sdk_instance(request: Request):
     """
-    Returns a (cached) Groundlight SDK instance given an API token.
+    Returns a (cached) IntelliOptics SDK instance given an API token.
     The SDK handles validation of the API token token itself, so there's no
     need to do that here.
     """
     api_token = request.headers.get("x-api-token")
-    return _get_groundlight_sdk_instance_internal(api_token)
+    return _get_intellioptics_sdk_instance_internal(api_token)
 
 
-def refresh_detector_metadata_if_needed(detector_id: str, gl: Groundlight) -> None:
+def refresh_detector_metadata_if_needed(detector_id: str, io: IntelliOptics) -> None:
     """
     Check if detector metadata needs refreshing based on age of cached value and refresh it if it's too old.
     If the refresh fails, the stale cached metadata is restored.
@@ -112,7 +112,7 @@ def refresh_detector_metadata_if_needed(detector_id: str, gl: Groundlight) -> No
 
             try:
                 # Repopulate the cache with fresh metadata
-                get_detector_metadata(detector_id=detector_id, gl=gl)
+                get_detector_metadata(detector_id=detector_id, io=io)
                 metadata_cache.delete_suspended_value(detector_id)
                 logger.info(f"Detector metadata for {detector_id=} refreshed successfully.")
             except KeyError:
@@ -130,14 +130,14 @@ def refresh_detector_metadata_if_needed(detector_id: str, gl: Groundlight) -> No
 
 @cachetools.cached(
     cache=TimestampedCache(maxsize=MAX_DETECTOR_IDS_CACHE_SIZE),
-    key=lambda detector_id, gl: detector_id,
+    key=lambda detector_id, io: detector_id,
 )
-def get_detector_metadata(detector_id: str, gl: Groundlight) -> Detector:
+def get_detector_metadata(detector_id: str, io: IntelliOptics) -> Detector:
     """
-    Returns detector metadata from the Groundlight API.
+    Returns detector metadata from the IntelliOptics API.
     Caches the result so that we don't have to make an expensive API call every time.
     """
-    detector = safe_call_sdk(gl.get_detector, id=detector_id)
+    detector = safe_call_sdk(io.get_detector, id=detector_id)
     return detector
 
 
@@ -154,3 +154,4 @@ def get_app_state(request: Request) -> AppState:
     if not hasattr(request.app.state, "app_state"):
         raise RuntimeError("App state is not initialized.")
     return request.app.state.app_state
+

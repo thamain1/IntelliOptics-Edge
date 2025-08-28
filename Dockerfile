@@ -4,7 +4,7 @@
 ARG NGINX_PORT=30101
 ARG NGINX_PORT_OLD=6717
 ARG UVICORN_PORT=6718
-ARG APP_ROOT="/groundlight-edge"
+ARG APP_ROOT="/intellioptics-edge"
 ARG POETRY_HOME="/opt/poetry"
 ARG POETRY_VERSION=1.5.1
 
@@ -63,19 +63,19 @@ WORKDIR ${APP_ROOT}
 RUN poetry install --no-interaction --no-root --without dev --without lint && \
     poetry cache clear --all pypi
 
-# Create /etc/groundlight directory where edge-config.yaml and inference_deployment.yaml will be mounted
-RUN mkdir -p /etc/groundlight/edge-config && \
-    mkdir -p /etc/groundlight/inference-deployment
+# Create /etc/intellioptics directory where edge-config.yaml and inference_deployment.yaml will be mounted
+RUN mkdir -p /etc/intellioptics/edge-config && \
+    mkdir -p /etc/intellioptics/inference-deployment
 
 # Adding this here for testing purposes. In production, this will be mounted as persistent
 # volume in kubernetes
-RUN mkdir -p /opt/groundlight/edge/sqlite
+RUN mkdir -p /opt/intellioptics/edge/sqlite
 
 # Copy configs
 COPY configs ${APP_ROOT}/configs
 
 COPY deploy/k3s/inference_deployment/inference_deployment_template.yaml \
-    /etc/groundlight/inference-deployment/
+    /etc/intellioptics/inference-deployment/
 
 
 ##################
@@ -111,3 +111,4 @@ CMD ["/bin/bash", "-c", "./app/bin/launch-edge-logic-server.sh"]
 
 # Document the exposed port, which is configured in nginx.conf
 EXPOSE ${NGINX_PORT} ${NGINX_PORT_OLD}
+

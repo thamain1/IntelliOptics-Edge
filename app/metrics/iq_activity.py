@@ -2,7 +2,7 @@
 and audits for each detector, as well as iqs submitted to the edge-endpoint as a whole.
 
 Filesystem structure:
-/opt/groundlight/edge-metrics/
+/opt/intellioptics/edge-metrics/
     detectors/
         <detector_id1>/
             last_iqs
@@ -174,7 +174,7 @@ class ActivityRetriever:
 @lru_cache(maxsize=1)  # Singleton
 def _tracker() -> FilesystemActivityTrackingHelper:
     """Get the activity tracker."""
-    return FilesystemActivityTrackingHelper(base_dir="/opt/groundlight/device/edge-metrics")
+    return FilesystemActivityTrackingHelper(base_dir="/opt/intellioptics/device/edge-metrics")
 
 
 def record_activity_for_metrics(detector_id: str, activity_type: str):
@@ -221,3 +221,4 @@ def clear_old_activity_files():
         logger.info(f"Clearing {len(old_files)} old activity files: {old_files}")
         for f in old_files:
             f.unlink()
+

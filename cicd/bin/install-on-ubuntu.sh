@@ -11,21 +11,21 @@ echo "Setting up Groundlight Edge Endpoint.  Follow along at /var/log/cloud-init
 echo "Starting cloud init.  Uptime: $(uptime)"
 
 # Set up signals about the status of the installation
-mkdir -p /opt/groundlight/ee-install-status
-touch /opt/groundlight/ee-install-status/installing
+mkdir -p /opt/intellioptics/ee-install-status
+touch /opt/intellioptics/ee-install-status/installing
 SETUP_COMPLETE=0
 record_result() {
     if [ "$SETUP_COMPLETE" -eq 0 ]; then
         echo "Setup failed at $(date)"
-        touch /opt/groundlight/ee-install-status/failed
+        touch /opt/intellioptics/ee-install-status/failed
         echo "Groundlight Edge Endpoint setup FAILED.  See /var/log/cloud-init-output.log for details." > /etc/motd
     else
         echo "Setup complete at $(date)"
         echo "Groundlight Edge Endpoint setup complete.  See /var/log/cloud-init-output.log for details." > /etc/motd
-        touch /opt/groundlight/ee-install-status/success
+        touch /opt/intellioptics/ee-install-status/success
     fi
     # Remove "installing" at the end to avoid a race where there is no status
-    rm -f /opt/groundlight/ee-install-status/installing
+    rm -f /opt/intellioptics/ee-install-status/installing
 }
 trap record_result EXIT
 
@@ -57,7 +57,7 @@ sudo apt install -y \
     ffmpeg
 
 # Download the edge-endpoint code
-CODE_BASE=/opt/groundlight/src/
+CODE_BASE=/opt/intellioptics/src/
 mkdir -p ${CODE_BASE}
 cd ${CODE_BASE}
 git clone https://github.com/groundlight/edge-endpoint

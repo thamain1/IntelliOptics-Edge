@@ -5,7 +5,7 @@
 
 set -e
 
-DATABASE_DIRECTORY="/opt/groundlight/edge/sqlite"
+DATABASE_DIRECTORY="/opt/intellioptics/edge/sqlite"
 DATABASE_PATH="${DATABASE_DIRECTORY}/sqlite.db"
 ENTRY_QUERY="CREATE TABLE IF NOT EXISTS test_table (id INTEGER);"
 DROP_QUERY="DROP TABLE IF EXISTS test_table;"
@@ -32,3 +32,4 @@ else
     # https://www.sqlite.org/wal.html
     echo "PRAGMA journal_mode=WAL;" | sqlite3 "${DATABASE_PATH}"
 fi
+
