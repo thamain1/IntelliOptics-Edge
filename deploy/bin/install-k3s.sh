@@ -280,7 +280,7 @@ chmod 700 /tmp/get_helm.sh
 /tmp/get_helm.sh
 
 # Add the edge-endpoint helm repo
-helm repo add edge-endpoint https://code.groundlight.ai/edge-endpoint/
+helm repo add edge-endpoint https://code.IntelliOptics.ai/edge-endpoint/
 helm repo update
 
 install_nvidia_operator() {
@@ -370,5 +370,6 @@ echo
 echo '##################################################################################'
 echo '# Installation successful'
 echo '##################################################################################'
+
 
 

@@ -55,3 +55,4 @@ for ns in "${namespaces[@]}"; do
     echo "Creating resources in ${ns}"
     DEPLOYMENT_NAMESPACE="${ns}" "$(dirname "$0")"/setup-ee.sh
 done
+

@@ -16,7 +16,7 @@ metadata:
   name: edge-endpoint-service
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
   selector:
     app: edge-logic-server
@@ -34,7 +34,7 @@ edge-endpoint
   namespace: {{ .Values.namespace }}
   labels:
     app: edge-endpoint
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
@@ -45,7 +45,7 @@ spec:
       labels:
         app: edge-logic-server
       annotations:
-        checksum/config: {{ include "groundlight-edge-endpoint.edgeConfig" . | sha256sum }}
+        checksum/config: {{ include "IntelliOptics-edge-endpoint.edgeConfig" . | sha256sum }}
     spec:
       # This service account is used by the edge logic to access the Kubernetes API
       # from within the pod. See templates/service_account.yaml for more details
@@ -53,7 +53,7 @@ spec:
       initContainers:
       - name: database-prep
 image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
           mountPath: /opt/intellioptics/edge/sqlite
@@ -62,7 +62,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
       containers:
       - name: nginx
 
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
         resources:
@@ -99,7 +99,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       - name: edge-endpoint
 
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
         resources:
@@ -117,7 +117,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         # TODO: Once we have kubernetes-based tests, we can remove this feature flag.
         - name: DEPLOY_DETECTOR_LEVEL_INFERENCE
           value: "1"
-        - name: GROUNDLIGHT_ENDPOINT
+        - name: INTELLIOPTICS_ENDPOINT
           value: "{{ .Values.upstreamEndpoint }}"
         volumeMounts:
         - name: edge-config-volume
@@ -133,7 +133,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       - name: status-monitor
 
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
         resources:
@@ -148,7 +148,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
-              name: groundlight-api-token
+              name: IntelliOptics-api-token
               key: INTELLIOPTICS_API_TOKEN
               optional: true
         - name: INFERENCE_FLAVOR
@@ -161,7 +161,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       - name: inference-model-updater
 
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.edgeEndpointPullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
         resources:
@@ -174,12 +174,12 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: {{ .Values.logLevel | quote }}
         - name: DEPLOY_DETECTOR_LEVEL_INFERENCE
           value: "1"
-        - name: GROUNDLIGHT_ENDPOINT
+        - name: INTELLIOPTICS_ENDPOINT
           value: "{{ .Values.upstreamEndpoint }}"
         - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
-              name: groundlight-api-token
+              name: IntelliOptics-api-token
               key: INTELLIOPTICS_API_TOKEN
         volumeMounts:
         - name: edge-config-volume
@@ -229,6 +229,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/device
           type: DirectoryOrCreate
+
 
 
 

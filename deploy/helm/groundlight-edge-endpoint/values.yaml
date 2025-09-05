@@ -1,4 +1,4 @@
-# Default values for groundlight-edge-endpoint.
+# Default values for IntelliOptics-edge-endpoint.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -35,16 +35,16 @@ persistentVolumeNameBase: "edge-endpoint-pv"
 # set this value to "cpu".
 inferenceFlavor: "gpu"
 
-# The user must provide the Groundlight API token as input or the deployment will fail
-groundlightApiToken: ""
+# The user must provide the IntelliOptics API token as input or the deployment will fail
+intelliopticsApiToken: ""
 
 # For escalations and audits and calls that aren't handled by the Edge Endpoint, we forward
-# to the Groundlight service in the cloud. If you're testing against another version
-# of the Groundlight service (e.g., your own dev environment or the integ environment),
+# to the IntelliOptics service in the cloud. If you're testing against another version
+# of the IntelliOptics service (e.g., your own dev environment or the integ environment),
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all Groundlight services are deployed in the us-west-2 region
+# Currently, all IntelliOptics services are deployed in the us-west-2 region
 awsRegion: "us-west-2"
 
 ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
@@ -69,4 +69,5 @@ k3sConfig:
 serviceAccount:
   create: true
   name: ""
+
 

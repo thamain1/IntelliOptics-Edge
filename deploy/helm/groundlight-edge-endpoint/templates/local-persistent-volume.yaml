@@ -6,7 +6,7 @@ metadata:
   name: "{{ .Values.persistentVolumeNameBase }}-{{ .Values.namespace }}"
   labels:
     edge-pv-for-namespace: {{ .Values.namespace }}
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
   capacity: 
     storage: 2Gi
@@ -31,3 +31,4 @@ spec:
   selector:
     matchLabels:
       edge-pv-for-namespace: {{ .Values.namespace }}
+

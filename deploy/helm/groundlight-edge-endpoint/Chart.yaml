@@ -1,6 +1,6 @@
 apiVersion: v2
-name: groundlight-edge-endpoint
-description: A full stack for deploying the Groundlight Edge Endpoint
+name: IntelliOptics-edge-endpoint
+description: A full stack for deploying the IntelliOptics Edge Endpoint
 
 # A chart can be either an 'application' or a 'library' chart.
 #
@@ -16,5 +16,6 @@ type: application
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
 version: 0.7.1
 
-# This is the version number of the application being deployed, the Groundlight Edge Endpoint.
+# This is the version number of the application being deployed, the IntelliOptics Edge Endpoint.
 appVersion: "0.7.1"
+

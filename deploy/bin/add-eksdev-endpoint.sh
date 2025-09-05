@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Update the k3s CoreDNS ConfigMap to add a new DNS entry for the dev API endpoint
-# so we can test against our eksdev environment (api.dev.groundlight.ai).
+# so we can test against our eksdev environment (api.dev.IntelliOptics.ai).
 
 # Check if the correct number of arguments was provided
 if [ "$#" -ne 1 ]; then
@@ -9,7 +9,7 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-HOSTNAME=api.dev.groundlight.ai
+HOSTNAME=api.dev.IntelliOptics.ai
 IP_ADDRESS=$1
 
 K=${KUBECTL_CMD:-kubectl}
@@ -62,3 +62,4 @@ rm /tmp/coredns_cm.yaml
 $K -n kube-system rollout restart deployment coredns
 
 echo "DNS entry for $HOSTNAME with IP $IP_ADDRESS added and CoreDNS restarted."
+

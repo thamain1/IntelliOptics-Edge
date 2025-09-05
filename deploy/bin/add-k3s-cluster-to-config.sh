@@ -41,3 +41,4 @@ else
     echo "ERROR: k3s config file ('${k3scfg}') not found"
     exit 1
 fi
+

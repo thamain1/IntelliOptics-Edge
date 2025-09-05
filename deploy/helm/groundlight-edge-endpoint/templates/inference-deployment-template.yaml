@@ -4,7 +4,8 @@ metadata:
   name: inference-deployment-template
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 data:
   inference_deployment_template.yaml: |
     {{- tpl (.Files.Get "files/inference-deployment-template.yaml") . | nindent 4 }}
+

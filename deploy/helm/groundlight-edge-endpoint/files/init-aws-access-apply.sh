@@ -41,3 +41,4 @@ kubectl create secret docker-registry registry-credentials \
     --docker-username=AWS \
     --docker-password="$(cat /shared/token.txt)" \
     --dry-run=client -o yaml | kubectl apply -f -
+

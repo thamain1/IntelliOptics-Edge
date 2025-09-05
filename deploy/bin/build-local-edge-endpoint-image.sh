@@ -54,3 +54,4 @@ build_and_upload() {
 }
 
 build_and_upload "${EDGE_ENDPOINT_IMAGE}"
+

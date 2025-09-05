@@ -40,3 +40,4 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             value: inference-results
           - name: SB_FEEDBACK_QUEUE
             value: feedback
+

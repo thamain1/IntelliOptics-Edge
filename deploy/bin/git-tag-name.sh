@@ -54,3 +54,4 @@ else
     HASH=$(echo $(git diff && git status) | ${HASH_FUNC} | cut -c -15)
     echo "${CURRENT_BRANCH}-${CURRENT_COMMIT}-dirty-${HASH}"
 fi
+

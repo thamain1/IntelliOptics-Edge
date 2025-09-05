@@ -109,7 +109,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             - name: INTELLIOPTICS_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: groundlight-api-token
+                  name: IntelliOptics-api-token
                   key: INTELLIOPTICS_API_TOKEN
                   optional: true
           volumeMounts:
@@ -131,7 +131,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             - name: INTELLIOPTICS_API_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: groundlight-api-token
+                  name: IntelliOptics-api-token
                   key: INTELLIOPTICS_API_TOKEN
                   optional: true
           volumeMounts:
@@ -178,5 +178,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           hostPath:
             path: /opt/intellioptics/device
             type: DirectoryOrCreate
+
 
 

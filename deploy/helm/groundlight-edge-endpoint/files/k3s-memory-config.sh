@@ -62,7 +62,7 @@ fi
 # Configure k3s, preserve user-defined config (if any)
 mkdir -p /etc/rancher/k3s
 CONFIG_FILE="/etc/rancher/k3s/config.yaml"
-MARKER="# Groundlight Edge Endpoint memory management"
+MARKER="# IntelliOptics Edge Endpoint memory management"
 
 # Remove old eviction settings
 if [ -f "$CONFIG_FILE" ]; then
@@ -86,3 +86,4 @@ cat ${CONFIG_FILE}
 echo "Restarting k3s..."
 systemctl restart k3s
 echo "k3s memory configuration completed"
+

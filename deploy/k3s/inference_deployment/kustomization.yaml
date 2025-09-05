@@ -3,3 +3,4 @@ resources:
 
 patchesStrategicMerge:
   - no_gpu_resources.yaml
+

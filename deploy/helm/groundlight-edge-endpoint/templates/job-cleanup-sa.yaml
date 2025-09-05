@@ -4,7 +4,7 @@ metadata:
   name: job-cleanup-sa
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -12,7 +12,7 @@ metadata:
   name: job-cleanup-role
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 rules:
   - apiGroups: ["batch"]
     resources: ["jobs"]
@@ -24,7 +24,7 @@ metadata:
   name: job-cleanup-rolebinding
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
     name: job-cleanup-sa
@@ -32,3 +32,4 @@ roleRef:
   kind: Role
   name: job-cleanup-role
   apiGroup: rbac.authorization.k8s.io
+

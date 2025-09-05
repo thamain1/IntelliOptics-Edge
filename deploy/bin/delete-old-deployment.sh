@@ -38,7 +38,7 @@ $K get service -o name | grep /inference-service- | xargs -I {} $K delete {}
 # Delete secrets and configmaps
 $K delete secret aws-credentials --ignore-not-found
 $K delete secret registry-credentials --ignore-not-found
-$K delete secret groundlight-api-token --ignore-not-found
+$K delete secret IntelliOptics-api-token --ignore-not-found
 
 
 $K delete configmap edge-config --ignore-not-found
@@ -74,3 +74,4 @@ if [ "$DEPLOYMENT_NAMESPACE" != "default" ]; then
 else
     echo "Not deleting default namespace"
 fi
+

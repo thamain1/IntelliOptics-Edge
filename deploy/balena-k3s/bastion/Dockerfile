@@ -64,3 +64,4 @@ RUN chmod +x ./edge-endpoint/deploy/bin/setup-ee.sh
 
 ENTRYPOINT []
 CMD ["/bin/sh", "-c", "./edge-endpoint/deploy/bin/setup-ee.sh && tail -f /dev/null"]
+

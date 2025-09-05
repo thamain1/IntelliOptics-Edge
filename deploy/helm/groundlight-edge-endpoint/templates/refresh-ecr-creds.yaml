@@ -5,7 +5,7 @@ metadata:
   name: refresh-ecr-creds
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
   schedule: "0 * * * *"  # Every 2 hours
   jobTemplate:
@@ -18,3 +18,4 @@ spec:
             app: refresh-ecr-creds
         spec:
           {{- include "edge-endpoint.registry-credentials.podSpec" . | nindent 10 }}
+

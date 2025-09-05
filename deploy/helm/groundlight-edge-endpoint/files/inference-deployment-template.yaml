@@ -62,7 +62,7 @@ spec:
       containers:
       - name: inference-server
 image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
-        imagePullPolicy: "{{ include "groundlight-edge-endpoint.inferencePullPolicy" . }}"
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
           value: &modelRepository /opt/intellioptics/edge/serving/model-repo
@@ -126,6 +126,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file
+
 
 
 

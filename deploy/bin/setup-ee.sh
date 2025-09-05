@@ -95,12 +95,12 @@ $K delete configmap --ignore-not-found inference-deployment-template -n ${DEPLOY
 $K delete configmap --ignore-not-found kubernetes-namespace -n ${DEPLOYMENT_NAMESPACE}
 $K delete configmap --ignore-not-found setup-db -n ${DEPLOYMENT_NAMESPACE}
 $K delete configmap --ignore-not-found db-reset -n ${DEPLOYMENT_NAMESPACE}
-$K delete secret --ignore-not-found groundlight-api-token -n ${DEPLOYMENT_NAMESPACE}
+$K delete secret --ignore-not-found IntelliOptics-api-token -n ${DEPLOYMENT_NAMESPACE}
 
 set +x  # temporarily disable command echoing to avoid printing secrets
 if [[ -n "${INTELLIOPTICS_API_TOKEN}" ]]; then
-    echo "Creating groundlight-api-token secret"
-    $K create secret generic groundlight-api-token --from-literal=INTELLIOPTICS_API_TOKEN=${INTELLIOPTICS_API_TOKEN} -n ${DEPLOYMENT_NAMESPACE}
+    echo "Creating IntelliOptics-api-token secret"
+    $K create secret generic IntelliOptics-api-token --from-literal=INTELLIOPTICS_API_TOKEN=${INTELLIOPTICS_API_TOKEN} -n ${DEPLOYMENT_NAMESPACE}
 fi
 set -x  # re-enable command echoing
 
@@ -193,3 +193,4 @@ apply_yaml deploy/k3s/edge_deployment/edge_deployment.yaml
 apply_yaml deploy/k3s/refresh_creds.yaml
 
 $K describe deployment edge-endpoint
+

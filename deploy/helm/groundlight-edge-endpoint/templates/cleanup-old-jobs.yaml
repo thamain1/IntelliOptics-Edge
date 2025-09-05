@@ -4,7 +4,7 @@ metadata:
   name: cleanup-old-jobs
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-upgrade
     "helm.sh/hook-weight": "-5"  # Ensure it runs before other hooks
@@ -37,4 +37,5 @@ spec:
                 done
                 echo "✅ Cleanup complete."
               fi
+
 

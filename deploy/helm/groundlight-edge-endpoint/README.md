@@ -1,5 +1,6 @@
-# Install Groundlight Edge Endpoint in your Cluster
+# Install IntelliOptics Edge Endpoint in your Cluster
 
-This Helm chart deploys Groundlight Edge Endpoint on a Kubernetes cluster using the Helm package manager.
+This Helm chart deploys IntelliOptics Edge Endpoint on a Kubernetes cluster using the Helm package manager.
 
-For details on the Groundlight Edge Endpoint, please visit the [GitHub project page](https://github.com/groundlight/edge-endpoint).
+For details on the IntelliOptics Edge Endpoint, please visit the [GitHub project page](https://github.com/IntelliOptics/edge-endpoint).
+

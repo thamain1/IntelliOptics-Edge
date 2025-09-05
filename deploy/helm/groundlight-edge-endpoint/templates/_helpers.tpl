@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "groundlight-edge-endpoint.name" -}}
+{{- define "IntelliOptics-edge-endpoint.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "groundlight-edge-endpoint.fullname" -}}
+{{- define "IntelliOptics-edge-endpoint.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "groundlight-edge-endpoint.chart" -}}
+{{- define "IntelliOptics-edge-endpoint.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "groundlight-edge-endpoint.labels" -}}
-helm.sh/chart: {{ include "groundlight-edge-endpoint.chart" . }}
-{{ include "groundlight-edge-endpoint.selectorLabels" . }}
+{{- define "IntelliOptics-edge-endpoint.labels" -}}
+helm.sh/chart: {{ include "IntelliOptics-edge-endpoint.chart" . }}
+{{ include "IntelliOptics-edge-endpoint.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "groundlight-edge-endpoint.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "groundlight-edge-endpoint.name" . }}
+{{- define "IntelliOptics-edge-endpoint.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "IntelliOptics-edge-endpoint.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "groundlight-edge-endpoint.serviceAccountName" -}}
+{{- define "IntelliOptics-edge-endpoint.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "groundlight-edge-endpoint.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "IntelliOptics-edge-endpoint.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -80,11 +80,11 @@ Create the name of the service account to use
   Determine the correct image tag to use for each container type. If the specific override
   is set for that image, use it. Otherwise, use the global image tag.
 */}}
-{{- define "groundlight-edge-endpoint.edgeEndpointTag" -}}
+{{- define "IntelliOptics-edge-endpoint.edgeEndpointTag" -}}
 {{- .Values.edgeEndpointTag | default .Values.imageTag }}
 {{- end }}
 
-{{- define "groundlight-edge-endpoint.inferenceTag" -}}
+{{- define "IntelliOptics-edge-endpoint.inferenceTag" -}}
 {{- .Values.inferenceTag | default .Values.imageTag }}
 {{- end }}
 
@@ -93,8 +93,8 @@ Create the name of the service account to use
   a dev tag, we use "Never" to avoid pulling from the registry. Otherwise,
   we use the global pull policy.
 */}}
-{{- define "groundlight-edge-endpoint.edgeEndpointPullPolicy" -}}
-{{- $tag := include "groundlight-edge-endpoint.edgeEndpointTag" . -}}
+{{- define "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" -}}
+{{- $tag := include "IntelliOptics-edge-endpoint.edgeEndpointTag" . -}}
 {{- if eq $tag "dev" -}}
 Never
 {{- else -}}
@@ -102,8 +102,8 @@ Never
 {{- end -}}
 {{- end -}}
 
-{{- define "groundlight-edge-endpoint.inferencePullPolicy" -}}
-{{- $tag := include "groundlight-edge-endpoint.inferenceTag" . -}}
+{{- define "IntelliOptics-edge-endpoint.inferencePullPolicy" -}}
+{{- $tag := include "IntelliOptics-edge-endpoint.inferenceTag" . -}}
 {{- if eq $tag "dev" -}}
 Never
 {{- else -}}
@@ -116,11 +116,12 @@ Never
   then use that. Otherwise, use the default version in the `files/` directory. We define this
   as a function so that we can use it as a nonce to restart the pod when the config changes.
 */}}
-{{- define "groundlight-edge-endpoint.edgeConfig" -}}
+{{- define "IntelliOptics-edge-endpoint.edgeConfig" -}}
 {{- if .Values.configFile }}
 {{- .Values.configFile }}
 {{- else }}
 {{- .Files.Get "files/default-edge-config.yaml" }}
 {{- end }}
 {{- end }}
+
 

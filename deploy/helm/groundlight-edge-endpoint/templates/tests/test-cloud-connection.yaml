@@ -5,7 +5,7 @@ metadata:
   name: "test-ee-cloud-connection"
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test
 spec:
@@ -16,13 +16,14 @@ spec:
       # Note that we use port 30101 here which is the internal port and not the port exposed to the host
       args: 
       - '-c'
-      - 'wget -O - --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" {{ include "groundlight-edge-endpoint.fullname" . }}-service:30101/device-api/v1/me'
+      - 'wget -O - --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" {{ include "IntelliOptics-edge-endpoint.fullname" . }}-service:30101/device-api/v1/me'
       env:
       - name: INTELLIOPTICS_API_TOKEN
         valueFrom:
           secretKeyRef:
-            name: groundlight-api-token
+            name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
             optional: true
   restartPolicy: Never
+
 

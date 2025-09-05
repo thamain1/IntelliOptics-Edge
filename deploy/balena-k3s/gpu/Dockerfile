@@ -90,3 +90,4 @@ WORKDIR /usr/src/app
 COPY *.sh ./
 
 ENTRYPOINT ["/bin/bash", "/usr/src/app/entry.sh"]
+

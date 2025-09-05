@@ -4,7 +4,7 @@ metadata:
   name: warmup-inference-model
   namespace: {{ .Values.namespace }}
   labels:
-    {{- include "groundlight-edge-endpoint.labels" . | nindent 4 }}
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
   ttlSecondsAfterFinished: 3600
   template:
@@ -35,4 +35,5 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         secret:
           secretName: aws-credentials-file
   backoffLimit: 2
+
 

@@ -33,3 +33,4 @@ $K create secret docker-registry registry-credentials \
     --docker-password=$ECR_PASSWORD
 
 echo "Stored ECR credentials in secret registry-credentials"
+

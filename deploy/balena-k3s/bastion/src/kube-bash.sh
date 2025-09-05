@@ -12,3 +12,4 @@ complete -F __start_kubectl k
 alias watch='watch -n 0.7 '
 
 set -o vi
+

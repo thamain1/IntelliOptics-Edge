@@ -26,3 +26,4 @@ spec:
       enabled: false  # Disable DCGM since we don't care
     dcgmExporter:
       enabled: false  # Disable DCGM exporter since we don't care
+

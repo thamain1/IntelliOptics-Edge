@@ -21,3 +21,4 @@ $K describe pod edge-endpoint
 $K logs deployment/edge-endpoint -c edge-endpoint
 $K logs deployment/edge-endpoint -c inference-model-updater
 
+

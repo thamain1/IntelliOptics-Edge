@@ -33,3 +33,4 @@ else
     echo "PRAGMA journal_mode=WAL;" | sqlite3 "${DATABASE_PATH}"
 fi
 
+

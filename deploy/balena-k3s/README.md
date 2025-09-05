@@ -71,3 +71,4 @@ Dockerfile will automatically run the following command as `bastion` launches so
 cd /app/edge-endpoint
 INFERENCE_FLAVOR="CPU" DEPLOYMENT_NAMESPACE="default" ./deploy/bin/setup-ee.sh
 ```
+

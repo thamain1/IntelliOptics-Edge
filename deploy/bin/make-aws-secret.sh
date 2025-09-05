@@ -40,3 +40,4 @@ fi
 if ! $K get secret aws-credentials; then
     echo "aws-credentials secret not found"
 fi
+

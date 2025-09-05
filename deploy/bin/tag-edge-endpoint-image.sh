@@ -49,3 +49,4 @@ digest=$(docker buildx imagetools inspect $ECR_REPO:$GIT_TAG --format '{{json .}
 docker buildx imagetools create --tag $ECR_REPO:$NEW_TAG $ECR_REPO@${digest}
 
 echo "✅ Image successfully tagged: $ECR_REPO:$NEW_TAG"
+

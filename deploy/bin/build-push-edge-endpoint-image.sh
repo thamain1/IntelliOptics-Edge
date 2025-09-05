@@ -66,3 +66,4 @@ docker buildx build \
 echo "Successfully pushed image to ECR_URL=${ECR_URL}"
 echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
+

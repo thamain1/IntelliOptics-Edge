@@ -6,3 +6,4 @@
 sqlite3 -header -column /opt/intellioptics/edge/sqlite.db
 # .help for help
 # .quit or .exit 0 to exit
+

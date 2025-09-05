@@ -30,3 +30,4 @@ fi
 # https://docs.k3s.io/cli/server
 # https://docs.k3s.io/datastore/ha-embedded
 exec /usr/local/bin/k3s server ${EXTRA_K3S_SERVER_ARGS:-}
+

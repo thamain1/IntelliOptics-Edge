@@ -109,3 +109,4 @@ RUN chmod +x server.sh
 
 CMD ["/bin/bash", "-c", "/usr/src/drm-script.sh && ./server.sh"]
 
+

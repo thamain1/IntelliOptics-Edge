@@ -10,28 +10,28 @@
 #    be used to create a registry secret in k8s.
 # 3. /shared/done: A marker file to indicate that the script has completed successfully.
 
-# Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and GROUNDLIGHT_ENDPOINT
+# Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT
 # settings. If you run it with the first argument being "validate", it will only run through the 
 # check of the curl results and exit with 0 if they are valid or 1 if they are not. In the latter 
 # case, it will also log the results.
 
 if [ "$1" == "validate" ]; then
-  echo "Validating INTELLIOPTICS_API_TOKEN and GROUNDLIGHT_ENDPOINT..."
+  echo "Validating INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT..."
   if [ -z "$INTELLIOPTICS_API_TOKEN" ]; then
     echo "INTELLIOPTICS_API_TOKEN is not set. Exiting."
     exit 1
   fi
 
-  if [ -z "$GROUNDLIGHT_ENDPOINT" ]; then
-    echo "GROUNDLIGHT_ENDPOINT is not set. Exiting."
+  if [ -z "$INTELLIOPTICS_ENDPOINT" ]; then
+    echo "INTELLIOPTICS_ENDPOINT is not set. Exiting."
     exit 1
   fi
   validate="yes"
 fi
 
-# This function replicates the Groundlight SDK's logic to clean up user-supplied endpoint URLs 
+# This function replicates the IntelliOptics SDK's logic to clean up user-supplied endpoint URLs 
 sanitize_endpoint_url() {
-    local endpoint="${1:-$GROUNDLIGHT_ENDPOINT}"
+    local endpoint="${1:-$INTELLIOPTICS_ENDPOINT}"
 
     # If empty, set default
     if [[ -z "$endpoint" ]]; then
@@ -77,14 +77,14 @@ sanitize_endpoint_url() {
     echo "$sanitized_endpoint"
 }
 
-sanitized_url=$(sanitize_endpoint_url "${GROUNDLIGHT_ENDPOINT}")
+sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT}")
 echo "Sanitized URL: $sanitized_url"
 
-echo "Fetching temporary AWS credentials from the Groundlight cloud service..."
+echo "Fetching temporary AWS credentials from the IntelliOptics cloud service..."
 HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
 
 if [ $? -ne 0 ]; then
-  echo "Failed to fetch credentials from the Groundlight cloud service"
+  echo "Failed to fetch credentials from the IntelliOptics cloud service"
   if [ -n "$HTTP_STATUS" ]; then
     echo "HTTP Status: $HTTP_STATUS"
   fi
@@ -120,4 +120,5 @@ echo $TOKEN > /shared/token.txt
 echo "Token fetched and saved to /shared/token.txt"
 
 touch /shared/done
+
 
