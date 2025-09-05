@@ -7,8 +7,8 @@
 set -e
 set -x
 
-if [ -z "$GROUNDLIGHT_API_TOKEN" ]; then
-    echo "Error: GROUNDLIGHT_API_TOKEN environment variable is not set."
+if [ -z "$INTELLIOPTICS_API_TOKEN" ]; then
+    echo "Error: INTELLIOPTICS_API_TOKEN environment variable is not set."
     exit 1
 fi
 
@@ -59,7 +59,7 @@ echo "DEPLOYMENT_NAMESPACE: $DEPLOYMENT_NAMESPACE"
 echo "IMAGE_TAG: $IMAGE_TAG"
 echo "INFERENCE_IMAGE_TAG: $INFERENCE_IMAGE_TAG"
 helm install -n default ${HELM_RELEASE_NAME} deploy/helm/groundlight-edge-endpoint \
-    --set groundlightApiToken=$GROUNDLIGHT_API_TOKEN \
+    --set groundlightApiToken=$INTELLIOPTICS_API_TOKEN \
     --set inferenceFlavor=$INFERENCE_FLAVOR \
     --set edgeEndpointPort=$EDGE_ENDPOINT_PORT \
     --set namespace=$DEPLOYMENT_NAMESPACE \

@@ -145,11 +145,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         env:
         - name: LOG_LEVEL
           value: {{ .Values.logLevel | quote }}
-        - name: GROUNDLIGHT_API_TOKEN
+        - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
               name: groundlight-api-token
-              key: GROUNDLIGHT_API_TOKEN
+              key: INTELLIOPTICS_API_TOKEN
               optional: true
         - name: INFERENCE_FLAVOR
           value: "{{ .Values.inferenceFlavor }}"
@@ -176,11 +176,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: "1"
         - name: GROUNDLIGHT_ENDPOINT
           value: "{{ .Values.upstreamEndpoint }}"
-        - name: GROUNDLIGHT_API_TOKEN
+        - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
               name: groundlight-api-token
-              key: GROUNDLIGHT_API_TOKEN
+              key: INTELLIOPTICS_API_TOKEN
         volumeMounts:
         - name: edge-config-volume
           mountPath: /etc/intellioptics/edge-config

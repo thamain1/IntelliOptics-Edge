@@ -10,7 +10,7 @@ LOG_FILE="$HOME/canary_logs/laptop_canary.log"
 
 # Required environment variables for this canary
 REQUIRED_VARS=(
-    "GROUNDLIGHT_API_TOKEN"
+    "INTELLIOPTICS_API_TOKEN"
     "GROUNDLIGHT_ENDPOINT"
     "RTSP_URL"
     "DETECTOR_ID"

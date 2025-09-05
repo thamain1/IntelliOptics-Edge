@@ -106,11 +106,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           env:
             - name: LOG_LEVEL
               value: "INFO"
-            - name: GROUNDLIGHT_API_TOKEN
+            - name: INTELLIOPTICS_API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: groundlight-api-token
-                  key: GROUNDLIGHT_API_TOKEN
+                  key: INTELLIOPTICS_API_TOKEN
                   optional: true
           volumeMounts:
             - name: edge-config-volume
@@ -128,11 +128,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
               value: "INFO"
             - name: DEPLOY_DETECTOR_LEVEL_INFERENCE
               value: "1"
-            - name: GROUNDLIGHT_API_TOKEN
+            - name: INTELLIOPTICS_API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: groundlight-api-token
-                  key: GROUNDLIGHT_API_TOKEN
+                  key: INTELLIOPTICS_API_TOKEN
                   optional: true
           volumeMounts:
             - name: edge-config-volume

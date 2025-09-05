@@ -11,11 +11,11 @@ containers:
     env:
       - name: GROUNDLIGHT_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
-      - name: GROUNDLIGHT_API_TOKEN
+      - name: INTELLIOPTICS_API_TOKEN
         valueFrom:
           secretKeyRef:
             name: groundlight-api-token
-            key: GROUNDLIGHT_API_TOKEN
+            key: INTELLIOPTICS_API_TOKEN
 
     volumeMounts:
       - name: shared-volume

@@ -23,7 +23,7 @@ This is the quick version of the instructions above.  On a fresh system with no 
 Before starting, get a Groundlight API token from the Groundlight web app and set it as an environment variable:
 
 ```shell
-export GROUNDLIGHT_API_TOKEN="api_xxxxxx"
+export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
 ```
 
 Then, run the following commands to set up the Edge Endpoint:
@@ -34,7 +34,7 @@ For GPU-based systems:
 curl -fsSL https://raw.githubusercontent.com/groundlight/edge-endpoint/refs/heads/main/deploy/bin/install-k3s.sh | bash -s gpu
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}"
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}"
 ```
 
 For CPU-based systems:
@@ -43,7 +43,7 @@ For CPU-based systems:
 curl -fsSL https://raw.githubusercontent.com/groundlight/edge-endpoint/refs/heads/main/deploy/bin/install-k3s.sh | bash -s cpu
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}" \
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}" \
   --set inferenceFlavor=cpu
 ```
 
@@ -53,7 +53,7 @@ For Jetson Orin-based systems (experimental):
 curl -fsSL https://raw.githubusercontent.com/groundlight/edge-endpoint/refs/heads/main/deploy/bin/install-k3s.sh | bash -s jetson
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}" \
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}" \
   --set inferenceTag="jetson"
 ```
 
@@ -83,7 +83,7 @@ To enable the Edge Endpoint to communicate with the Groundlight service, you nee
 Groundlight API token. You can create one on [this page](https://dashboard.groundlight.ai/reef/my-account/api-tokens) and set it as an environment variable.
 
 ```shell
-export GROUNDLIGHT_API_TOKEN="api_xxxxxx"
+export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
 ```
 
 > [!NOTE]
@@ -133,7 +133,7 @@ For a simple, default installation, you can run the following command:
 
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}"
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}"
 ```
 
 This will install the Edge Endpoint doing GPU-based inference in the `edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
@@ -155,7 +155,7 @@ To use a custom edge config file, set the `configFile` Helm value to the path of
 
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}" --set-file configFile=/path/to/your/edge-config.yaml
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}" --set-file configFile=/path/to/your/edge-config.yaml
 ```
 #### Variation: CPU Mode Inference
 
@@ -163,7 +163,7 @@ If the system you're running on doesn't have a GPU, you can run the Edge Endpoin
 
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}" \
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}" \
   --set inferenceFlavor=cpu
 ```
 
@@ -229,7 +229,7 @@ Some other environment variables should also be set. You'll need to have created
 a Groundlight API token in the [Groundlight web app](https://app.groundlight.ai/reef/my-account/api-tokens).
 ```bash
 # Set your API token
-export GROUNDLIGHT_API_TOKEN="api_xxxxxx"
+export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
 
 # Choose an inference flavor, either CPU or (default) GPU.
 # Note that appropriate setup for GPU will need to be done separately.

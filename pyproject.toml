@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "intellioptics-edge"
 version = "0.1.0"
-description = "Run groundlight on the edge!"
-authors = ["Groundlight AI <support@groundlight.ai>"]
+description = "Run intellioptics on the edge!"
+authors = ["IntelliOptics AI <admin@4wardmotions.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
@@ -23,7 +23,8 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
-
+
+
 intellioptics = { git = "https://github.com/thamain1/IntelliOptics.git", subdirectory = "python-sdk" }
 
 [tool.poetry.group.dev.dependencies]

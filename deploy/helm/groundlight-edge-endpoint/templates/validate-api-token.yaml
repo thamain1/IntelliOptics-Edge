@@ -22,11 +22,11 @@ spec:
           env:
             - name: GROUNDLIGHT_ENDPOINT
               value: "{{ .Values.upstreamEndpoint }}"
-            - name: GROUNDLIGHT_API_TOKEN
+            - name: INTELLIOPTICS_API_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: groundlight-api-token-validate-{{ .Values.namespace }}
-                  key: GROUNDLIGHT_API_TOKEN
+                  key: INTELLIOPTICS_API_TOKEN
           command:
             - /bin/bash
             - /app/init-aws-access-retrieve.sh
@@ -68,5 +68,5 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 type: Opaque
 data:
-  GROUNDLIGHT_API_TOKEN: {{ .Values.groundlightApiToken | b64enc | quote }}
+  INTELLIOPTICS_API_TOKEN: {{ .Values.groundlightApiToken | b64enc | quote }}
 

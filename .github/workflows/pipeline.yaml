@@ -278,7 +278,7 @@ jobs:
     env:
       # associated with roxanne+test_edge account since for some reason it was failing with
       # prod biggies
-      GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
+      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -328,7 +328,7 @@ jobs:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
     secrets:
-      K3S_TEST_GROUNDLIGHT_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
+      K3S_TEST_INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
 
   G4-end-to-end:
     # Note this job can run multiple times in parallel because the stack name is unique

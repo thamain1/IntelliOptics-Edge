@@ -98,9 +98,9 @@ $K delete configmap --ignore-not-found db-reset -n ${DEPLOYMENT_NAMESPACE}
 $K delete secret --ignore-not-found groundlight-api-token -n ${DEPLOYMENT_NAMESPACE}
 
 set +x  # temporarily disable command echoing to avoid printing secrets
-if [[ -n "${GROUNDLIGHT_API_TOKEN}" ]]; then
+if [[ -n "${INTELLIOPTICS_API_TOKEN}" ]]; then
     echo "Creating groundlight-api-token secret"
-    $K create secret generic groundlight-api-token --from-literal=GROUNDLIGHT_API_TOKEN=${GROUNDLIGHT_API_TOKEN} -n ${DEPLOYMENT_NAMESPACE}
+    $K create secret generic groundlight-api-token --from-literal=INTELLIOPTICS_API_TOKEN=${INTELLIOPTICS_API_TOKEN} -n ${DEPLOYMENT_NAMESPACE}
 fi
 set -x  # re-enable command echoing
 

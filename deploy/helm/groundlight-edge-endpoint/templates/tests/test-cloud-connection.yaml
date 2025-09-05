@@ -16,13 +16,13 @@ spec:
       # Note that we use port 30101 here which is the internal port and not the port exposed to the host
       args: 
       - '-c'
-      - 'wget -O - --header "x-api-token: ${GROUNDLIGHT_API_TOKEN}" {{ include "groundlight-edge-endpoint.fullname" . }}-service:30101/device-api/v1/me'
+      - 'wget -O - --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" {{ include "groundlight-edge-endpoint.fullname" . }}-service:30101/device-api/v1/me'
       env:
-      - name: GROUNDLIGHT_API_TOKEN
+      - name: INTELLIOPTICS_API_TOKEN
         valueFrom:
           secretKeyRef:
             name: groundlight-api-token
-            key: GROUNDLIGHT_API_TOKEN
+            key: INTELLIOPTICS_API_TOKEN
             optional: true
   restartPolicy: Never
 

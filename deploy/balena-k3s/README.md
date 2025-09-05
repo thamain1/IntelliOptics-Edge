@@ -57,7 +57,7 @@ see the [Configuration](#Configuration) section below (specifically, you will ne
 ### Configuration
 Configure the following variables via the `<fleet>/Variables` or `<device>/Device Variables` interfaces on the BalenaCloud dashboard:
 ```
-GROUNDLIGHT_API_TOKEN - so that we can authorize the fetching of edge model binaries
+INTELLIOPTICS_API_TOKEN - so that we can authorize the fetching of edge model binaries
 AWS_ACCESS_KEY_ID - so we can pull the edge-endpoint and gl-edge-inference images from ECR
 AWS_SECRET_ACCESS_KEY - needed along with AWS_ACCESS_KEY_ID
 RUN_EDGE_ENDPOINT - Set this to anything (such as "1") to start the pods (added for glhub integration)

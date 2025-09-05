@@ -101,10 +101,10 @@ echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /home/${TARGET_USER}/.bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # This should get substituted by the launching script
-export GROUNDLIGHT_API_TOKEN="__GROUNDLIGHTAPITOKEN__"
+export INTELLIOPTICS_API_TOKEN="__GROUNDLIGHTAPITOKEN__"
 
 # Install the edge-endpoint using helm
-make helm-install HELM_ARGS="--set groundlightApiToken=${GROUNDLIGHT_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
+make helm-install HELM_ARGS="--set groundlightApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
 
 # Configure kubectl to use the namespace where the EE is installed
 kubectl config set-context edge --namespace=edge --cluster=default --user=default

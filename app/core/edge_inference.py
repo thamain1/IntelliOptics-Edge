@@ -322,7 +322,7 @@ class EdgeInferenceManager:
         )
 
         # fallback to env var if we don't have a token in the config
-        api_token = api_token or os.environ.get("GROUNDLIGHT_API_TOKEN", None)
+        api_token = api_token or os.environ.get("INTELLIOPTICS_API_TOKEN", None)
 
         edge_model_info, oodd_model_info = fetch_model_info(detector_id, api_token=api_token)
 

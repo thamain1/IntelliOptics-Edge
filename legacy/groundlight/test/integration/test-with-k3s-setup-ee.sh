@@ -13,8 +13,8 @@
 set -e
 set -x
 
-if [ -z "$GROUNDLIGHT_API_TOKEN" ]; then
-    echo "Error: GROUNDLIGHT_API_TOKEN environment variable is not set."
+if [ -z "$INTELLIOPTICS_API_TOKEN" ]; then
+    echo "Error: INTELLIOPTICS_API_TOKEN environment variable is not set."
     exit 1
 fi
 

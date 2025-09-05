@@ -42,7 +42,7 @@ Reinstall the endpoint and set the configFile to the `edge-config.yaml` that you
 ```
 # For an endpoint with default values:
 helm upgrade -i -n default edge-endpoint edge-endpoint/groundlight-edge-endpoint \
-  --set groundlightApiToken="${GROUNDLIGHT_API_TOKEN}" --set-file configFile=/path/to/your/edge-config.yaml
+  --set groundlightApiToken="${INTELLIOPTICS_API_TOKEN}" --set-file configFile=/path/to/your/edge-config.yaml
 ```
 
 
@@ -61,7 +61,7 @@ Most configuration of the load testing scripts is done in [config.py](./config.p
 
 It's recommended to generate the load from a separate machine than the one hosting the endpoint to ensure maximum resources are available for the endpoint to use.
 
-Before running the script, ensure you have set the `GROUNDLIGHT_API_TOKEN` environment variable. The api token should belong to an account with access to the detectors you will be sending image queries to.
+Before running the script, ensure you have set the `INTELLIOPTICS_API_TOKEN` environment variable. The api token should belong to an account with access to the detectors you will be sending image queries to.
 
 The usage of `load_test.py` is:
 ```

@@ -10,15 +10,15 @@
 #    be used to create a registry secret in k8s.
 # 3. /shared/done: A marker file to indicate that the script has completed successfully.
 
-# Note: This script is also used to validate the GROUNDLIGHT_API_TOKEN and GROUNDLIGHT_ENDPOINT
+# Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and GROUNDLIGHT_ENDPOINT
 # settings. If you run it with the first argument being "validate", it will only run through the 
 # check of the curl results and exit with 0 if they are valid or 1 if they are not. In the latter 
 # case, it will also log the results.
 
 if [ "$1" == "validate" ]; then
-  echo "Validating GROUNDLIGHT_API_TOKEN and GROUNDLIGHT_ENDPOINT..."
-  if [ -z "$GROUNDLIGHT_API_TOKEN" ]; then
-    echo "GROUNDLIGHT_API_TOKEN is not set. Exiting."
+  echo "Validating INTELLIOPTICS_API_TOKEN and GROUNDLIGHT_ENDPOINT..."
+  if [ -z "$INTELLIOPTICS_API_TOKEN" ]; then
+    echo "INTELLIOPTICS_API_TOKEN is not set. Exiting."
     exit 1
   fi
 
@@ -81,7 +81,7 @@ sanitized_url=$(sanitize_endpoint_url "${GROUNDLIGHT_ENDPOINT}")
 echo "Sanitized URL: $sanitized_url"
 
 echo "Fetching temporary AWS credentials from the Groundlight cloud service..."
-HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${GROUNDLIGHT_API_TOKEN}" ${sanitized_url}/reader-credentials)
+HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
 
 if [ $? -ne 0 ]; then
   echo "Failed to fetch credentials from the Groundlight cloud service"
