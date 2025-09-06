@@ -1,18 +1,16 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Copy worker code (relative to build context root)
-COPY Azure/intellioptics-oneclick/worker-shim/ /app/
+# Copy worker code from the Edge repo (we build from C:\Dev\IntelliOpticsDev)
+COPY IntelliOptics-Edge/backend/worker/ /app/worker/
 
-# Bring in the IntelliOptics SDK wheel (built locally)
-COPY intellioptics-python-sdk/dist/intellioptics-0.1.0-py3-none-any.whl /tmp/
+# Build a minimal SDK context: pyproject + README + package only
+COPY IntelliOptics-SDK/pyproject.toml /tmp/io-sdk/pyproject.toml
+COPY IntelliOptics-SDK/README.md      /tmp/io-sdk/README.md
+COPY IntelliOptics-SDK/intellioptics  /tmp/io-sdk/intellioptics
 
-# Sanity check
-RUN ls -l /tmp
+# Install SDK and then worker reqs
+RUN pip install --no-cache-dir /tmp/io-sdk && \
+    pip install --no-cache-dir -r /app/worker/requirements.txt
 
-# Install deps + SDK from wheel
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir azure-identity azure-servicebus "psycopg[binary]" sqlalchemy pydantic httpx \
-      /tmp/intellioptics-*.whl
-
-CMD ["python","worker.py"]
+CMD ["python", "/app/worker/worker.py"]
