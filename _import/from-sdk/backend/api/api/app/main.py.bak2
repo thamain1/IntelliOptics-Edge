@@ -1,0 +1,412 @@
+# app/main.py
+"""
+IntelliOptics Backend – FastAPI (v0.2.8)
+
+- Safe blob uploads (URL-safe names + ContentSettings).
+- Returns a real image_query_id and enqueues work.
+- DB writes are best-effort: if SQLite schema is missing, we log and continue.
+- GET status falls back to IntelliOptics client if local DB isn't available.
+- Structured JSON logging for key events.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Optional
+from uuid import uuid4
+
+from contextlib import suppress
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Request
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
+
+from .auth import require_auth
+from .clients.intellioptics_client import io_client
+from .config import settings
+from .db import Base, SessionLocal, engine
+from .models import ImageQueryRow
+from .queues.servicebus import enqueue_feedback, enqueue_image_query
+from .schemas import HumanLabelRequest, QueryStatusResponse, SubmitQueryResponse
+from .storage.blob import BlobRef, get_container, upload_starlette_file
+from .logsetup import setup_logging
+
+from .features.detectors import router as detectors_router
+
+logger = logging.getLogger(__name__)
+
+API_VERSION = "0.2.8"
+
+# Resolve blob container name from settings or environment
+BLOB_CONTAINER_NAME: str = (
+    getattr(settings, "blob_container", None)
+    or os.getenv("AZ_BLOB_CONTAINER")
+    or "images"
+)
+
+# Initialized in create_app()
+_container_client = None
+
+
+def ensure_db_schema() -> None:
+    """
+    Create tables using the *model's* metadata to avoid Base mismatches.
+    Logs the final table list to confirm creation.
+    """
+    from .models import ImageQueryRow  # ensures model is imported
+
+    try:
+        with engine.begin() as conn:
+            # Use the model's metadata (authoritative). checkfirst avoids noisy logs.
+            ImageQueryRow.metadata.create_all(bind=conn, checkfirst=True)
+            # (Equivalently: ImageQueryRow.__table__.create(bind=conn, checkfirst=True))
+
+        # Inspect on a fresh connection
+        from sqlalchemy import inspect as _inspect
+        with engine.connect() as _conn:
+            tables = _inspect(_conn).get_table_names()
+
+        logger.info(
+            "db_ready",
+            extra={
+                "event": "db_ready",
+                "engine_url": str(engine.url),
+                "tables": tables,
+                "model_tablename": ImageQueryRow.__tablename__,
+                "base_id": id(Base),
+                "model_meta_id": id(ImageQueryRow.metadata),
+            },
+        )
+    except Exception:
+        logger.exception("db_init_failed")
+        raise
+
+
+def create_app() -> FastAPI:
+    # Set up JSON logging once
+    setup_logging()
+
+    app = FastAPI(title="IntelliOptics Backend", version=API_VERSION)`r`n    app.include_router(detectors_router)
+
+    # Initialize shared ContainerClient once per process
+    global _container_client
+    if _container_client is None:
+        _container_client = get_container(BLOB_CONTAINER_NAME)
+        logger.info(
+            "blob_container_ready",
+            extra={"event": "blob_container_ready", "container": BLOB_CONTAINER_NAME},
+        )
+
+    # Ensure DB schema at startup
+    ensure_db_schema()
+
+    # CORS
+    origins = (
+        ["*"]
+        if settings.allowed_origins == "*"
+        else [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/healthz")
+    async def healthz():
+        return {"ok": True}
+
+    @app.post(
+        f"{settings.api_base_path}/image-queries",
+        response_model=SubmitQueryResponse,
+        dependencies=[Depends(require_auth)],
+    )
+    async def submit_image_query(
+        request: Request, detector_id: str, image: UploadFile = File(...)
+    ):
+        # 0) Generate a real id
+        image_query_id = uuid4().hex
+
+        # Read content so we can log accurate size, then rewind before upload
+        try:
+            content = await image.read()
+        except Exception as e:
+            logger.warning(
+                "uploadfile_read_failed",
+                extra={
+                    "event": "uploadfile_read_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+            content = b""
+        finally:
+            # Reset the stream for the upcoming blob upload
+            with suppress(Exception):
+                await image.seek(0)
+            with suppress(Exception):
+                image.file.seek(0)
+
+        # Safe filename (strip any path components)
+        safe_upload_name = (getattr(image, "filename", "") or "").split("/")[-1].split("\\")[-1]
+
+        # Log receipt with the updated fields
+        logger.info(
+            "image_query_received",
+            extra={
+                "event": "image_query_received",
+                "image_query_id": image_query_id,
+                "detector_id": detector_id,
+                "upload_name": safe_upload_name,  # renamed, not 'filename'
+                "content_type": getattr(image, "content_type", None),
+                "size": len(content),
+                "client_ip": getattr(getattr(request, "client", None), "host", None),
+            },
+        )
+
+        # 1) Upload with sanitized name + ContentSettings
+        try:
+            blobref: BlobRef = await upload_starlette_file(
+                _container_client, image, prefix="image-queries"
+            )
+            logger.info(
+                "blob_uploaded",
+                extra={
+                    "event": "blob_uploaded",
+                    "image_query_id": image_query_id,
+                    "container": blobref.container,
+                    "blob_name": blobref.name,
+                    "content_type": blobref.content_type,
+                    "size": blobref.size,
+                },
+            )
+        except Exception as e:  # Azure SDK or I/O error
+            logger.exception(
+                "blob_upload_failed",
+                extra={
+                    "event": "blob_upload_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+            )
+            raise HTTPException(status_code=502, detail=f"blob upload failed: {type(e).__name__}")
+
+        # 2) Best-effort: persist a local row
+        try:
+            with SessionLocal() as db:
+                row = ImageQueryRow(
+                    id=image_query_id,
+                    detector_id=detector_id,        # added
+                    blob_url=blobref.url,           # added
+                    status="QUEUED",
+                    label=None,
+                    confidence=None,
+                    result_type=None,
+                    count=None,
+                    extra=None,
+                )
+                db.add(row)
+                db.commit()
+                logger.info(
+                    "db_row_inserted",
+                    extra={"event": "db_row_inserted", "image_query_id": image_query_id},
+                )
+        except (OperationalError, ProgrammingError, DatabaseError) as e:
+            logger.warning(
+                "db_insert_failed",
+                extra={
+                    "event": "db_insert_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+        except Exception as e:
+            logger.warning(
+                "db_insert_failed_unexpected",
+                extra={
+                    "event": "db_insert_failed_unexpected",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+
+        # 3) Enqueue for worker
+        payload = {
+            "image_query_id": image_query_id,
+            "detector_id": detector_id,
+            "blob_url": blobref.url,  # back-compat
+            "blob_container": blobref.container,
+            "blob_name": blobref.name,
+            "content_type": blobref.content_type,
+            "size": blobref.size,
+        }
+        try:
+            await enqueue_image_query(payload)
+            logger.info(
+                "sb_sent",
+                extra={
+                    "event": "sb_sent",
+                    "image_query_id": image_query_id,
+                    "queue": getattr(settings, "sb_image_queue", "image-queries"),
+                },
+            )
+        except Exception as e:
+            logger.exception(
+                "sb_send_failed",
+                extra={
+                    "event": "sb_send_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+            )
+            raise HTTPException(status_code=502, detail="failed to enqueue image query")
+
+        # 4) Return the id for polling
+        return SubmitQueryResponse(image_query_id=image_query_id, status="QUEUED")
+
+    @app.get(
+        f"{settings.api_base_path}/image-queries/{{image_query_id}}",
+        response_model=QueryStatusResponse,
+        dependencies=[Depends(require_auth)],
+    )
+    async def get_status(image_query_id: str):
+        # Try local DB first; if unavailable, fall back to IntelliOptics
+        row: Optional[ImageQueryRow] = None
+        try:
+            with SessionLocal() as db:
+                row = db.get(ImageQueryRow, image_query_id)
+        except (OperationalError, ProgrammingError, DatabaseError) as e:
+            logger.warning(
+                "db_read_failed",
+                extra={
+                    "event": "db_read_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+        except Exception as e:
+            logger.warning(
+                "db_read_failed_unexpected",
+                extra={
+                    "event": "db_read_failed_unexpected",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+
+        if row:
+            return QueryStatusResponse(
+                id=row.id,
+                status=row.status,
+                label=row.label,
+                confidence=row.confidence,
+                result_type=row.result_type,
+                count=row.count,
+                extra=row.extra,
+            )
+
+        # Fallback: ask IntelliOptics
+        try:
+            iq = io_client().get_image_query(image_query_id)
+        except Exception as e:
+            logger.info(
+                "io_lookup_failed",
+                extra={
+                    "event": "io_lookup_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+            )
+            return QueryStatusResponse(
+                id=image_query_id,
+                status="PROCESSING",
+                label=None,
+                confidence=None,
+                result_type=None,
+                count=None,
+                extra=None,
+            )
+
+        return QueryStatusResponse(
+            id=iq.id,
+            status="DONE" if iq.done_processing else "PROCESSING",
+            label=(iq.result.label if getattr(iq, "result", None) else None),
+            confidence=(iq.result.confidence if getattr(iq, "result", None) else None),
+            result_type=getattr(iq, "result_type", None),
+            count=getattr(getattr(iq, "result", None), "count", None),
+            extra=None,
+        )
+
+    @app.post(
+        f"{settings.api_base_path}/image-queries/{{image_query_id}}/human-label",
+        dependencies=[Depends(require_auth)],
+    )
+    async def human_label(image_query_id: str, body: HumanLabelRequest):
+        # Best-effort: update local row; if DB missing, still enqueue feedback
+        try:
+            with SessionLocal() as db:
+                row: Optional[ImageQueryRow] = db.get(ImageQueryRow, image_query_id)
+                if row:
+                    row.human_label = body.label
+                    row.human_confidence = body.confidence
+                    row.human_notes = body.notes
+                    row.human_user = body.user
+                    if body.count is not None:
+                        row.count = body.count
+                    if body.extra is not None:
+                        row.extra = body.extra
+                    db.add(row)
+                    db.commit()
+                    logger.info(
+                        "db_row_updated",
+                        extra={"event": "db_row_updated", "image_query_id": image_query_id},
+                    )
+        except Exception as e:
+            logger.warning(
+                "db_update_failed",
+                extra={
+                    "event": "db_update_failed",
+                    "image_query_id": image_query_id,
+                    "err": type(e).__name__,
+                },
+                exc_info=True,
+            )
+
+        await enqueue_feedback(
+            {
+                "image_query_id": image_query_id,
+                "label": body.label,
+                "confidence": body.confidence,
+                "count": body.count,
+                "notes": body.notes,
+                "user": body.user,
+            }
+        )
+        logger.info(
+            "feedback_enqueued",
+            extra={"event": "feedback_enqueued", "image_query_id": image_query_id},
+        )
+        return {"ok": True}
+
+    @app.post("/webhooks/intellioptics")
+    async def webhook_ingest(payload: dict):
+        return {"ok": True}
+
+    @app.get("/")
+    async def root():
+        return {"service": "intellioptics-backend", "version": API_VERSION}
+
+    return app
+
+
+# ASGI entrypoint for uvicorn: "app.main:app"
+app = create_app()
+
+
+
