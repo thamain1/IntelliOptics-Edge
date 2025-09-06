@@ -156,3 +156,6 @@ _inventory/
 *.bak
 *.orig
 *.old
+
+backend/api/.env
+backend/worker/.env
