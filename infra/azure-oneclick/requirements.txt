@@ -1,0 +1,14 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+gunicorn==22.0.0
+
+sqlalchemy==2.0.34
+psycopg[binary]==3.2.1
+
+azure-servicebus==7.12.3
+azure-storage-blob==12.19.1
+
+pydantic-settings==2.4.0
+python-multipart==0.0.9
+
+python-dotenv

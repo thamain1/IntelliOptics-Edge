@@ -1,0 +1,41 @@
+name: api-ci
+on: { workflow_dispatch: {}, push: { branches: [ main ] } }
+permissions: { id-token: write, contents: read }
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Build & push API
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/intellioptics-api:latest backend
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/intellioptics-api:latest
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Provision + Deploy API (App Service)
+        env:
+          AZ_RESOURCE_GROUP: ${{ vars.AZ_RESOURCE_GROUP }}
+          AZ_LOCATION: ${{ vars.AZ_LOCATION }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          AZ_SB_NAMESPACE: ${{ secrets.AZ_SB_NAMESPACE }}
+          SERVICE_BUS_CONN: ${{ secrets.SERVICE_BUS_CONN }}
+          AZ_BLOB_ACCOUNT: ${{ secrets.AZ_BLOB_ACCOUNT }}
+          AZ_BLOB_CONTAINER: ${{ vars.AZ_BLOB_CONTAINER }}
+          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+          PG_HOST: ${{ secrets.PG_HOST }}
+          PG_DB: ${{ vars.PG_DB }}
+          PG_USER: ${{ secrets.PG_USER }}
+          PG_PASSWORD: ${{ secrets.PG_PASSWORD }}
+          INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+          INTELLIOPTICS_ENDPOINT: ${{ vars.INTELLIOPTICS_ENDPOINT }}
+          API_PLAN: ${{ vars.API_PLAN }}
+          WEBAPP: ${{ vars.WEBAPP }}
+        run: bash deploy/appservice-api.sh
