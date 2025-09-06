@@ -2,10 +2,10 @@
 
 (For instructions on running on Balena, see [here](./deploy/balena-k3s/README.md))
 
-Run your IntelliOptics models on-prem by hosting an Edge Endpoint on your own hardware.  The Edge Endpoint exposes the exact same API as the IntelliOptics cloud service, so any IntelliOptics application can point to the Edge Endpoint simply by configuring the `IINTELLIOPTICS_ENDPOINT` environment variable as follows:
+Run your IntelliOptics models on-prem by hosting an Edge Endpoint on your own hardware.  The Edge Endpoint exposes the exact same API as the IntelliOptics cloud service, so any IntelliOptics application can point to the Edge Endpoint simply by configuring the `INTELLIOPTICS_ENDPOINT` environment variable as follows:
 
 ```bash
-export IINTELLIOPTICS_ENDPOINT=http://localhost:30101
+export INTELLIOPTICS_ENDPOINT=http://localhost:30101
 # This assumes your IntelliOptics SDK application is running on the same host as the Edge Endpoint.
 ```
 
@@ -24,7 +24,7 @@ While not required, configuring detectors provides fine-grained control over the
 Any application written with the [IntelliOptics SDK]([https://pypi.org/project/groundlight/](https://intelliopticsweb37558.z13.web.core.windows.net/python-sdk/api-reference-docs/index.html)) can work with an Edge Endpoint without any code changes.  Simply set an environment variable with the URL of your Edge Endpoint like:
 
 ```bash
-export IINTELLIOPTICS_ENDPOINT=http://localhost:30101
+export INTELLIOPTICS_ENDPOINT=http://localhost:30101
 ```
 
 To find the correct port, run `kubectl get services` and you should see an entry like this:

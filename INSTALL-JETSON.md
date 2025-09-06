@@ -42,4 +42,4 @@ aws sts get-caller-identity
 kubectl get service edge-endpoint-service
 ```
 
-This IP address and port are your URL for `GROUNDLIGHT_ENDPOINT`
+This IP address and port are your URL for `INTELLIOPTICS_ENDPOINT`
