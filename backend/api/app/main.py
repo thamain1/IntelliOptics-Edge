@@ -1,3 +1,4 @@
+from .routers import labels
 # backend/app/main.py
 from __future__ import annotations
 
@@ -350,3 +351,6 @@ async def submit_image_query(
 @app.get("/")
 async def root() -> Dict[str, str]:
     return {"hello": "intellioptics"}
+
+app.include_router(labels.router)
+
