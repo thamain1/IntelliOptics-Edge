@@ -166,3 +166,7 @@ intellioptics_api_key.txt
 *.pyc
 .vscode/
 .idea/
+
+# backup files
+*_bak
+
