@@ -170,3 +170,5 @@ intellioptics_api_key.txt
 # backup files
 *_bak
 
+# Local diagnostics/scripts
+backend/api/app/diag_*.py

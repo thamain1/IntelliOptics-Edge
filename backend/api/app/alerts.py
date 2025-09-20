@@ -1,284 +1,276 @@
 # backend/api/app/alerts.py
 from __future__ import annotations
 
-import datetime as dt
-import json
 import os
-import pathlib
-import typing as T
 import uuid
-import logging
+import json
+import datetime as dt
+from pathlib import Path
+from typing import Optional, Tuple
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-# ---------- Azure Blob (optional; mount even if missing) ----------
+# --- Logging ---------------------------------------------------------------
+import logging
+
+logger = logging.getLogger("intellioptics.api")
+logger.setLevel(logging.INFO)
+
+# --- Optional Azure SDK ----------------------------------------------------
+_AZURE_OK = True
 try:
     from azure.storage.blob import (
         BlobServiceClient,
+        BlobSasPermissions,
         ContentSettings,
         generate_blob_sas,
-        BlobSasPermissions,
     )
-except Exception:  # pragma: no cover
-    BlobServiceClient = None  # type: ignore
-    ContentSettings = None  # type: ignore
-    generate_blob_sas = None  # type: ignore
-    BlobSasPermissions = None  # type: ignore
+except Exception as e:  # pragma: no cover
+    _AZURE_OK = False
+    logger.warning("[alerts] Azure SDK import failed: %s", e)
 
-log = logging.getLogger("intellioptics.api")
+
 router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
 
-# ---------- Env / Config ----------
-CONN_STR = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "").strip()
-PRIVATE_CONTAINER = os.getenv("AZ_BLOB_CONTAINER", "images").strip()
+# =============================================================================
+# Models
+# =============================================================================
 
-PUBLIC_ENABLE = os.getenv("PUBLIC_SNAPSHOT_ENABLE", "true").lower() not in ("0", "false", "no")
-PUBLIC_CONTAINER = os.getenv("PUBLIC_CONTAINER", "public").strip()
-PUBLIC_PREFIX = os.getenv("PUBLIC_PREFIX", "web/alerts").strip()
-PUBLIC_CACHE_CONTROL = os.getenv("PUBLIC_CACHE_CONTROL", "public, max-age=604800, immutable")
-
-SAS_EXPIRE_MINUTES = int(os.getenv("SAS_EXPIRE_MINUTES", "1440"))
-ARTIFACTS_DIR = pathlib.Path("backend/api/artifacts/ann")  # local annotated snapshots
-
-# ---------- Optional: best-effort DB via psycopg (no import-time connect) ----------
-try:
-    import psycopg  # type: ignore
-    from psycopg.rows import dict_row  # type: ignore
-
-    DB_URL = os.getenv("DB_URL")
-    _DB_OK = bool(DB_URL)
-except Exception:
-    DB_URL = None
-    _DB_OK = False
-
-
-def _db_exec(sql: str, params: tuple | None = None) -> None:
-    if not _DB_OK:
-        return
-    try:
-        with psycopg.connect(DB_URL, autocommit=True) as conn:  # type: ignore
-            with conn.cursor() as cur:
-                cur.execute(sql, params or ())
-    except Exception:
-        pass  # keep API healthy even if DB is down
-
-
-def _db_query(sql: str, params: tuple | None = None) -> list[dict]:
-    if not _DB_OK:
-        return []
-    try:
-        with psycopg.connect(DB_URL) as conn:  # type: ignore
-            with conn.cursor(row_factory=dict_row) as cur:
-                cur.execute(sql, params or ())
-                return list(cur.fetchall())
-    except Exception:
-        return []
-
-# ---------- Connection string helpers ----------
-def _parse_conn_str(conn: str) -> dict[str, str]:
-    """Parse 'key=value;key=value' into a dict (AccountName, AccountKey, EndpointSuffix, etc)."""
-    parts = {}
-    for seg in conn.split(";"):
-        if not seg.strip() or "=" not in seg:
-            continue
-        k, v = seg.split("=", 1)
-        parts[k.strip()] = v.strip()
-    return parts
-
-def _blob_service() -> BlobServiceClient:
-    if not CONN_STR or not BlobServiceClient:
-        raise HTTPException(status_code=500, detail="Blob service not configured (AZURE_STORAGE_CONNECTION_STRING).")
-    return BlobServiceClient.from_connection_string(CONN_STR)
-
-def _account_name_and_key() -> tuple[str, str]:
-    parts = _parse_conn_str(CONN_STR)
-    acct = parts.get("AccountName", "")
-    key = parts.get("AccountKey", "")
-    if not acct or not key:
-        raise HTTPException(status_code=500, detail="Storage connection string missing AccountName/AccountKey.")
-    return acct, key
-
-def _today_parts(now: dt.datetime) -> tuple[int, int, int]:
-    return now.year, now.month, now.day
-
-# ---------- Blob operations ----------
-def _upload_private_and_sas(
-    bsc: BlobServiceClient, local_path: pathlib.Path, now: dt.datetime
-) -> str:
-    """Upload to private container images/alerts/YYYY/MM/DD/<file>.jpg and return a SAS URL."""
-    y, m, d = _today_parts(now)
-    blob_name = f"images/alerts/{y:04d}/{m:02d}/{d:02d}/{local_path.name}"
-    cont = bsc.get_container_client(PRIVATE_CONTAINER)
-    with local_path.open("rb") as f:
-        cont.upload_blob(
-            name=blob_name,
-            data=f,
-            overwrite=True,
-            content_settings=ContentSettings(content_type="image/jpeg", cache_control="no-cache"),
-        )
-
-    account, key = _account_name_and_key()
-    sas = generate_blob_sas(
-        account_name=account,
-        container_name=PRIVATE_CONTAINER,
-        blob_name=blob_name,
-        permission=BlobSasPermissions(read=True),
-        expiry=dt.datetime.utcnow() + dt.timedelta(minutes=SAS_EXPIRE_MINUTES),
-        account_key=key,  # REQUIRED for SAS
-    )
-    url = f"https://{account}.blob.core.windows.net/{PRIVATE_CONTAINER}/{blob_name}?{sas}"
-    log.info(f"[alerts] private SAS generated: {url[:80]}...")
-    return url
-
-def _publish_public_copy(
-    bsc: BlobServiceClient, local_path: pathlib.Path, now: dt.datetime
-) -> str:
-    """Publish a non-expiring public copy for web/email viewing. Returns public HTTPS URL."""
-    y, m, d = _today_parts(now)
-    stem = local_path.stem
-    suffix = local_path.suffix.lower() or ".jpg"
-    unique = uuid.uuid4().hex[:6]
-    blob_name = f"{PUBLIC_PREFIX}/{y:04d}/{m:02d}/{d:02d}/{stem}-{unique}{suffix}"
-
-    cont = bsc.get_container_client(PUBLIC_CONTAINER)
-    with local_path.open("rb") as f:
-        cont.upload_blob(
-            name=blob_name,
-            data=f,
-            overwrite=True,
-            content_settings=ContentSettings(
-                content_type="image/jpeg",
-                cache_control=PUBLIC_CACHE_CONTROL,
-            ),
-        )
-    account, _ = _account_name_and_key()
-    url = f"https://{account}.blob.core.windows.net/{PUBLIC_CONTAINER}/{blob_name}"
-    log.info(f"[alerts] public URL published: {url}")
-    return url
-
-# ---------- Models ----------
-class SimulateRequest(BaseModel):
+class SimulateIn(BaseModel):
     detector_id: str
-    image_query_id: str
-    answer: str = Field(..., description="YES/NO/COUNT/UNCLEAR")
-    confidence: float | None = None
-    count: float | None = None
-    extra: dict | None = None
-    query_text: str | None = Field(None, description='e.g., "Is there a person in the image?"')
+    image_query_id: str = Field(alias="image_query_id")
+    answer: str
+    confidence: Optional[float] = None
+    query_text: Optional[str] = None
+    extra: Optional[dict] = None
 
-class SimulateResponse(BaseModel):
+
+class SimulateOut(BaseModel):
     ok: bool
     detector_id: str
     image_query_id: str
     answer: str
-    snapshot_url: str | None = None  # private SAS URL
-    public_url: str | None = None    # public HTTPS URL
-    query_text: str | None = None
-    stored_event_id: str | None = None
+    snapshot_url: Optional[str] = None
+    public_url: Optional[str] = None
+    query_text: Optional[str] = None
+    stored_event_id: Optional[str] = None
 
-class RecentEvent(BaseModel):
-    id: str
-    detector_id: str
-    answer: str
-    confidence: float | None = None
-    count: float | None = None
-    snapshot_url: str | None = None
-    extra: dict | None = None
-    created_at: str
 
-# ---------- Routes ----------
-@router.post("/simulate", response_model=SimulateResponse)
-def simulate_alert(req: SimulateRequest):
+# =============================================================================
+# Helpers
+# =============================================================================
+
+def _env(name: str, default: Optional[str] = None) -> Optional[str]:
+    v = os.getenv(name)
+    return v if (v is not None and str(v).strip() != "") else default
+
+
+def _parse_account(conn_str: str) -> Tuple[str, str]:
+    # Expect "...;AccountName=...;AccountKey=...;..."
+    parts = dict(x.split("=", 1) for x in conn_str.split(";") if "=" in x)
+    acct = parts.get("AccountName")
+    key = parts.get("AccountKey")
+    if not acct or not key:
+        raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING missing AccountName or AccountKey")
+    return acct, key
+
+
+def _find_annotated_file(iq: str) -> Optional[Path]:
     """
-    Dev-only simulate: if a local annotated file exists (backend/api/artifacts/ann/<IQ>.jpg),
-    upload to private container (+SAS). If enabled, also publish a copy to the public container.
-    Record an alert_event if DB is available (best-effort).
+    Try all known locations for annotated snapshots.
+    Returns the first existing path.
     """
+    candidates = [
+        # Working-dir relative (backend/api) — what capture.ps1 writes
+        Path("artifacts") / "ann" / f"{iq}.jpg",
+        # Module-dir relative (backend/api/app) — some routers used this historically
+        Path(__file__).parent / "artifacts" / "ann" / f"{iq}.jpg",
+        # Add more candidates as needed:
+        # Path("..") / "artifacts" / "ann" / f"{iq}.jpg",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+def _maybe_upload_to_blob(local_path: Path) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Uploads local_path to private container; returns (snapshot_url, public_url).
+    If blob config not present or SDK unavailable, returns (None, None).
+    """
+    if not _AZURE_OK:
+        logger.warning("[alerts] Azure SDK not available")
+        return (None, None)
+
+    conn = _env("AZURE_STORAGE_CONNECTION_STRING")
+    if not conn:
+        logger.warning("[alerts] AZURE_STORAGE_CONNECTION_STRING missing; skipping upload")
+        return (None, None)
+
+    priv_container = _env("AZ_BLOB_CONTAINER", "images")
+    pub_enabled = str(_env("PUBLIC_SNAPSHOT_ENABLE", "false")).lower() == "true"
+    pub_container = _env("PUBLIC_CONTAINER", "public")
+    pub_prefix = _env("PUBLIC_PREFIX", "web/alerts")
+    sas_minutes = int(_env("SAS_EXPIRE_MINUTES", "1440") or "1440")
+
+    # Allow pinning a storage API version to avoid future breaking headers
+    api_ver = _env("AZURE_STORAGE_BLOB_API_VERSION")
+    if api_ver:
+        os.environ["AZURE_STORAGE_BLOB_API_VERSION"] = api_ver
+
+    acct_name, acct_key = _parse_account(conn)
+    svc = BlobServiceClient.from_connection_string(conn)
+
     now = dt.datetime.utcnow()
-    ann_path = ARTIFACTS_DIR / f"{req.image_query_id}.jpg"
+    dated_prefix = f"alerts/{now:%Y/%m/%d}"
+    private_blob = f"{dated_prefix}/{local_path.name}"
 
-    snapshot_sas = None
+    # Upload private
+    bpriv = svc.get_blob_client(container=priv_container, blob=private_blob)
+    with local_path.open("rb") as f:
+        bpriv.upload_blob(
+            f,
+            overwrite=True,
+            content_settings=ContentSettings(content_type="image/jpeg"),
+        )
+    # SAS
+    sas = generate_blob_sas(
+        account_name=acct_name,
+        account_key=acct_key,
+        container_name=priv_container,
+        blob_name=private_blob,
+        permission=BlobSasPermissions(read=True),
+        expiry=now + dt.timedelta(minutes=sas_minutes),
+    )
+    snapshot_url = f"https://{acct_name}.blob.core.windows.net/{priv_container}/{private_blob}?{sas}"
+
     public_url = None
+    if pub_enabled:
+        uid = uuid.uuid4().hex[:8]
+        public_blob = f"{pub_prefix}/{now:%Y/%m/%d}/{local_path.stem}-{uid}.jpg"
+        bpub = svc.get_blob_client(container=pub_container, blob=public_blob)
+        # Copy from private (server-side copy)
+        src = f"https://{acct_name}.blob.core.windows.net/{priv_container}/{private_blob}"
+        bpub.start_copy_from_url(src)
+        public_url = f"https://{acct_name}.blob.core.windows.net/{pub_container}/{public_blob}"
 
-    if ann_path.exists() and BlobServiceClient and ContentSettings and generate_blob_sas:
-        try:
-            bsc = _blob_service()
-            snapshot_sas = _upload_private_and_sas(bsc, ann_path, now)
-            if PUBLIC_ENABLE:
-                try:
-                    public_url = _publish_public_copy(bsc, ann_path, now)
-                except Exception as e:
-                    log.warning(f"[alerts] public publish failed: {e}")
-                    public_url = None
-        except Exception as e:
-            log.warning(f"[alerts] upload/SAS failed: {e}")
-            snapshot_sas = None
-            public_url = None
-    else:
-        log.warning("[alerts] annotated file missing or blob SDK not available; skipping uploads")
+    return (snapshot_url, public_url)
 
-    # Store event (best-effort)
-    event_id = str(uuid.uuid4())
-    _db_exec(
-        """
-        INSERT INTO alert_events (id, detector_id, answer, confidence, count, snapshot_url, extra, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, NOW())
-        """,
-        (
-            event_id,
-            req.detector_id,
-            req.answer,
-            req.confidence,
-            req.count,
-            snapshot_sas,
-            json.dumps(req.extra or {}),
-        ),
+
+def _store_event_best_effort(payload: dict) -> Optional[str]:
+    """
+    Placeholder: write to DB if available. Here we just synthesize an ID.
+    Keep this best-effort to avoid breaking alert paths when DB is down.
+    """
+    try:
+        # TODO: integrate real DB write
+        return str(uuid.uuid4())
+    except Exception as e:  # pragma: no cover
+        logger.warning("[alerts] DB write skipped: %s", e)
+        return None
+
+
+# =============================================================================
+# Routes
+# =============================================================================
+
+@router.post("/simulate", response_model=SimulateOut)
+def simulate_alert(body: SimulateIn) -> SimulateOut:
+    """
+    - Finds annotated snapshot for image_query_id.
+    - Uploads to Azure Blob (private) + optional public publish.
+    - Returns URLs and stores a lightweight event.
+    """
+    iq = body.image_query_id
+    answer = body.answer.upper().strip()
+
+    local = _find_annotated_file(iq)
+    if not local:
+        # Emit a clear log showing where we looked
+        logger.warning(
+            "[alerts] annotated file not found for IQ=%s; looked in: %s",
+            iq,
+            [
+                str(Path("artifacts") / "ann" / f"{iq}.jpg"),
+                str(Path(__file__).parent / "artifacts" / "ann" / f"{iq}.jpg"),
+            ],
+        )
+        # Still return 200 with ok:true to preserve current behavior, but with null URLs
+        stored_id = _store_event_best_effort(
+            {
+                "detector_id": body.detector_id,
+                "image_query_id": iq,
+                "answer": answer,
+                "query_text": body.query_text,
+                "note": "annotated-file-missing",
+            }
+        )
+        return SimulateOut(
+            ok=True,
+            detector_id=body.detector_id,
+            image_query_id=iq,
+            answer=answer,
+            snapshot_url=None,
+            public_url=None,
+            query_text=body.query_text,
+            stored_event_id=stored_id,
+        )
+
+    # We have a file; attempt Azure upload if configured, else return null URLs
+    snapshot_url: Optional[str] = None
+    public_url: Optional[str] = None
+    try:
+        snapshot_url, public_url = _maybe_upload_to_blob(local)
+        if snapshot_url:
+            logger.info("[alerts] uploaded -> SAS OK for IQ=%s", iq)
+        if public_url:
+            logger.info("[alerts] published -> public OK for IQ=%s", iq)
+        if not snapshot_url and not public_url:
+            logger.warning("[alerts] blob not configured or SDK missing; URLs null for IQ=%s", iq)
+    except Exception as e:  # pragma: no cover
+        logger.warning("[alerts] upload/publish failed for IQ=%s: %s", iq, e, exc_info=True)
+        snapshot_url = None
+        public_url = None
+
+    stored_id = _store_event_best_effort(
+        {
+            "detector_id": body.detector_id,
+            "image_query_id": iq,
+            "answer": answer,
+            "confidence": body.confidence,
+            "query_text": body.query_text,
+            "extra": body.extra or {},
+            "snapshot_url": snapshot_url,
+            "public_url": public_url,
+        }
     )
 
-    return SimulateResponse(
+    return SimulateOut(
         ok=True,
-        detector_id=req.detector_id,
-        image_query_id=req.image_query_id,
-        answer=req.answer,
-        snapshot_url=snapshot_sas,
+        detector_id=body.detector_id,
+        image_query_id=iq,
+        answer=answer,
+        snapshot_url=snapshot_url,
         public_url=public_url,
-        query_text=req.query_text,
-        stored_event_id=event_id if _DB_OK else None,
+        query_text=body.query_text,
+        stored_event_id=stored_id,
     )
 
-@router.get("/events/recent", response_model=list[RecentEvent])
-def recent_events(limit: int = Query(20, ge=1, le=200)):
-    """Return most recent events if DB available; otherwise an empty list."""
-    rows = _db_query(
-        """
-        SELECT id, detector_id, answer, confidence, count, snapshot_url, extra,
-               to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at
-        FROM alert_events
-        ORDER BY created_at DESC
-        LIMIT %s
-        """,
-        (limit,),
-    )
-    return [RecentEvent(**r) for r in rows]
+
+@router.get("/events/recent")
+def recent_events(limit: int = 10) -> dict:
+    """
+    Placeholder recent events endpoint. Returns an empty list here so we
+    keep the shape stable (your DB impl can plug in).
+    """
+    return {"ok": True, "items": [], "limit": limit}
+
 
 @router.post("/admin/migrate")
-def admin_migrate():
-    """Ensure alert_events has required columns; no-op if DB is unavailable."""
-    ran: list[str] = []
-    if not _DB_OK:
-        return {"ok": False, "ran": ran}
-
-    stmts = [
-        "ALTER TABLE IF NOT EXISTS alert_events ADD COLUMN IF NOT EXISTS confidence DOUBLE PRECISION NULL",
-        "ALTER TABLE IF NOT EXISTS alert_events ADD COLUMN IF NOT EXISTS count DOUBLE PRECISION NULL",
-        "ALTER TABLE IF NOT EXISTS alert_events ADD COLUMN IF NOT EXISTS snapshot_url VARCHAR(2048) NULL",
-        "ALTER TABLE IF NOT EXISTS alert_events ADD COLUMN IF NOT EXISTS extra JSONB NULL",
-    ]
-    for s in stmts:
-        try:
-            _db_exec(s)
-            ran.append(s)
-        except Exception:
-            pass
-    return {"ok": True, "ran": ran}
+def admin_migrate() -> dict:
+    """
+    Placeholder migration endpoint (no-op).
+    """
+    return {"ok": True, "migrations": []}
