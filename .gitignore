@@ -159,3 +159,10 @@ _inventory/
 
 backend/api/.env
 backend/worker/.env
+# IntelliOptics local secrets & caches
+intellioptics_api_key.txt
+*.env.local
+*.env.*.local
+*.pyc
+.vscode/
+.idea/
