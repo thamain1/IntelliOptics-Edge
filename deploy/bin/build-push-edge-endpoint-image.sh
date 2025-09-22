@@ -13,9 +13,6 @@
 #
 # Note: Ensure you have the necessary AWS credentials and Docker installed.
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
-
 set -e
 
 # Ensure that you're in the same directory as this script before running it
@@ -24,12 +21,26 @@ cd "$(dirname "$0")"
 TAG=$(./git-tag-name.sh)
 
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+REGISTRY_LOGIN_SERVER=""
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [ -n "${ACR_LOGIN_SERVER:-}" ]; then
+  REGISTRY_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
+  ACR_NAME=${ACR_NAME:-${REGISTRY_LOGIN_SERVER%%.*}}
+  echo "🔐 Logging into Azure Container Registry '${ACR_NAME}'"
+  az acr login --name "${ACR_NAME}"
+else
+  ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
+  ECR_REGION=${ECR_REGION:-us-west-2}
+  ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+  REGISTRY_LOGIN_SERVER="${ECR_URL}"
+
+  # Authenticate docker to ECR
+  aws ecr get-login-password --region ${ECR_REGION} | docker login \
+                    --username AWS \
+                    --password-stdin  ${ECR_URL}
+fi
+
+REGISTRY_IMAGE="${REGISTRY_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
 
 if [ "$1" == "dev" ]; then
   echo "'$0 dev' is no longer supported!!"
@@ -60,10 +71,10 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${REGISTRY_IMAGE}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+echo "Successfully pushed image to registry=${REGISTRY_LOGIN_SERVER}"
+echo "${REGISTRY_IMAGE}:${TAG}"
 
 

@@ -8,9 +8,6 @@
 set -e  # Exit immediately on error
 set -o pipefail
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
-
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
 
@@ -32,13 +29,26 @@ fi
 
 GIT_TAG=$(./git-tag-name.sh)
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
-ECR_REPO="${ECR_URL}/${EDGE_ENDPOINT_IMAGE}"
+REGISTRY_LOGIN_SERVER=""
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [ -n "${ACR_LOGIN_SERVER:-}" ]; then
+    REGISTRY_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
+    ACR_NAME=${ACR_NAME:-${REGISTRY_LOGIN_SERVER%%.*}}
+    echo "🔐 Logging into Azure Container Registry '${ACR_NAME}'"
+    az acr login --name "${ACR_NAME}"
+else
+    ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
+    ECR_REGION=${ECR_REGION:-us-west-2}
+    ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+    REGISTRY_LOGIN_SERVER="${ECR_URL}"
+
+    # Authenticate docker to ECR
+    aws ecr get-login-password --region ${ECR_REGION} | docker login \
+                      --username AWS \
+                      --password-stdin  ${ECR_URL}
+fi
+
+ECR_REPO="${REGISTRY_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
 
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
