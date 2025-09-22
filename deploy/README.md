@@ -136,7 +136,7 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}"
 ```
 
-This will install the Edge Endpoint doing GPU-based inference in the `edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
+This will install the Edge Endpoint doing GPU-based inference in the `intellioptics-edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
 
 To change values that you've customized after you've installed the Edge Endpoint or to install an updated chart, use the `helm upgrade` command. For example, to change the `intelliopticsApiToken` value, you can run:
 
@@ -182,7 +182,7 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
 After installation, verify your pods are running:
 
 ```bash
-kubectl get pods -n edge
+kubectl get pods -n intellioptics-edge
 ```
 
 You should see output similar to:
@@ -285,7 +285,7 @@ Here are some common issues you might encounter when deploying the edge endpoint
 If you see an error like this when running the Helm install command:
 ```
 Error: failed pre-install: 1 error occurred:
-        * job validate-api-token-edge failed: BackoffLimitExceeded
+        * job validate-api-token-intellioptics-edge failed: BackoffLimitExceeded
 ```
 it means that the API token you provided is not giving access.
 
@@ -293,13 +293,13 @@ There are two possible reasons for this:
 1. The API token is invalid. Check the value you're providing and make sure it maps to a valid API token in the IntelliOptics web app.
 2. Your account does not have permission to use edge services. Not all plans enable edge inference. To find out more and get your account enabled, contact IntelliOptics support at [support@IntelliOptics.ai](mailto:support@IntelliOptics.ai).
 
-To diagnose which of these is the issue (or if it's something else entirely), you can check the logs of the `validate-api-token-edge` job:
+To diagnose which of these is the issue (or if it's something else entirely), you can check the logs of the `validate-api-token-intellioptics-edge` job:
 
 ```shell
-kubectl logs -n default job/validate-api-token-edge
+kubectl logs -n default job/validate-api-token-intellioptics-edge
 ```
 
-(If you're installing into a different namespace, replace `edge` in the job name with the name of your namespace.)
+(If you're installing into a different namespace, replace `intellioptics-edge` in the job name with the name of your namespace.)
 
 This will show you the error returned by the IntelliOptics cloud service.
 
@@ -311,7 +311,7 @@ helm uninstall -n default edge-endpoint --keep-history
 
 Then, re-run the Helm install command.
 
-### Helm deployment fails with `namespaces "edge" not found`.
+### Helm deployment fails with `namespaces "intellioptics-edge" not found`.
 
 This happens when there was an initial failure in the Helm install command and the namespace was not created. 
 
