@@ -32,13 +32,38 @@ fi
 
 GIT_TAG=$(./git-tag-name.sh)
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
-ECR_REPO="${ECR_URL}/${EDGE_ENDPOINT_IMAGE}"
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
+if [ -n "${ACR_LOGIN_SERVER}" ]; then
+    REGISTRY_URL="${ACR_LOGIN_SERVER}"
+else
+    REGISTRY_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+fi
+
+ECR_REPO="${REGISTRY_URL}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker to the container registry
+if [ -n "${ACR_LOGIN_SERVER}" ]; then
+    if [ -n "${ACR_USERNAME}" ] && [ -n "${ACR_PASSWORD}" ]; then
+        echo "Using provided ACR credentials for docker login"
+        if ! printf '%s' "${ACR_PASSWORD}" | docker login \
+                --username "${ACR_USERNAME}" \
+                --password-stdin "${ACR_LOGIN_SERVER}"; then
+            echo "Failed to authenticate to ${ACR_LOGIN_SERVER} with provided credentials" >&2
+            exit 1
+        fi
+    else
+        ACR_NAME=${ACR_NAME:-${ACR_LOGIN_SERVER%%.*}}
+        echo "Logging into Azure Container Registry ${ACR_NAME} using az acr login"
+        if ! az acr login --name "${ACR_NAME}"; then
+            echo "Failed to authenticate to Azure Container Registry ${ACR_NAME} via az acr login" >&2
+            exit 1
+        fi
+    fi
+else
+    aws ecr get-login-password --region ${ECR_REGION} | docker login \
                   --username AWS \
-                  --password-stdin  ${ECR_URL}
+                  --password-stdin  ${REGISTRY_URL}
+fi
 
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
