@@ -14,18 +14,13 @@ spec:
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'mkdir -p "$PINAMOD_DIR" && azcopy sync "$PINAMOD_SYNC_SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
-        - name: AWS_ACCESS_KEY_ID
+        - name: PINAMOD_SYNC_SOURCE
           valueFrom:
             secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
+              name: pinamod-storage
+              key: sync_source
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         volumeMounts:
