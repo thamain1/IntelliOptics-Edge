@@ -12,30 +12,9 @@ spec:
       - name: image-puller
 
         command: ["echo", "Successfully pulled image to warm cache"]
-      - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
-        env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
-        - name: PINAMOD_DIR
-          value: /opt/models/pinamod
-        volumeMounts:
-        - name: pina-models
-          mountPath: /opt/models
-      volumes:
-      - name: pina-models
-        hostPath:
-          path: /opt/intellioptics/edge/pinamod-public
-          type: Directory
+      # The AWS CLI tooling previously synchronized the public PINAMOD artifacts at runtime.
+      # This is no longer required because models are now fetched directly through the
+      # IntelliOptics API when detectors start up, so we simply warm the image cache here.
   backoffLimit: 2
 
 

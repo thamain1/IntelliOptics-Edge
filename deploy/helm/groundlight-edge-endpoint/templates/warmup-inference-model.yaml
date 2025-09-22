@@ -14,26 +14,11 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
-      - name: sync-pinamod
-
-        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR; aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
-        env:
-        - name: PINAMOD_DIR
-          value: /opt/models/pinamod-public/pinamod
-        volumeMounts:
-        - name: pina-models
-          mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
-      volumes:
-      - name: pina-models
-        persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
+      # Previous warmup logic mirrored artifacts from AWS S3. The edge endpoint now
+      # retrieves required assets dynamically via the upstream API, so this job only
+      # pulls the container image to warm the cache.
   backoffLimit: 2
 
 

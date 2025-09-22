@@ -31,14 +31,9 @@ if [ ! -f "$FILE" ]; then
 fi
 
 
-echo "Creating Kubernetes secrets..."
+if [ -s /shared/credentials ] || [ -s /shared/token.txt ]; then
+    echo "Legacy AWS credential artifacts detected, but AWS support has been removed."
+fi
 
-kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
-    --dry-run=client -o yaml | kubectl apply -f -
-
-kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
-    --docker-username=AWS \
-    --docker-password="$(cat /shared/token.txt)" \
-    --dry-run=client -o yaml | kubectl apply -f -
+echo "AWS credential provisioning has been removed; nothing to apply."
 
