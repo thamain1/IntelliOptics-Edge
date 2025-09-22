@@ -1,20 +1,23 @@
 #!/bin/bash
 
-# This script builds and pushes the edge-endpoint Docker image to ECR.
+# This script builds and pushes the edge-endpoint Docker image to Azure
+# Container Registry (ACR).
 #
 # Usage:
 #   ./build-push-edge-endpoint-image.sh
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
-# 2. Authenticates Docker with ECR.
+# 2. Authenticates Docker with Azure Container Registry.
 # 3. Builds a multi-platform Docker image.
-# 4. Pushes the image to ECR.
+# 4. Pushes the image to Azure Container Registry.
 #
-# Note: Ensure you have the necessary AWS credentials and Docker installed.
+# Note: Ensure you have the necessary Azure credentials and Docker installed.
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-intelliopticsedge.azurecr.io}
+ACR_USERNAME=${ACR_USERNAME:-}
+ACR_PASSWORD=${ACR_PASSWORD:-}
+ACR_NAME=${ACR_NAME:-}
 
 set -e
 
@@ -24,12 +27,33 @@ cd "$(dirname "$0")"
 TAG=$(./git-tag-name.sh)
 
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+ACR_REPOSITORY=${ACR_REPOSITORY:-${EDGE_ENDPOINT_IMAGE}}
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [ -z "${ACR_LOGIN_SERVER}" ]; then
+  echo "Error: ACR_LOGIN_SERVER must be set."
+  exit 1
+fi
+
+ACR_SERVER_HOST=${ACR_LOGIN_SERVER%%:*}
+
+# Authenticate docker to ACR
+if command -v az >/dev/null 2>&1; then
+  ACR_NAME=${ACR_NAME:-${ACR_SERVER_HOST%%.azurecr.io}}
+  if [ -z "${ACR_NAME}" ]; then
+    echo "Error: Unable to determine ACR name for az login. Set ACR_NAME explicitly."
+    exit 1
+  fi
+  echo "🔐 Logging into Azure Container Registry '${ACR_NAME}' via az CLI"
+  az acr login --name "${ACR_NAME}"
+elif [ -n "${ACR_USERNAME}" ] && [ -n "${ACR_PASSWORD}" ]; then
+  echo "🔐 Logging into Azure Container Registry '${ACR_LOGIN_SERVER}' via docker login"
+  echo "${ACR_PASSWORD}" | docker login "${ACR_LOGIN_SERVER}" \
+    --username "${ACR_USERNAME}" \
+    --password-stdin
+else
+  echo "Error: Unable to authenticate to ACR. Provide az CLI or set ACR_USERNAME and ACR_PASSWORD."
+  exit 1
+fi
 
 if [ "$1" == "dev" ]; then
   echo "'$0 dev' is no longer supported!!"
@@ -45,25 +69,25 @@ fi
 # Install QEMU, a generic and open-source machine emulator and virtualizer
 docker run --rm --privileged linuxkit/binfmt:af88a591f9cc896a52ce596b9cf7ca26a061ef97
 
-# Check if tempbuilder already exists
-if ! docker buildx ls | grep -q tempgroundlightedgebuilder; then
+# Check if IntelliOptics buildx builder already exists
+if ! docker buildx ls | grep -q intellioptics-edge-builder; then
   # Prep for multiplatform build - the build is done INSIDE a docker container
-  docker buildx create --name tempgroundlightedgebuilder --use
+  docker buildx create --name intellioptics-edge-builder --use
 else
-  # If tempbuilder exists, set it as the current builder
-  docker buildx use tempgroundlightedgebuilder
+  # If the IntelliOptics builder exists, set it as the current builder
+  docker buildx use intellioptics-edge-builder
 fi
 
-# Ensure that the tempbuilder container is running
-docker buildx inspect tempgroundlightedgebuilder --bootstrap
+# Ensure that the IntelliOptics buildx container is running
+docker buildx inspect intellioptics-edge-builder --bootstrap
 
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${ACR_LOGIN_SERVER}/${ACR_REPOSITORY}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+echo "Successfully pushed image to ACR registry=${ACR_LOGIN_SERVER}"
+echo "${ACR_LOGIN_SERVER}/${ACR_REPOSITORY}:${TAG}"
 
 
