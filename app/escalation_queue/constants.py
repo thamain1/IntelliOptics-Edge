@@ -1,3 +1,5 @@
+DEFAULT_REQUEST_CACHE_DIR = "/opt/intellioptics/queue/request-cache"
+DEFAULT_REQUEST_CACHE_MAX_ENTRIES = 15
 DEFAULT_QUEUE_BASE_DIR = "/opt/intellioptics/queue"  # Default base directory for escalation queue files.
 READING_DIR_SUFFIX = "reading"
 WRITING_DIR_SUFFIX = "writing"
