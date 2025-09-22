@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -61,7 +61,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       containers:
       - name: nginx
-
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -98,7 +98,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           failureThreshold: 4  # after 40 seconds of failure, restart the pod
 
       - name: edge-endpoint
-
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -119,6 +119,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: "1"
         - name: INTELLIOPTICS_ENDPOINT
           value: "{{ .Values.upstreamEndpoint }}"
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: edge-config-volume
           mountPath: /etc/intellioptics/edge-config
@@ -132,7 +137,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           mountPath: /opt/intellioptics/device
 
       - name: status-monitor
-
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -160,7 +165,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
-
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -181,6 +186,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             secretKeyRef:
               name: IntelliOptics-api-token
               key: INTELLIOPTICS_API_TOKEN
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: edge-config-volume
           mountPath: /etc/intellioptics/edge-config

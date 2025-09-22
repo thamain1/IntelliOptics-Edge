@@ -14,26 +14,30 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR; aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.inferenceTag" .) }}
+        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
+        command: ['sh', '-c', 'mkdir -p "$PINAMOD_DIR"; az storage blob download-batch --source "${PINAMOD_CONTAINER:-pinamod}" --destination "$PINAMOD_DIR" --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --pattern "*" --no-progress']
         env:
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
+        - name: PINAMOD_CONTAINER
+          value: {{ .Values.azure.storage.pinamodContainer | default "pinamod" | quote }}
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
       volumes:
       - name: pina-models
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
   backoffLimit: 2
 
 

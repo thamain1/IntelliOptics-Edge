@@ -1,45 +1,40 @@
 {{- define "edge-endpoint.registry-credentials.podSpec" -}}
-restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
+restartPolicy: OnFailure
 
 containers:
-  - name: aws-cli
-
+  - name: refresh-acr-credentials
+    image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) }}
+    imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
     command:
       - /bin/sh
-      - /app/init-aws-access-retrieve.sh
+      - -c
+      - /intellioptics-edge/deploy/bin/refresh-ecr-login.sh
     env:
-      - name: INTELLIOPTICS_ENDPOINT
-        value: "{{ .Values.upstreamEndpoint }}"
-      - name: INTELLIOPTICS_API_TOKEN
+      - name: AZURE_CLIENT_ID
         valueFrom:
           secretKeyRef:
-            name: IntelliOptics-api-token
-            key: INTELLIOPTICS_API_TOKEN
-
-    volumeMounts:
-      - name: shared-volume
-        mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-retrieve.sh
-        subPath: init-aws-access-retrieve.sh
-
-  - name: kubectl
-
-    command:
-      - /bin/sh
-      - /app/init-aws-access-apply.sh
-    volumeMounts:
-      - name: shared-volume
-        mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-apply.sh
-        subPath: init-aws-access-apply.sh
-volumes:
-  - name: init-aws-access
-    configMap:
-      name: init-aws-access
-  - name: shared-volume
-    emptyDir: {}
+            name: azure-service-principal
+            key: AZURE_CLIENT_ID
+      - name: AZURE_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: azure-service-principal
+            key: AZURE_CLIENT_SECRET
+      - name: AZURE_TENANT_ID
+        valueFrom:
+          secretKeyRef:
+            name: azure-service-principal
+            key: AZURE_TENANT_ID
+      - name: AZURE_SUBSCRIPTION_ID
+        valueFrom:
+          secretKeyRef:
+            name: azure-service-principal
+            key: AZURE_SUBSCRIPTION_ID
+        optional: true
+      - name: AZURE_CONTAINER_REGISTRY
+        value: "{{ .Values.azure.acrName }}"
+      - name: ACR_LOGIN_SERVER
+        value: "{{ .Values.azure.loginServer }}"
 {{- end }}
 

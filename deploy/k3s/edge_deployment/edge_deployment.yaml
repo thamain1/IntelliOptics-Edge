@@ -41,7 +41,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
         - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+          image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           volumeMounts:
             - name: edge-endpoint-persistent-volume
@@ -52,7 +52,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       containers:
         - name: edge-endpoint
-
+          image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 30101
@@ -68,6 +68,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             # TODO: Once we have kubernetes-based tests, we can remove this feature flag.
             - name: DEPLOY_DETECTOR_LEVEL_INFERENCE
               value: "1"
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: azure-storage-credentials
+                  key: AZURE_STORAGE_CONNECTION_STRING
           volumeMounts:
             - name: edge-config-volume
               mountPath: /etc/intellioptics/edge-config
@@ -98,7 +103,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             failureThreshold: 4 # after 40 seconds of failure, restart the pod
 
         - name: status-monitor
-
+          image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8123
@@ -119,7 +124,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
               mountPath: /opt/intellioptics/device
 
         - name: inference-model-updater
-
+          image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           imagePullPolicy: Always
           command: ["/bin/bash", "-c"]
           args: ["poetry run python -m app.model_updater.update_models"]
@@ -134,6 +139,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
                   name: IntelliOptics-api-token
                   key: INTELLIOPTICS_API_TOKEN
                   optional: true
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: azure-storage-credentials
+                  key: AZURE_STORAGE_CONNECTION_STRING
           volumeMounts:
             - name: edge-config-volume
               mountPath: /etc/intellioptics/edge-config

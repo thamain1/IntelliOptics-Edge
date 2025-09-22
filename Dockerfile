@@ -31,6 +31,7 @@ RUN apt-get update && \
     nginx \
     less \
     unzip \
+    jq \
     libglib2.0-0 \
     libgl1-mesa-glx \
     sqlite3 && \
@@ -46,6 +47,9 @@ RUN cd /tmp && \
     unzip awscliv2.zip && \
     ./aws/install --update && \
     rm -rf awscliv2.zip aws
+
+# Install the Azure CLI for interacting with Azure Container Registry and storage
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \

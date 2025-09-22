@@ -48,20 +48,25 @@ spec:
       # NOTE: the sync-pinamod container is duplicated in the warmup_inference_model.yaml Job
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.inferenceTag" .) }}
+        command: ['sh', '-c', 'mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --source "${PINAMOD_CONTAINER:-pinamod}" --destination "$PINAMOD_DIR" --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --pattern "*" --no-progress']
         env:
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
+        - name: PINAMOD_CONTAINER
+          value: {{ .Values.azure.storage.pinamodContainer | default "pinamod" | quote }}
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ printf "%s/intellioptics/edge-endpoint:%s" .Values.azure.loginServer (include "IntelliOptics-edge-endpoint.inferenceTag" .) }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
@@ -70,6 +75,11 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: placeholder-model-name
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
         - name: LOG_LEVEL
           value: {{ .Values.logLevel | quote }}
         - name: LOAD_ALL_PIPELINES  # Load only the pipelines that are needed for edge inference.
@@ -123,9 +133,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
 
 
 

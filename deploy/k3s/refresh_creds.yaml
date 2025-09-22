@@ -1,4 +1,4 @@
-# Cron job to refresh our local credentials
+# Cron job to refresh Azure Container Registry credentials
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -17,7 +17,7 @@ spec:
           imagePullSecrets:
             - name: registry-credentials
           containers:
-          - name: ecr
+          - name: acr
 
             command: [
               "/bin/sh",
@@ -25,17 +25,34 @@ spec:
               "/intellioptics-edge/deploy/bin/refresh-ecr-login.sh"
               ]
             env:
-            - name: AWS_ACCESS_KEY_ID
+            - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_access_key_id
-            - name: AWS_SECRET_ACCESS_KEY
+                  name: azure-service-principal
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_secret_access_key
-            
+                  name: azure-service-principal
+                  key: AZURE_CLIENT_SECRET
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: AZURE_TENANT_ID
+            - name: AZURE_SUBSCRIPTION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: AZURE_SUBSCRIPTION_ID
+              optional: true
+            - name: ACR_NAME
+              value: acrintellioptics
+            - name: AZURE_CONTAINER_REGISTRY
+              value: acrintellioptics
+            - name: ACR_LOGIN_SERVER
+              value: acrintellioptics.azurecr.io
+
           restartPolicy: OnFailure
 
 

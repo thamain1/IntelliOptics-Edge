@@ -1,4 +1,4 @@
-# Cron job to refresh our local credentials
+# Cron job to refresh our local Azure Container Registry credentials
 apiVersion: batch/v1
 kind: CronJob
 metadata:

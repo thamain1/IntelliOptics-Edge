@@ -85,7 +85,7 @@ export EDGE_ENDPOINT_PORT=${EDGE_ENDPOINT_PORT:-30101}
 
 # Create Secrets
 if ! ./deploy/bin/make-aws-secret.sh; then
-    echo "Failed to execute make-aws-secret.sh successfully. Exiting."
+    echo "Failed to provision Azure secrets via make-aws-secret.sh. Exiting."
     exit 1
 fi
 
