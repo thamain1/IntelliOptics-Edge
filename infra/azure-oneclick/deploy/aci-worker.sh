@@ -6,7 +6,8 @@ DIR=$(cd "$(dirname "$0")" && pwd)
 IMG="$ACR_LOGIN_SERVER/${IMAGE_NAME}:${IMAGE_TAG}"
 
 az acr login --name "$ACR" >/dev/null
-( cd worker-shim && docker build -t "$IMG" . && docker push "$IMG" )
+WORKER_DIR=$(cd "$DIR/../../../backend/worker" && pwd)
+( cd "$WORKER_DIR" && docker build -t "$IMG" . && docker push "$IMG" )
 
 ACI_NAME=${ACI_NAME:-io-worker}
 ENVVARS=(
