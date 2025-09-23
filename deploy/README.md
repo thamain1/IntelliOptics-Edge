@@ -378,3 +378,8 @@ Follow the following steps:
 > ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 
+> [!NOTE]
+> The Docker build now pulls the Microsoft package repository to install the `azure-cli` tool inside the edge-endpoint image so
+> the container can authenticate with Azure Blob Storage. Ensure the build host can reach `packages.microsoft.com` when running
+> the build script.
+
