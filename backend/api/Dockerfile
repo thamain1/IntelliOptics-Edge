@@ -1,4 +1,4 @@
-# Dockerfile (repo root)
+# Dockerfile for IntelliOptics API
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -6,26 +6,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # System deps (keep minimal)
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential git \
  && rm -rf /var/lib/apt/lists/*
 
 # --- App code ---
-# Your FastAPI package lives here in your repo:
-#   Azure/intellioptics-oneclick/backend/app  --> copied to /app/app
-COPY Azure/intellioptics-oneclick/backend/app /app/app
-
-# --- IntelliOptics SDK (wheel) ---
-# Keep this line only if that wheel exists in your build context
-COPY intellioptics-python-sdk/dist/intellioptics-0.1.0-py3-none-any.whl /tmp/
-RUN ls -l /tmp || true
+# Copy the FastAPI sources from this repository into the image
+COPY api/app /app/app
 
 # --- Python deps ---
-# If you don’t need Postgres in this image, you can drop "psycopg[binary]"
+COPY api/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-      fastapi "uvicorn[standard]" pydantic sqlalchemy python-multipart \
+    pip install --no-cache-dir -r /tmp/requirements.txt \
       azure-identity azure-servicebus azure-storage-blob httpx \
-      /tmp/intellioptics-0.1.0-py3-none-any.whl
+      "intellioptics @ git+https://github.com/thamain1/IntelliOptics.git#subdirectory=python-sdk"
 
 EXPOSE 8080
 
