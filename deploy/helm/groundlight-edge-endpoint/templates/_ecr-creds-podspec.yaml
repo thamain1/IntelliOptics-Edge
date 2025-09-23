@@ -3,11 +3,16 @@ restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
 
 containers:
-  - name: aws-cli
+  - name: azure-cli
 
     command:
       - /bin/sh
       - /app/init-aws-access-retrieve.sh
+    envFrom:
+      - secretRef:
+          name: {{ .Values.azureRegistryAuthSecretName }}
+          optional: true
+
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
@@ -16,6 +21,12 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
+      - name: ACR_LOGIN_SERVER
+        value: "{{ .Values.acr.loginServer }}"
+{{- if .Values.acr.name }}
+      - name: ACR_NAME
+        value: "{{ .Values.acr.name }}"
+{{- end }}
 
     volumeMounts:
       - name: shared-volume

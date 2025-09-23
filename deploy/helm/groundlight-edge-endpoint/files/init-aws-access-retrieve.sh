@@ -1,35 +1,36 @@
 #!/bin/bash
 
-# Part one of getting AWS credentials set up.
-# This script runs in a aws-cli container and retrieves the credentials from Janzu.
-# Then it uses the credentials to get a login token for ECR.
+# Part one of setting up container registry access for the edge endpoint.
+# This script runs in an Azure CLI container and retrieves credentials from
+# one of three possible sources:
+#   1. Pre-provided ACR credentials (ACR_USERNAME/ACR_PASSWORD)
+#   2. Service principal credentials (AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID)
+#   3. Managed identity credentials (AZURE_USE_MANAGED_IDENTITY=true, optional IDENTITY_CLIENT_ID)
 #
-# It saves three files to the shared volume for use by part two:
-# 1. /shared/credentials: The AWS credentials file that can be mounted into pods at ~/.aws/credentials
-# 2. /shared/token.txt: The ECR login token that can be used to pull images from ECR. This will
-#    be used to create a registry secret in k8s.
-# 3. /shared/done: A marker file to indicate that the script has completed successfully.
+# It stores the resolved registry credentials on the shared volume for
+# init-aws-access-apply.sh (part two) to consume.
+#
+# The script also supports a "validate" mode used by the Helm pre-install
+# hooks to verify the IntelliOptics API token.
 
-# Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT
-# settings. If you run it with the first argument being "validate", it will only run through the 
-# check of the curl results and exit with 0 if they are valid or 1 if they are not. In the latter 
-# case, it will also log the results.
+set -euo pipefail
 
-if [ "$1" == "validate" ]; then
+validate="no"
+if [ "${1:-}" == "validate" ]; then
   echo "Validating INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT..."
-  if [ -z "$INTELLIOPTICS_API_TOKEN" ]; then
+  if [ -z "${INTELLIOPTICS_API_TOKEN:-}" ]; then
     echo "INTELLIOPTICS_API_TOKEN is not set. Exiting."
     exit 1
   fi
 
-  if [ -z "$INTELLIOPTICS_ENDPOINT" ]; then
+  if [ -z "${INTELLIOPTICS_ENDPOINT:-}" ]; then
     echo "INTELLIOPTICS_ENDPOINT is not set. Exiting."
     exit 1
   fi
   validate="yes"
 fi
 
-# This function replicates the IntelliOptics SDK's logic to clean up user-supplied endpoint URLs 
+# This function replicates the IntelliOptics SDK's logic to clean up user-supplied endpoint URLs
 sanitize_endpoint_url() {
     local endpoint="${1:-$INTELLIOPTICS_ENDPOINT}"
 
@@ -77,48 +78,134 @@ sanitize_endpoint_url() {
     echo "$sanitized_endpoint"
 }
 
-sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT}")
-echo "Sanitized URL: $sanitized_url"
+log() {
+    echo "$@" >&2
+}
 
-echo "Fetching temporary AWS credentials from the IntelliOptics cloud service..."
-HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
+should_use_managed_identity() {
+    case "${AZURE_USE_MANAGED_IDENTITY:-false}" in
+        1|true|TRUE|True|yes|YES|Yes) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-if [ $? -ne 0 ]; then
-  echo "Failed to fetch credentials from the IntelliOptics cloud service"
-  if [ -n "$HTTP_STATUS" ]; then
-    echo "HTTP Status: $HTTP_STATUS"
-  fi
-  echo -n "Response: "
-  cat /tmp/credentials.json; echo
-  exit 1
-fi
+ensure_az_login() {
+    if ! command -v az >/dev/null 2>&1; then
+        return 1
+    fi
+
+    if az account show >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if [[ -n "${AZURE_CLIENT_ID:-}" && -n "${AZURE_CLIENT_SECRET:-}" && -n "${AZURE_TENANT_ID:-}" ]]; then
+        log "Logging into Azure with provided service principal credentials"
+        az login --service-principal \
+            --username "$AZURE_CLIENT_ID" \
+            --password "$AZURE_CLIENT_SECRET" \
+            --tenant "$AZURE_TENANT_ID" \
+            >/dev/null
+        return 0
+    fi
+
+    if should_use_managed_identity; then
+        log "Logging into Azure using managed identity"
+        if [[ -n "${IDENTITY_CLIENT_ID:-}" ]]; then
+            az login --identity --username "$IDENTITY_CLIENT_ID" >/dev/null
+        else
+            az login --identity >/dev/null
+        fi
+        return 0
+    fi
+
+    return 1
+}
+
+resolve_acr_settings() {
+    if [[ -z "${ACR_LOGIN_SERVER:-}" ]]; then
+        ACR_LOGIN_SERVER="acrintellioptics.azurecr.io"
+    fi
+
+    if [[ -z "${ACR_NAME:-}" ]]; then
+        ACR_NAME=${ACR_LOGIN_SERVER%%.*}
+    fi
+
+    if [[ -z "$ACR_NAME" ]]; then
+        echo "Unable to determine ACR_NAME" >&2
+        exit 1
+    fi
+
+    if [[ -n "${ACR_PASSWORD:-}" && -z "${ACR_USERNAME:-}" ]]; then
+        ACR_USERNAME="00000000-0000-0000-0000-000000000000"
+    fi
+
+    if [[ -z "${ACR_USERNAME:-}" || -z "${ACR_PASSWORD:-}" ]]; then
+        if command -v az >/dev/null 2>&1; then
+            if ! az account show >/dev/null 2>&1; then
+                ensure_az_login || {
+                    echo "Azure CLI is not logged in. Provide service principal credentials or enable managed identity." >&2
+                    exit 1
+                }
+            fi
+
+            log "Requesting temporary ACR access token for $ACR_NAME"
+            ACR_PASSWORD=$(az acr login --name "$ACR_NAME" --expose-token --output tsv --query accessToken)
+            if [[ -z "$ACR_PASSWORD" ]]; then
+                echo "Failed to obtain access token for $ACR_NAME" >&2
+                exit 1
+            fi
+
+            if [[ -z "${ACR_USERNAME:-}" ]]; then
+                ACR_USERNAME=$(az acr login --name "$ACR_NAME" --expose-token --output tsv --query username 2>/dev/null || true)
+                if [[ -z "$ACR_USERNAME" ]]; then
+                    ACR_USERNAME="00000000-0000-0000-0000-000000000000"
+                fi
+            fi
+        else
+            echo "Azure CLI is not available and static ACR credentials were not provided" >&2
+            exit 1
+        fi
+    fi
+}
+
+sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT:-}")
+log "Sanitized URL: $sanitized_url"
 
 if [ "$validate" == "yes" ]; then
+  HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
+
+  if [ $? -ne 0 ]; then
+    echo "Failed to fetch credentials from the IntelliOptics cloud service"
+    if [ -n "$HTTP_STATUS" ]; then
+      echo "HTTP Status: $HTTP_STATUS"
+    fi
+    echo -n "Response: "
+    cat /tmp/credentials.json; echo
+    exit 1
+  fi
 
   echo "API token validation successful. Exiting."
   exit 0
 fi
 
-export AWS_ACCESS_KEY_ID=$(sed 's/^.*"access_key_id":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SECRET_ACCESS_KEY=$(sed 's/^.*"secret_access_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SESSION_TOKEN=$(sed 's/^.*"session_token":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+resolve_acr_settings
 
-cat <<EOF > /shared/credentials
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY_ID}
-aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
-aws_session_token = ${AWS_SESSION_TOKEN}
-EOF
+log "Writing registry credentials to shared volume"
+cat <<EOF_SHARED > /shared/registry.env
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER}
+ACR_NAME=${ACR_NAME}
+ACR_USERNAME=${ACR_USERNAME}
+ACR_PASSWORD=${ACR_PASSWORD}
+EOF_SHARED
 
-echo "Credentials fetched and saved to /shared/credentials"
-cat /shared/credentials; echo
-
-echo "Fetching AWS ECR login token..."
-TOKEN=$(aws ecr get-login-password --region {{ .Values.awsRegion }})
-echo $TOKEN > /shared/token.txt
-
-echo "Token fetched and saved to /shared/token.txt"
+if command -v docker >/dev/null 2>&1; then
+    log "Logging docker into ${ACR_LOGIN_SERVER}"
+    echo "${ACR_PASSWORD}" | docker login \
+        --username "${ACR_USERNAME}" \
+        --password-stdin \
+        "${ACR_LOGIN_SERVER}"
+else
+    log "Docker is not installed. Skipping local docker login."
+fi
 
 touch /shared/done
-
-

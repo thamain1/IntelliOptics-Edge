@@ -1,14 +1,12 @@
 #!/bin/sh
 
-# Part two of getting AWS credentials set up. 
-# This script runs in a minimal container with just kubectl, and applies the credentials to the cluster.
+# Part two of setting up container registry access for the edge endpoint.
+# This script runs in a minimal container with kubectl, waits for the
+# credentials to be written to the shared volume by init-aws-access-retrieve.sh,
+# and then creates/updates the registry-credentials secret in Kubernetes.
 
-# We do two things:
-# 1. Create a secret with an AWS credentials file. We use a file instead of environment variables
-#    so that we can change it without restarting the pod.
-# 2. Create a secret with a Docker registry credentials. This is used to pull images from ECR.
+set -eu
 
-# We wait for the credentials to be written to the shared volume by the previous script.
 TIMEOUT=60  # Maximum time to wait in seconds
 FILE="/shared/done"
 
@@ -30,15 +28,24 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
+if [ ! -f /shared/registry.env ]; then
+    echo "❌ Error: Registry credentials were not written to /shared/registry.env" >&2
+    exit 1
+fi
 
-echo "Creating Kubernetes secrets..."
+set -a
+. /shared/registry.env
+set +a
 
-kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
-    --dry-run=client -o yaml | kubectl apply -f -
+if [ -z "${ACR_LOGIN_SERVER:-}" ] || [ -z "${ACR_USERNAME:-}" ] || [ -z "${ACR_PASSWORD:-}" ]; then
+    echo "❌ Error: Missing required registry credential fields." >&2
+    exit 1
+fi
+
+echo "Creating Kubernetes secret registry-credentials..."
 
 kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
-    --docker-username=AWS \
-    --docker-password="$(cat /shared/token.txt)" \
+    --docker-server="${ACR_LOGIN_SERVER}" \
+    --docker-username="${ACR_USERNAME}" \
+    --docker-password="${ACR_PASSWORD}" \
     --dry-run=client -o yaml | kubectl apply -f -
-

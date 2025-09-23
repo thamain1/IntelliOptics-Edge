@@ -56,8 +56,6 @@ spec:
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
@@ -123,9 +121,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
 
 
 

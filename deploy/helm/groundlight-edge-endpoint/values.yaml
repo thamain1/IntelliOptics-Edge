@@ -44,10 +44,15 @@ intelliopticsApiToken: ""
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all IntelliOptics services are deployed in the us-west-2 region
-awsRegion: "us-west-2"
+# Azure Container Registry configuration
+acr:
+  # Login server for the container registry (e.g. myregistry.azurecr.io)
+  loginServer: "acrintellioptics.azurecr.io"
+  # Optional override for the registry name. When empty, it is derived from the login server.
+  name: ""
 
-ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+# Name of the Kubernetes secret containing Azure authentication data for registry refresh jobs
+azureRegistryAuthSecretName: "azure-registry-auth"
 
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"
