@@ -2,43 +2,101 @@
 Fabric tools to connect to the EEUT and see how it's doing.
 """
 from functools import lru_cache
-from typing import Callable
+from typing import Callable, Iterable
 import os
 import time
 import io
 
-from fabric import task, Connection, Config
+from fabric import task, Connection
 from invoke import run as local
-import boto3
+from invoke.exceptions import UnexpectedExit
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 import paramiko
 
-def fetch_secret(secret_id: str) -> str:
-    """Fetches a secret from AWS Secrets Manager."""
-    client = boto3.client("secretsmanager", region_name="us-west-2")
-    response = client.get_secret_value(SecretId=secret_id)
-    return response['SecretString']
+
+@lru_cache(maxsize=None)
+def get_secret_client() -> SecretClient:
+    """Create an Azure Key Vault client using the default credential chain."""
+    vault_url = os.environ.get("AZURE_KEY_VAULT_URL")
+    if not vault_url:
+        vault_name = os.environ.get("AZURE_KEY_VAULT_NAME")
+        if not vault_name:
+            raise RuntimeError(
+                "Either AZURE_KEY_VAULT_URL or AZURE_KEY_VAULT_NAME must be set to access the EEUT SSH key."
+            )
+        vault_url = f"https://{vault_name}.vault.azure.net"
+    credential = DefaultAzureCredential()
+    return SecretClient(vault_url=vault_url, credential=credential)
+
+
+def fetch_secret(secret_name: str) -> str:
+    """Fetch a secret value from Azure Key Vault."""
+    client = get_secret_client()
+    secret = client.get_secret(secret_name)
+    return secret.value
+
+
+def _load_private_key(private_key: str) -> paramiko.PKey:
+    """Attempt to deserialize the SSH private key using supported algorithms."""
+    key_buffer = io.StringIO(private_key)
+    for key_cls in (paramiko.Ed25519Key, paramiko.RSAKey, paramiko.ECDSAKey):
+        key_buffer.seek(0)
+        try:
+            return key_cls.from_private_key(key_buffer)
+        except paramiko.ssh_exception.SSHException:
+            continue
+    raise RuntimeError("Unable to parse SSH private key retrieved from Azure Key Vault.")
+
+
+def _pulumi_outputs_to_try() -> Iterable[str]:
+    """Return the Pulumi output names that might contain the EEUT IP address."""
+    env_override = os.environ.get("EEUT_PULUMI_IP_OUTPUTS")
+    if env_override:
+        for name in env_override.split(","):
+            cleaned = name.strip()
+            if cleaned:
+                yield cleaned
+        return
+    # Default order: prefer explicit overrides and fall back to historical names.
+    yield from ("eeut_private_ip", "eeut_public_ip", "eeut_ip")
 
 def get_eeut_ip() -> str:
-    """Gets the EEUT's IP address from Pulumi."""
-    return local("pulumi stack output eeut_private_ip", hide=True).stdout.strip()
+    """Gets the EEUT's IP address from Pulumi or the environment."""
+    ip_override = os.environ.get("EEUT_SSH_HOST")
+    if ip_override:
+        return ip_override
+
+    for output_name in _pulumi_outputs_to_try():
+        try:
+            result = local(
+                f"pulumi stack output {output_name}",
+                hide=True,
+                warn=True,
+            )
+        except UnexpectedExit:
+            continue
+        if result.ok and result.stdout.strip():
+            return result.stdout.strip()
+    raise RuntimeError(
+        "Unable to determine EEUT IP address. Provide EEUT_SSH_HOST or ensure Pulumi exports one of: "
+        + ", ".join(_pulumi_outputs_to_try())
+    )
 
 def connect_server() -> Connection:
-    """Connects to the EEUT, using the private key stored in AWS Secrets Manager."""
+    """Connects to the EEUT using the private key stored in Azure Key Vault."""
     ip = get_eeut_ip()
-    try:
-        private_key = fetch_secret("ghar2eeut-private-key")
-        private_key_file = io.StringIO(private_key)
-        key = paramiko.Ed25519Key.from_private_key(private_key_file)
-        conn = Connection(
-            ip,
-            user='ubuntu',
-            connect_kwargs={"pkey": key},
-        )
-        conn.run(f"echo 'Successfully logged in to {ip}'")
-        return conn
-    except paramiko.ssh_exception.SSHException as e:
-        print(f"Failed to connect to {ip}")
-        raise
+    secret_name = os.environ.get("EEUT_SSH_KEY_SECRET_NAME", "ghar2eeut-private-key")
+    private_key = fetch_secret(secret_name)
+    key = _load_private_key(private_key)
+    user = os.environ.get("EEUT_SSH_USER", "ubuntu")
+    conn = Connection(
+        ip,
+        user=user,
+        connect_kwargs={"pkey": key},
+    )
+    conn.run(f"echo 'Successfully logged in to {ip}'")
+    return conn
 
 
 class InfrequentUpdater:
