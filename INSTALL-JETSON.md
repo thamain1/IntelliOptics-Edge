@@ -21,13 +21,9 @@ git clone https://github.com/groundlight/edge-endpoint
 
 or run `~/edge-endpoint/deploy/bin/install-k3s.sh cpu`
 
-4) AWS credentials
+4) Azure credentials
 
-Make sure you are logged in with a valid AWS account to get the container images.
-
-```
-aws sts get-caller-identity
-```
+Provision the shared Azure resources (ACR + Blob Storage) and load the credentials into your shell. The quickest path is to run the scripts in [`infra/azure-oneclick`](infra/azure-oneclick), copy `.env.example` to `.env`, fill in your subscription/region/resource names, and execute `deploy/install.sh`. Then source the resulting `.env` file to export values such as `ACR_LOGIN_SERVER`, `ACR_USERNAME`, `ACR_PASSWORD`, `AZ_BLOB_ACCOUNT`, `AZ_BLOB_CONTAINER`, and `AZURE_BLOB_SAS`.
 
 
 5) Setup the edge endpoint.

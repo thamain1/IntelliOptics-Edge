@@ -1,0 +1,28 @@
+{{- $account := .Values.azure.blob.account -}}
+{{- $container := .Values.azure.blob.container -}}
+{{- $sas := .Values.azure.blob.sasToken -}}
+{{- $endpointSuffix := default "blob.core.windows.net" .Values.azure.blob.endpointSuffix -}}
+{{- if or $account $container $sas -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-blob-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
+type: Opaque
+data:
+{{- if $account }}
+  AZ_BLOB_ACCOUNT: {{ $account | b64enc | quote }}
+  AZURE_STORAGE_ACCOUNT_URL: {{ printf "https://%s.%s" $account $endpointSuffix | b64enc | quote }}
+{{- end }}
+{{- if $container }}
+  AZ_BLOB_CONTAINER: {{ $container | b64enc | quote }}
+{{- end }}
+{{- if $sas }}
+  AZURE_BLOB_SAS: {{ $sas | b64enc | quote }}
+{{- end }}
+{{- if .Values.azure.region }}
+  AZURE_REGION: {{ .Values.azure.region | b64enc | quote }}
+{{- end }}
+{{- end }}

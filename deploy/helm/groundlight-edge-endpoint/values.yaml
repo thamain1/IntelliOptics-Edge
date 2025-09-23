@@ -44,10 +44,25 @@ intelliopticsApiToken: ""
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all IntelliOptics services are deployed in the us-west-2 region
-awsRegion: "us-west-2"
+# Azure specific configuration used by the Edge Endpoint deployment
+azure:
+  # Azure region where the supporting resources (AKS, Storage, etc.) live
+  region: ""
 
-ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+  # Azure Container Registry settings so Kubernetes can pull the images
+  acr:
+    loginServer: ""
+    username: ""
+    password: ""
+    edgeRepository: "intellioptics/edge-endpoint"
+    inferenceRepository: "intellioptics/edge-endpoint"
+
+  # Azure Blob Storage configuration (used for snapshot uploads, logs, etc.)
+  blob:
+    account: ""
+    container: "images"
+    sasToken: ""
+    endpointSuffix: "blob.core.windows.net"
 
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"

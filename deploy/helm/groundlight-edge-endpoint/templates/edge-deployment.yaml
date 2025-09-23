@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -61,7 +61,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       containers:
       - name: nginx
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -98,7 +98,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           failureThreshold: 4  # after 40 seconds of failure, restart the pod
 
       - name: edge-endpoint
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -119,6 +119,36 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: "1"
         - name: INTELLIOPTICS_ENDPOINT
           value: "{{ .Values.upstreamEndpoint }}"
+        - name: AZ_BLOB_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_ACCOUNT
+              optional: true
+        - name: AZ_BLOB_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_CONTAINER
+              optional: true
+        - name: AZURE_BLOB_SAS
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_BLOB_SAS
+              optional: true
+        - name: AZURE_STORAGE_ACCOUNT_URL
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_STORAGE_ACCOUNT_URL
+              optional: true
+        - name: AZURE_REGION
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_REGION
+              optional: true
         volumeMounts:
         - name: edge-config-volume
           mountPath: /etc/intellioptics/edge-config
@@ -132,7 +162,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           mountPath: /opt/intellioptics/device
 
       - name: status-monitor
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -151,6 +181,36 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
               name: IntelliOptics-api-token
               key: INTELLIOPTICS_API_TOKEN
               optional: true
+        - name: AZ_BLOB_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_ACCOUNT
+              optional: true
+        - name: AZ_BLOB_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_CONTAINER
+              optional: true
+        - name: AZURE_BLOB_SAS
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_BLOB_SAS
+              optional: true
+        - name: AZURE_STORAGE_ACCOUNT_URL
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_STORAGE_ACCOUNT_URL
+              optional: true
+        - name: AZURE_REGION
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_REGION
+              optional: true
         - name: INFERENCE_FLAVOR
           value: "{{ .Values.inferenceFlavor }}"
         volumeMounts:
@@ -160,7 +220,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -181,6 +241,36 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             secretKeyRef:
               name: IntelliOptics-api-token
               key: INTELLIOPTICS_API_TOKEN
+        - name: AZ_BLOB_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_ACCOUNT
+              optional: true
+        - name: AZ_BLOB_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZ_BLOB_CONTAINER
+              optional: true
+        - name: AZURE_BLOB_SAS
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_BLOB_SAS
+              optional: true
+        - name: AZURE_STORAGE_ACCOUNT_URL
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_STORAGE_ACCOUNT_URL
+              optional: true
+        - name: AZURE_REGION
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-config
+              key: AZURE_REGION
+              optional: true
         volumeMounts:
         - name: edge-config-volume
           mountPath: /etc/intellioptics/edge-config

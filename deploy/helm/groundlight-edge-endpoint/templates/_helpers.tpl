@@ -112,6 +112,33 @@ Never
 {{- end -}}
 
 {{/*
+  Resolve the Azure Container Registry login server that hosts the images.
+*/}}
+{{- define "IntelliOptics-edge-endpoint.acrLoginServer" -}}
+{{- required "You must supply azure.acr.loginServer" .Values.azure.acr.loginServer -}}
+{{- end -}}
+
+{{/*
+  Compute the fully-qualified image reference for the edge endpoint containers.
+*/}}
+{{- define "IntelliOptics-edge-endpoint.edgeEndpointImage" -}}
+{{- $server := include "IntelliOptics-edge-endpoint.acrLoginServer" . -}}
+{{- $repo := default "intellioptics/edge-endpoint" .Values.azure.acr.edgeRepository -}}
+{{- $tag := include "IntelliOptics-edge-endpoint.edgeEndpointTag" . -}}
+{{- printf "%s/%s:%s" $server $repo $tag -}}
+{{- end -}}
+
+{{/*
+  Compute the fully-qualified image reference for inference workloads.
+*/}}
+{{- define "IntelliOptics-edge-endpoint.inferenceImage" -}}
+{{- $server := include "IntelliOptics-edge-endpoint.acrLoginServer" . -}}
+{{- $repo := default "intellioptics/edge-endpoint" .Values.azure.acr.inferenceRepository -}}
+{{- $tag := include "IntelliOptics-edge-endpoint.inferenceTag" . -}}
+{{- printf "%s/%s:%s" $server $repo $tag -}}
+{{- end -}}
+
+{{/*
   Get the edge-config.yaml file. If the user supplies one via `--set-file configFile=...yaml`
   then use that. Otherwise, use the default version in the `files/` directory. We define this
   as a function so that we can use it as a nonce to restart the pod when the config changes.

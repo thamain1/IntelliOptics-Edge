@@ -34,7 +34,14 @@ For GPU-based systems:
 curl -fsSL https://raw.githubusercontent.com/IntelliOptics/edge-endpoint/refs/heads/main/deploy/bin/install-k3s.sh | bash -s gpu
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
-  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}"
+  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}"
 ```
 
 For CPU-based systems:
@@ -44,6 +51,13 @@ curl -fsSL https://raw.githubusercontent.com/IntelliOptics/edge-endpoint/refs/he
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}" \
   --set inferenceFlavor=cpu
 ```
 
@@ -54,10 +68,52 @@ curl -fsSL https://raw.githubusercontent.com/IntelliOptics/edge-endpoint/refs/he
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}" \
   --set inferenceTag="jetson"
 ```
 
 You're done. You can skip down to [Verifying the Installation](#verifying-the-installation) to confirm that the Edge Endpoint is running.
+
+### End-to-end Azure install example
+
+To reproduce the full "provision + install" flow against an Azure-hosted Kubernetes cluster:
+
+1. Provision the shared resources and capture credentials:
+   ```bash
+   cd infra/azure-oneclick
+   cp .env.example .env  # fill in subscription, region, and desired resource names
+   # edit .env to provide AZ_RESOURCE_GROUP, AZ_LOCATION, AZ_BLOB_ACCOUNT, etc.
+   bash deploy/install.sh
+   ```
+   The script creates (or reuses) the ACR and Blob Storage resources and writes the connection details into `.env`.
+
+2. Configure your Kubernetes context to point at the AKS/cluster you want to run on and export the provisioning outputs:
+   ```bash
+   set -a
+   source infra/azure-oneclick/.env
+   set +a
+   ```
+
+3. Run the Helm install/upgrade with the Azure values supplied via `--set` flags:
+   ```bash
+   helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
+     --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+     --set azure.region="${AZ_LOCATION}" \
+     --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+     --set azure.acr.username="${ACR_USERNAME}" \
+     --set azure.acr.password="${ACR_PASSWORD}" \
+     --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+     --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+    --set azure.blob.sasToken="${AZURE_BLOB_SAS}"
+   ```
+
+The resulting deployment runs entirely on Azure infrastructure (ACR, Blob Storage, AKS) while preserving the same Helm workflow as the AWS-based instructions it replaces.
 
 ### Setting up Single-Node Kubernetes with k3s
 
@@ -133,7 +189,14 @@ For a simple, default installation, you can run the following command:
 
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
-  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}"
+  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}"
 ```
 
 This will install the Edge Endpoint doing GPU-based inference in the `edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
@@ -155,7 +218,15 @@ To use a custom edge config file, set the `configFile` Helm value to the path of
 
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
-  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" --set-file configFile=/path/to/your/edge-config.yaml
+  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}" \
+  --set-file configFile=/path/to/your/edge-config.yaml
 ```
 #### Variation: CPU Mode Inference
 
@@ -164,6 +235,13 @@ If the system you're running on doesn't have a GPU, you can run the Edge Endpoin
 ```shell
 helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set azure.region="${AZ_LOCATION}" \
+  --set azure.acr.loginServer="${ACR_LOGIN_SERVER}" \
+  --set azure.acr.username="${ACR_USERNAME}" \
+  --set azure.acr.password="${ACR_PASSWORD}" \
+  --set azure.blob.account="${AZ_BLOB_ACCOUNT}" \
+  --set azure.blob.container="${AZ_BLOB_CONTAINER}" \
+  --set azure.blob.sasToken="${AZURE_BLOB_SAS}" \
   --set inferenceFlavor=cpu
 ```
 
@@ -238,7 +316,31 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+You'll also need Azure credentials so the cluster can pull images and push snapshots. The recommended way to obtain these values is to run the provisioning flow under [infra/azure-oneclick](../infra/azure-oneclick), which creates an `.env` file populated with the Azure Container Registry (ACR) login server and admin credentials together with the Blob Storage account, container name, and shared access signature (SAS) token. After provisioning, bring those values into your shell with:
+
+```bash
+set -a
+source ../infra/azure-oneclick/.env
+set +a
+```
+
+If you're managing resources manually, make sure you have:
+
+- An Azure Container Registry admin username/password and the registry login server (e.g. `acrintellioptics.azurecr.io`).
+- A Blob Storage account + container along with a SAS token that allows read/write access. You can generate a container-level SAS with the Azure CLI via `az storage container generate-sas`.
+- The Azure region where these resources live (for example `westus2`).
+
+Export the resulting values so Helm can consume them when we render the chart:
+
+```bash
+export ACR_LOGIN_SERVER="acrintellioptics.azurecr.io"
+export ACR_USERNAME="<acr admin username>"
+export ACR_PASSWORD="<acr admin password>"
+export AZ_BLOB_ACCOUNT="<storage account name>"
+export AZ_BLOB_CONTAINER="images"
+export AZURE_BLOB_SAS="<sas token with write permissions>"
+export AZ_LOCATION="westus2"
+```
 
 To install the edge-endpoint, run:
 ```shell
@@ -261,9 +363,7 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
-deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+The legacy manifests still reference an image hosted in Azure Container Registry (ACR). If you want to make modifications to the edge endpoint code and push a different image, follow the guidance in [Building and publishing custom images to Azure Container Registry (ACR)](#building-and-publishing-custom-images-to-azure-container-registry-acr).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -325,10 +425,10 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Confirm that the `registry-credentials` secret in your namespace contains the correct ACR login server and token. If the credentials have expired or changed, re-run the Helm command with updated `azure.acr.username`/`azure.acr.password` values (Helm will re-render and update the secret in-place). You can inspect the current secret with:
 
 ```
-kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
+kubectl get secret registry-credentials -n <YOUR-NAMESPACE> -o yaml
 ```
 
 ### Changing IP Address Causes DNS Failures and Other Problems
@@ -364,17 +464,20 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Building and publishing custom images to Azure Container Registry (ACR)
 
-We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
-If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
-then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+The Helm chart defaults to pulling images from the login server you provide via `azure.acr.loginServer`. When developing locally you might want to publish your own build. A typical ACR flow looks like:
 
-Follow the following steps:
+```bash
+# Authenticate docker to your registry (requires Azure CLI)
+az acr login --name "${ACR_LOGIN_SERVER%%.*}"
 
-```shell
-# Build and push image to ECR
-> ./deploy/bin/build-push-edge-endpoint-image.sh
+# Build and tag the image using the registry + repository + tag pattern used by Helm
+docker build -t "${ACR_LOGIN_SERVER}/${AZURE_EDGE_REPOSITORY:-intellioptics/edge-endpoint}:${EDGE_TAG:-dev}" .
+
+# Push the image to ACR
+docker push "${ACR_LOGIN_SERVER}/${AZURE_EDGE_REPOSITORY:-intellioptics/edge-endpoint}:${EDGE_TAG:-dev}"
 ```
+
+Update your Helm release to point at the new tag (and optionally repository) by setting `imageTag`, `edgeEndpointTag`, or `azure.acr.edgeRepository` before running `helm upgrade`.
 
