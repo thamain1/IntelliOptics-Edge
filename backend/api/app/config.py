@@ -5,6 +5,11 @@ class Settings(BaseModel):
     api_base_path: str = os.getenv("API_BASE_PATH", "/v1")
     allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "*")
 
+    # Azure AD auth
+    azure_tenant_id: str | None = os.getenv("AZURE_AD_TENANT_ID") or os.getenv("AZ_TENANT_ID")
+    azure_audience: str | None = os.getenv("AZURE_AD_AUDIENCE") or os.getenv("AZURE_AD_CLIENT_ID")
+    azure_openid_config: str | None = os.getenv("AZURE_AD_OPENID_CONFIG")
+
     # IntelliOptics
     io_token: str | None = os.getenv("INTELLIOPTICS_API_TOKEN") or os.getenv("INTELLOPTICS_API_TOKEN")
     io_endpoint: str | None = os.getenv("INTELLIOPTICS_ENDPOINT") or os.getenv("INTELLOPTICS_API_BASE")
