@@ -37,6 +37,7 @@ $K get service -o name | grep /inference-service- | xargs -I {} $K delete {}
 
 # Delete secrets and configmaps
 $K delete secret aws-credentials --ignore-not-found
+$K delete secret azure-credentials --ignore-not-found
 $K delete secret registry-credentials --ignore-not-found
 $K delete secret IntelliOptics-api-token --ignore-not-found
 

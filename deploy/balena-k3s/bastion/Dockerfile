@@ -21,26 +21,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     curl \
-    unzip \
     dnsutils \
     vim \
     jq \
     bash-completion \
     gettext-base \
     procps \
-    htop && \
+    htop \
+    python3 \
+    python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# This works for both x86_64 and aarch64, but its not simultaneously multi-arch
-RUN arch=$(uname -m) && \
-    if [ "$arch" = "aarch64" ]; then \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"; \
-    else \
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"; \
-    fi
-RUN unzip awscliv2.zip && rm awscliv2.zip
-RUN ./aws/install
-RUN aws --version
+RUN pip3 install --no-cache-dir azure-cli && \
+    az version
 
 COPY --from=arkade /src/arkade /usr/local/bin/arkade
 
