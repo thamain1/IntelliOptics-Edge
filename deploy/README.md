@@ -238,7 +238,20 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+You must also provide Azure credentials with permission to query the IntelliOptics Azure Container Registry. Export the following variables for a service principal that can read the registry (and associated storage) before running the setup script:
+
+```bash
+export AZURE_CLIENT_ID="<service-principal-client-id>"
+export AZURE_CLIENT_SECRET="<service-principal-secret>"
+export AZURE_TENANT_ID="<azure-tenant-id>"
+```
+
+If your service principal should target a non-default registry, you can optionally set:
+
+```bash
+export ACR_NAME="customRegistryName"
+export ACR_LOGIN_SERVER="customRegistryName.azurecr.io"
+```
 
 To install the edge-endpoint, run:
 ```shell
@@ -325,10 +338,10 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh-acr-creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from the Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-service-principal`) are invalid or not authorized to pull algorithm images from ACR.
 
 ```
-kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
+kubectl logs -n <YOUR-NAMESPACE> -l app=refresh-acr-creds
 ```
 
 ### Changing IP Address Causes DNS Failures and Other Problems
