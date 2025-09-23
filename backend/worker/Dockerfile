@@ -1,16 +1,13 @@
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Copy worker code from the Edge repo (we build from C:\Dev\IntelliOpticsDev)
-COPY IntelliOptics-Edge/backend/worker/ /app/worker/
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Build a minimal SDK context: pyproject + README + package only
-COPY IntelliOptics-SDK/pyproject.toml /tmp/io-sdk/pyproject.toml
-COPY IntelliOptics-SDK/README.md      /tmp/io-sdk/README.md
-COPY IntelliOptics-SDK/intellioptics  /tmp/io-sdk/intellioptics
+COPY . .
 
-# Install SDK and then worker reqs
-RUN pip install --no-cache-dir /tmp/io-sdk && \
-    pip install --no-cache-dir -r /app/worker/requirements.txt
-
-CMD ["python", "/app/worker/worker.py"]
+CMD ["python", "worker.py"]
