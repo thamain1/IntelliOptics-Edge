@@ -9,8 +9,9 @@
 # - INFERENCE_FLAVOR: Determines the inference type, either "CPU" or "GPU". Defaults to "GPU".
 # - EDGE_CONFIG: Specifies the contents of edge-config.yaml. If not set, defaults to configs/edge-config.yaml.
 # - DEPLOY_LOCAL_VERSION: Indicates if the local version of the edge endpoint is being built.
-#   - Set to 0 to attach an EFS instead of a local volume. Defaults to 1.
-# - EFS_VOLUME_ID: The ID of the EFS volume to use when deploying the EFS version.
+#   - Set to 0 to attach a remote Azure Files share instead of a local volume. Defaults to 1.
+# - AZURE_FILE_SHARE_NAME: The name of the Azure Files share to use when DEPLOY_LOCAL_VERSION=0.
+# - AZURE_STORAGE_ACCOUNT: The Azure storage account that contains the share used for persistent storage.
 # - DEPLOYMENT_NAMESPACE: The namespace for deployment. Defaults to the current namespace.
 # - RUN_EDGE_ENDPOINT: Controls the launch of edge endpoint pods.
 #   - If set, the edge-endpoint pods will be launched. If not set, pods will not be launched.
@@ -66,6 +67,7 @@ K=${KUBECTL_CMD:-"kubectl"}
 INFERENCE_FLAVOR=${INFERENCE_FLAVOR:-"GPU"}
 DEPLOY_LOCAL_VERSION=${DEPLOY_LOCAL_VERSION:-1}
 DEPLOYMENT_NAMESPACE=${DEPLOYMENT_NAMESPACE:-$($K config view -o json | jq -r '.contexts[] | select(.name == "'$($K config current-context)'") | .context.namespace // "default"')}
+export DEPLOYMENT_NAMESPACE
 export IMAGE_TAG=${IMAGE_TAG:-"latest"}
 
 # Update K to include the deployment namespace
@@ -85,7 +87,7 @@ export EDGE_ENDPOINT_PORT=${EDGE_ENDPOINT_PORT:-30101}
 
 # Create Secrets
 if ! ./deploy/bin/make-aws-secret.sh; then
-    echo "Failed to execute make-aws-secret.sh successfully. Exiting."
+    echo "Failed to execute Azure credential provisioning successfully. Exiting."
     exit 1
 fi
 
@@ -162,24 +164,32 @@ if [[ "${DEPLOY_LOCAL_VERSION}" == "1" ]]; then
     echo $PERSISTENT_VOLUME_NAME
 
 else
-    # If environment variable EFS_VOLUME_ID is not set, exit
-    if [[ -z "${EFS_VOLUME_ID}" ]]; then
-        fail "EFS_VOLUME_ID environment variable not set"
+    AZURE_FILE_SHARE_NAME=${AZURE_FILE_SHARE_NAME:-${EFS_VOLUME_ID:-}}
+    if [[ -z "${AZURE_STORAGE_ACCOUNT}" ]]; then
+        fail "AZURE_STORAGE_ACCOUNT environment variable not set"
+    fi
+    if [[ -z "${AZURE_FILE_SHARE_NAME}" ]]; then
+        fail "AZURE_FILE_SHARE_NAME environment variable not set"
     fi
 
-    if ! check_pv_conflict "$PERSISTENT_VOLUME_NAME" "efs-sc"; then
+    if ! check_pv_conflict "$PERSISTENT_VOLUME_NAME" "azure-file-sc"; then
         fail "PersistentVolume $PERSISTENT_VOLUME_NAME conflicts with the existing resource."
     fi
 
+    export AZURE_FILE_SHARE_NAME AZURE_STORAGE_ACCOUNT
     apply_yaml deploy/k3s/efs_persistent_volume.yaml
 fi
 
 # Check if the persistent volume claim exists. If not, create it
 if ! $K get pvc edge-endpoint-pvc; then
-    # If environment variable EFS_VOLUME_ID is not set, exit
-    if [[ -z "${EFS_VOLUME_ID}" ]]; then
-        fail "EFS_VOLUME_ID environment variable not set"
+    AZURE_FILE_SHARE_NAME=${AZURE_FILE_SHARE_NAME:-${EFS_VOLUME_ID:-}}
+    if [[ -z "${AZURE_STORAGE_ACCOUNT}" ]]; then
+        fail "AZURE_STORAGE_ACCOUNT environment variable not set"
     fi
+    if [[ -z "${AZURE_FILE_SHARE_NAME}" ]]; then
+        fail "AZURE_FILE_SHARE_NAME environment variable not set"
+    fi
+    export AZURE_FILE_SHARE_NAME AZURE_STORAGE_ACCOUNT
     apply_yaml deploy/k3s/persistentvolume.yaml
 fi
 

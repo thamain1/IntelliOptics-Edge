@@ -25,11 +25,10 @@ set -e
 
 cd "$(dirname "$0")"
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
+ACR_NAME=${ACR_NAME:-${ACR_LOGIN_SERVER%%.azurecr.io}}
 TAG=dev # In local mode, we always use the 'dev' tag
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-intellioptics/edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 
 # The socket that's used by the k3s containerd
 SOCK=/run/k3s/containerd/containerd.sock
@@ -41,7 +40,7 @@ build_and_upload() {
     local path=. # Edge endpoint is built from the root directory
     echo "Building and uploading ${name}..."
     cd "${project_root}/${path}"
-    local full_name=${ECR_URL}/${name}:${TAG}
+    local full_name=${ACR_LOGIN_SERVER}/${name}:${TAG}
     docker build -t ${full_name} .
     local id=$(docker image inspect ${full_name} | jq -r '.[0].Id')
     local on_server=$(sudo crictl images -q | grep $id)

@@ -18,7 +18,8 @@ spec:
       restartPolicy: Never
       containers:
         - name: main
-
+          image: mcr.microsoft.com/azure-cli:2.53.0
+          imagePullPolicy: IfNotPresent
           env:
             - name: INTELLIOPTICS_ENDPOINT
               value: "{{ .Values.upstreamEndpoint }}"
@@ -29,12 +30,12 @@ spec:
                   key: INTELLIOPTICS_API_TOKEN
           command:
             - /bin/bash
-            - /app/init-aws-access-retrieve.sh
+            - /app/init-azure-access-retrieve.sh
             - validate
           volumeMounts:
             - name: validate-api-token-script
-              mountPath: /app/init-aws-access-retrieve.sh
-              subPath: init-aws-access-retrieve.sh
+              mountPath: /app/init-azure-access-retrieve.sh
+              subPath: init-azure-access-retrieve.sh
       volumes:
         - name: validate-api-token-script
           configMap:
@@ -52,8 +53,8 @@ metadata:
     "helm.sh/hook-weight": "-1"  # Ensure it runs before the job
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 data:
-  init-aws-access-retrieve.sh: |
-    {{- tpl (.Files.Get "files/init-aws-access-retrieve.sh") . | nindent 4 }}
+  init-azure-access-retrieve.sh: |
+    {{- tpl (.Files.Get "files/init-azure-access-retrieve.sh") . | nindent 4 }}
 ---
 apiVersion: v1
 kind: Secret

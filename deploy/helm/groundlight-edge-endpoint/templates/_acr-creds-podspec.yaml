@@ -3,11 +3,13 @@ restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
 
 containers:
-  - name: aws-cli
+  - name: azure-cli
+    image: mcr.microsoft.com/azure-cli:2.53.0
+    imagePullPolicy: IfNotPresent
 
     command:
       - /bin/sh
-      - /app/init-aws-access-retrieve.sh
+      - /app/init-azure-access-retrieve.sh
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
@@ -20,25 +22,27 @@ containers:
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-retrieve.sh
-        subPath: init-aws-access-retrieve.sh
+      - name: init-azure-access
+        mountPath: /app/init-azure-access-retrieve.sh
+        subPath: init-azure-access-retrieve.sh
 
   - name: kubectl
+    image: mcr.microsoft.com/azure-cli:2.53.0
+    imagePullPolicy: IfNotPresent
 
     command:
       - /bin/sh
-      - /app/init-aws-access-apply.sh
+      - /app/init-azure-access-apply.sh
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-apply.sh
-        subPath: init-aws-access-apply.sh
+      - name: init-azure-access
+        mountPath: /app/init-azure-access-apply.sh
+        subPath: init-azure-access-apply.sh
 volumes:
-  - name: init-aws-access
+  - name: init-azure-access
     configMap:
-      name: init-aws-access
+      name: init-azure-access
   - name: shared-volume
     emptyDir: {}
 {{- end }}

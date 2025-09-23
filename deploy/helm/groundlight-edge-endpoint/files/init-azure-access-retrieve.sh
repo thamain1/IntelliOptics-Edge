@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# Part one of getting AWS credentials set up.
-# This script runs in a aws-cli container and retrieves the credentials from Janzu.
-# Then it uses the credentials to get a login token for ECR.
+# Part one of getting Azure credentials set up.
+# This script runs in an Azure CLI container and retrieves the credentials from the IntelliOptics
+# cloud service. The credentials include the Azure service principal, storage account details, and
+# container registry metadata required by other jobs.
 #
-# It saves three files to the shared volume for use by part two:
-# 1. /shared/credentials: The AWS credentials file that can be mounted into pods at ~/.aws/credentials
-# 2. /shared/token.txt: The ECR login token that can be used to pull images from ECR. This will
-#    be used to create a registry secret in k8s.
-# 3. /shared/done: A marker file to indicate that the script has completed successfully.
+# It saves two files to the shared volume for use by part two:
+# 1. /shared/azure.env: A shell-compatible environment file containing Azure credentials.
+# 2. /shared/done: A marker file to indicate that the script has completed successfully.
 
 # Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT
 # settings. If you run it with the first argument being "validate", it will only run through the 
@@ -80,7 +79,7 @@ sanitize_endpoint_url() {
 sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT}")
 echo "Sanitized URL: $sanitized_url"
 
-echo "Fetching temporary AWS credentials from the IntelliOptics cloud service..."
+echo "Fetching temporary Azure credentials from the IntelliOptics cloud service..."
 HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
 
 if [ $? -ne 0 ]; then
@@ -99,25 +98,57 @@ if [ "$validate" == "yes" ]; then
   exit 0
 fi
 
-export AWS_ACCESS_KEY_ID=$(sed 's/^.*"access_key_id":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SECRET_ACCESS_KEY=$(sed 's/^.*"secret_access_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SESSION_TOKEN=$(sed 's/^.*"session_token":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+extract_credential() {
+    local jq_query="$1"
+    jq -r "${jq_query} // empty" /tmp/credentials.json
+}
 
-cat <<EOF > /shared/credentials
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY_ID}
-aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
-aws_session_token = ${AWS_SESSION_TOKEN}
+AZURE_CLIENT_ID=$(extract_credential '.azure_client_id')
+AZURE_CLIENT_SECRET=$(extract_credential '.azure_client_secret')
+AZURE_TENANT_ID=$(extract_credential '.azure_tenant_id')
+AZURE_SUBSCRIPTION_ID=$(extract_credential '.azure_subscription_id')
+AZURE_STORAGE_ACCOUNT=$(extract_credential '.azure_storage_account')
+AZURE_STORAGE_KEY=$(extract_credential '.azure_storage_key')
+AZURE_STORAGE_CONTAINER=$(extract_credential '.azure_storage_container')
+ACR_LOGIN_SERVER=$(extract_credential '.acr_login_server')
+ACR_NAME=$(extract_credential '.acr_name')
+
+if [ -z "$ACR_LOGIN_SERVER" ]; then
+    ACR_LOGIN_SERVER="{{ .Values.acrLoginServer }}"
+fi
+
+if [ -z "$ACR_NAME" ] && [ -n "$ACR_LOGIN_SERVER" ]; then
+    ACR_NAME=${ACR_LOGIN_SERVER%%.azurecr.io}
+fi
+
+for required in \
+    AZURE_CLIENT_ID \
+    AZURE_CLIENT_SECRET \
+    AZURE_TENANT_ID \
+    AZURE_STORAGE_ACCOUNT \
+    AZURE_STORAGE_KEY \
+    AZURE_STORAGE_CONTAINER \
+    ACR_LOGIN_SERVER \
+    ACR_NAME; do
+    if [ -z "${!required}" ]; then
+        echo "Required credential $required missing from response" >&2
+        exit 1
+    fi
+done
+
+cat <<EOF > /shared/azure.env
+AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+AZURE_TENANT_ID=${AZURE_TENANT_ID}
+AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}
+AZURE_STORAGE_KEY=${AZURE_STORAGE_KEY}
+AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER}
+ACR_NAME=${ACR_NAME}
 EOF
 
-echo "Credentials fetched and saved to /shared/credentials"
-cat /shared/credentials; echo
-
-echo "Fetching AWS ECR login token..."
-TOKEN=$(aws ecr get-login-password --region {{ .Values.awsRegion }})
-echo $TOKEN > /shared/token.txt
-
-echo "Token fetched and saved to /shared/token.txt"
+echo "Credentials fetched and saved to /shared/azure.env"
 
 touch /shared/done
 

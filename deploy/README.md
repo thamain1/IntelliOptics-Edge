@@ -325,7 +325,7 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-credentials`) are invalid or not authorized to pull algorithm images from the registry.
 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
