@@ -18,6 +18,8 @@ spec:
             - name: registry-credentials
           containers:
           - name: ecr
+            image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+            imagePullPolicy: IfNotPresent
 
             command: [
               "/bin/sh",

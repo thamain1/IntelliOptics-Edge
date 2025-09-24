@@ -33,7 +33,10 @@ RUN apt-get update && \
     unzip \
     libglib2.0-0 \
     libgl1-mesa-glx \
-    sqlite3 && \
+    sqlite3 \
+    ca-certificates \
+    gnupg \
+    lsb-release && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     POETRY_HOME=${POETRY_HOME} curl -sSL https://install.python-poetry.org | python - && \
@@ -46,6 +49,8 @@ RUN cd /tmp && \
     unzip awscliv2.zip && \
     ./aws/install --update && \
     rm -rf awscliv2.zip aws
+
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \
