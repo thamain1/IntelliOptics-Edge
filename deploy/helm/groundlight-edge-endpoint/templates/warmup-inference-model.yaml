@@ -30,7 +30,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
       volumes:
       - name: pina-models
         persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
+          claimName: {{ .Values.storage.data.claimName }}
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file

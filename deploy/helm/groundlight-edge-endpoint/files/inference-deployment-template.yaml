@@ -118,7 +118,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
       volumes:
       - name: edge-endpoint-persistent-volume
         persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
+          claimName: {{ .Values.storage.data.claimName }}
       - name: pina-models
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
