@@ -1,37 +1,52 @@
 #!/bin/bash
 
-# This script builds and pushes the edge-endpoint Docker image to ECR.
+# This script builds and pushes the edge-endpoint Docker image to a container
+# registry that is not Amazon ECR.
 #
 # Usage:
-#   ./build-push-edge-endpoint-image.sh
+#   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
+#   REGISTRY_USERNAME=<user> REGISTRY_PASSWORD=<token> \
+#     ./build-push-edge-endpoint-image.sh
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
-# 2. Authenticates Docker with ECR.
+# 2. Authenticates Docker with the target registry when credentials are provided.
 # 3. Builds a multi-platform Docker image.
-# 4. Pushes the image to ECR.
-#
-# Note: Ensure you have the necessary AWS credentials and Docker installed.
+# 4. Pushes the image to the configured registry.
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
-
-set -e
+set -euo pipefail
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
 
 TAG=$(./git-tag-name.sh)
 
+REGISTRY_SERVER=${REGISTRY_SERVER:-}
+REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
+REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [[ -z "${REGISTRY_SERVER}" ]]; then
+  echo "Error: REGISTRY_SERVER must be set (for example, ghcr.io)." >&2
+  exit 1
+fi
 
-if [ "$1" == "dev" ]; then
+IMAGE_REPOSITORY="${REGISTRY_SERVER}/"
+if [[ -n "${REGISTRY_NAMESPACE}" ]]; then
+  IMAGE_REPOSITORY+="${REGISTRY_NAMESPACE}/"
+fi
+IMAGE_REPOSITORY+="${EDGE_ENDPOINT_IMAGE}"
+
+if [[ -n "${REGISTRY_USERNAME}" && -n "${REGISTRY_PASSWORD}" ]]; then
+  echo "Logging in to ${REGISTRY_SERVER} as ${REGISTRY_USERNAME}" >&2
+  echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_SERVER}" --username "${REGISTRY_USERNAME}" --password-stdin
+else
+  echo "Skipping registry login because REGISTRY_USERNAME or REGISTRY_PASSWORD is not set." >&2
+  echo "Ensure you are already logged in via 'docker login ${REGISTRY_SERVER}'." >&2
+fi
+
+if [[ ${1:-} == "dev" ]]; then
   echo "'$0 dev' is no longer supported!!"
   exit 1
 fi
@@ -60,10 +75,10 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${IMAGE_REPOSITORY}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+echo "Successfully pushed image to ${IMAGE_REPOSITORY}"
+echo "${IMAGE_REPOSITORY}:${TAG}"
 
 
