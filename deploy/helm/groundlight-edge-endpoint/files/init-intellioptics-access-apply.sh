@@ -1,12 +1,10 @@
 #!/bin/sh
 
-# Part two of getting AWS credentials set up. 
+# Part two of getting registry credentials set up.
 # This script runs in a minimal container with just kubectl, and applies the credentials to the cluster.
 
-# We do two things:
-# 1. Create a secret with an AWS credentials file. We use a file instead of environment variables
-#    so that we can change it without restarting the pod.
-# 2. Create a secret with a Docker registry credentials. This is used to pull images from ECR.
+# We create or update a docker-registry secret that Kubernetes will use when pulling
+# images from the IntelliOptics Azure Container Registry.
 
 # We wait for the credentials to be written to the shared volume by the previous script.
 TIMEOUT=60  # Maximum time to wait in seconds
@@ -33,12 +31,21 @@ fi
 
 echo "Creating Kubernetes secrets..."
 
-kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
-    --dry-run=client -o yaml | kubectl apply -f -
+if [ ! -f /shared/registry.env ]; then
+    echo "❌ Error: /shared/registry.env not found." >&2
+    exit 1
+fi
+
+. /shared/registry.env
+
+if [ -z "$REGISTRY_LOGIN_SERVER" ] || [ -z "$REGISTRY_USERNAME" ] || [ -z "$REGISTRY_PASSWORD" ]; then
+    echo "❌ Error: registry credentials are incomplete." >&2
+    exit 1
+fi
 
 kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
-    --docker-username=AWS \
-    --docker-password="$(cat /shared/token.txt)" \
+    --docker-server="${REGISTRY_LOGIN_SERVER}" \
+    --docker-username="${REGISTRY_USERNAME}" \
+    --docker-password="${REGISTRY_PASSWORD}" \
     --dry-run=client -o yaml | kubectl apply -f -
 

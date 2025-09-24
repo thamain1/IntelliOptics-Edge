@@ -18,6 +18,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: main
+          image: alpine:3.19
 
           env:
             - name: INTELLIOPTICS_ENDPOINT
@@ -28,13 +29,13 @@ spec:
                   name: IntelliOptics-api-token-validate-{{ .Values.namespace }}
                   key: INTELLIOPTICS_API_TOKEN
           command:
-            - /bin/bash
-            - /app/init-aws-access-retrieve.sh
-            - validate
+            - /bin/sh
+            - -c
+            - apk add --no-cache bash curl jq && exec /app/init-intellioptics-access-retrieve.sh validate
           volumeMounts:
             - name: validate-api-token-script
-              mountPath: /app/init-aws-access-retrieve.sh
-              subPath: init-aws-access-retrieve.sh
+              mountPath: /app/init-intellioptics-access-retrieve.sh
+              subPath: init-intellioptics-access-retrieve.sh
       volumes:
         - name: validate-api-token-script
           configMap:
@@ -52,8 +53,8 @@ metadata:
     "helm.sh/hook-weight": "-1"  # Ensure it runs before the job
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 data:
-  init-aws-access-retrieve.sh: |
-    {{- tpl (.Files.Get "files/init-aws-access-retrieve.sh") . | nindent 4 }}
+  init-intellioptics-access-retrieve.sh: |
+    {{- tpl (.Files.Get "files/init-intellioptics-access-retrieve.sh") . | nindent 4 }}
 ---
 apiVersion: v1
 kind: Secret

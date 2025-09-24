@@ -44,10 +44,10 @@ intelliopticsApiToken: ""
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all IntelliOptics services are deployed in the us-west-2 region
-awsRegion: "us-west-2"
-
-ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+# IntelliOptics container images are hosted in Azure Container Registry.
+# This value is only used for documentation; credentials are fetched dynamically
+# from the IntelliOptics cloud when the chart is installed.
+registryLoginServer: "acrintellioptics.azurecr.io"
 
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"

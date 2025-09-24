@@ -3,11 +3,12 @@ restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
 
 containers:
-  - name: aws-cli
-
+  - name: registry-fetcher
+    image: alpine:3.19
     command:
       - /bin/sh
-      - /app/init-aws-access-retrieve.sh
+      - -c
+      - apk add --no-cache bash curl jq && exec /app/init-intellioptics-access-retrieve.sh
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
@@ -20,25 +21,25 @@ containers:
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-retrieve.sh
-        subPath: init-aws-access-retrieve.sh
+      - name: init-intellioptics-access
+        mountPath: /app/init-intellioptics-access-retrieve.sh
+        subPath: init-intellioptics-access-retrieve.sh
 
   - name: kubectl
-
+    image: bitnami/kubectl:1.28
     command:
       - /bin/sh
-      - /app/init-aws-access-apply.sh
+      - /app/init-intellioptics-access-apply.sh
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
-      - name: init-aws-access
-        mountPath: /app/init-aws-access-apply.sh
-        subPath: init-aws-access-apply.sh
+      - name: init-intellioptics-access
+        mountPath: /app/init-intellioptics-access-apply.sh
+        subPath: init-intellioptics-access-apply.sh
 volumes:
-  - name: init-aws-access
+  - name: init-intellioptics-access
     configMap:
-      name: init-aws-access
+      name: init-intellioptics-access
   - name: shared-volume
     emptyDir: {}
 {{- end }}

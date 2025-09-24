@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-intellioptics-access
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
+data:
+  init-intellioptics-access-retrieve.sh: |
+    {{- tpl (.Files.Get "files/init-intellioptics-access-retrieve.sh") . | nindent 4 }}
+  init-intellioptics-access-apply.sh: |
+    {{- tpl (.Files.Get "files/init-intellioptics-access-apply.sh") . | nindent 4 }}
+

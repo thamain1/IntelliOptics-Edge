@@ -1,14 +1,12 @@
 #!/bin/bash
 
-# Part one of getting AWS credentials set up.
-# This script runs in a aws-cli container and retrieves the credentials from Janzu.
-# Then it uses the credentials to get a login token for ECR.
+# Part one of getting registry credentials set up.
+# This script runs in a lightweight container and retrieves short-lived credentials
+# for the IntelliOptics Azure Container Registry from the IntelliOptics cloud.
 #
-# It saves three files to the shared volume for use by part two:
-# 1. /shared/credentials: The AWS credentials file that can be mounted into pods at ~/.aws/credentials
-# 2. /shared/token.txt: The ECR login token that can be used to pull images from ECR. This will
-#    be used to create a registry secret in k8s.
-# 3. /shared/done: A marker file to indicate that the script has completed successfully.
+# It saves two files to the shared volume for use by part two:
+# 1. /shared/registry.env: Key/value pairs describing the registry credentials.
+# 2. /shared/done: A marker file to indicate that the script has completed successfully.
 
 # Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT
 # settings. If you run it with the first argument being "validate", it will only run through the 
@@ -80,7 +78,7 @@ sanitize_endpoint_url() {
 sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT}")
 echo "Sanitized URL: $sanitized_url"
 
-echo "Fetching temporary AWS credentials from the IntelliOptics cloud service..."
+echo "Fetching temporary IntelliOptics registry credentials from the IntelliOptics cloud service..."
 HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
 
 if [ $? -ne 0 ]; then
@@ -93,31 +91,32 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-if [ "$validate" == "yes" ]; then
+REGISTRY_LOGIN_SERVER=$(jq -r '(.registry.login_server // .registryLoginServer // .registry_login_server // .registryUrl // .registry_url // empty)' /tmp/credentials.json)
+if [ -z "$REGISTRY_LOGIN_SERVER" ]; then
+  REGISTRY_LOGIN_SERVER="{{ .Values.registryLoginServer }}"
+fi
+REGISTRY_USERNAME=$(jq -r '(.registry.username // .registryUsername // .registry_user // .registry_username // empty)' /tmp/credentials.json)
+REGISTRY_PASSWORD=$(jq -r '(.registry.password // .registryPassword // .registry_pass // .registry_password // empty)' /tmp/credentials.json)
 
+if [ -z "$REGISTRY_LOGIN_SERVER" ] || [ -z "$REGISTRY_USERNAME" ] || [ -z "$REGISTRY_PASSWORD" ]; then
+  echo "Failed to parse registry credentials from response:" >&2
+  cat /tmp/credentials.json >&2
+  exit 1
+fi
+
+if [ "$validate" == "yes" ]; then
   echo "API token validation successful. Exiting."
   exit 0
 fi
 
-export AWS_ACCESS_KEY_ID=$(sed 's/^.*"access_key_id":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SECRET_ACCESS_KEY=$(sed 's/^.*"secret_access_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SESSION_TOKEN=$(sed 's/^.*"session_token":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-
-cat <<EOF > /shared/credentials
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY_ID}
-aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
-aws_session_token = ${AWS_SESSION_TOKEN}
+cat <<EOF > /shared/registry.env
+REGISTRY_LOGIN_SERVER=${REGISTRY_LOGIN_SERVER}
+REGISTRY_USERNAME=${REGISTRY_USERNAME}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
 EOF
 
-echo "Credentials fetched and saved to /shared/credentials"
-cat /shared/credentials; echo
-
-echo "Fetching AWS ECR login token..."
-TOKEN=$(aws ecr get-login-password --region {{ .Values.awsRegion }})
-echo $TOKEN > /shared/token.txt
-
-echo "Token fetched and saved to /shared/token.txt"
+echo "Registry credentials fetched and saved to /shared/registry.env"
+cat /shared/registry.env; echo
 
 touch /shared/done
 
