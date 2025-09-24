@@ -6,8 +6,11 @@ containers:
   - name: aws-cli
 
     command:
-      - /bin/sh
-      - /app/init-aws-access-retrieve.sh
+      - /bin/bash
+      - -c
+      - |
+        # ConfigMap mounts lack the execute bit, so run the script through bash.
+        exec /bin/bash /app/init-aws-access-retrieve.sh
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"

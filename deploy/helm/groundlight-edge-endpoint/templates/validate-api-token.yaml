@@ -29,8 +29,10 @@ spec:
                   key: INTELLIOPTICS_API_TOKEN
           command:
             - /bin/bash
-            - /app/init-aws-access-retrieve.sh
-            - validate
+            - -c
+            - |
+              # ConfigMap mounts lack the execute bit, so run the script through bash.
+              exec /bin/bash /app/init-aws-access-retrieve.sh validate
           volumeMounts:
             - name: validate-api-token-script
               mountPath: /app/init-aws-access-retrieve.sh
