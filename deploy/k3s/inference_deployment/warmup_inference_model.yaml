@@ -14,28 +14,28 @@ spec:
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command:
+          [
+            "sh",
+            "-c",
+            "set -euo pipefail\nrm -rf ${PINAMOD_DIR:?}/*\ncp -a ${PINAMOD_SOURCE_DIR}/. ${PINAMOD_DIR}/"
+          ]
         env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_SOURCE_DIR
+          value: /opt/pinamod-source
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
+        - name: pina-models-source
+          mountPath: /opt/pinamod-source
       volumes:
       - name: pina-models
-        hostPath:
-          path: /opt/intellioptics/edge/pinamod-public
-          type: Directory
+        emptyDir: {}
+      - name: pina-models-source
+        persistentVolumeClaim:
+          claimName: pinamod-artifacts-pvc
   backoffLimit: 2
 
 
