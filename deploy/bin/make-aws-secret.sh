@@ -1,43 +1,69 @@
 #!/bin/bash
 
+set -euo pipefail
+
+fail() {
+    echo "$1" >&2
+    exit 1
+}
+
 K=${KUBECTL_CMD:-"kubectl"}
 DEPLOYMENT_NAMESPACE=${DEPLOYMENT_NAMESPACE:-$($K config view -o json | jq -r '.contexts[] | select(.name == "'$($K config current-context)'") | .context.namespace // "default"')}
-# Update K to include the deployment namespace
 K="$K -n $DEPLOYMENT_NAMESPACE"
+
+REGISTRY_SECRET_NAME=${REGISTRY_SECRET_NAME:-registry-credentials}
+REGISTRY_SERVER=${REGISTRY_SERVER:-}
+REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
+REGISTRY_PASSWORD_FILE=${REGISTRY_PASSWORD_FILE:-}
+REGISTRY_EMAIL=${REGISTRY_EMAIL:-}
+
+if [[ -z "$REGISTRY_PASSWORD" && -n "$REGISTRY_PASSWORD_FILE" ]]; then
+    if [[ ! -f "$REGISTRY_PASSWORD_FILE" ]]; then
+        fail "Registry password file '$REGISTRY_PASSWORD_FILE' not found"
+    fi
+    REGISTRY_PASSWORD=$(<"$REGISTRY_PASSWORD_FILE")
+fi
+
+if [[ -z "$REGISTRY_SERVER" || -z "$REGISTRY_USERNAME" || -z "$REGISTRY_PASSWORD" ]]; then
+    fail "REGISTRY_SERVER, REGISTRY_USERNAME, and REGISTRY_PASSWORD (or REGISTRY_PASSWORD_FILE) must be provided"
+fi
 
 cd $(dirname "$0")
 
-# Run the refresh-ecr-login.sh, telling it to use the configured KUBECTL_CMD
-KUBECTL_CMD="$K" ./refresh-ecr-login.sh
+KUBECTL_CMD="$K" \
+REGISTRY_SECRET_NAME="$REGISTRY_SECRET_NAME" \
+REGISTRY_SERVER="$REGISTRY_SERVER" \
+REGISTRY_USERNAME="$REGISTRY_USERNAME" \
+REGISTRY_PASSWORD="$REGISTRY_PASSWORD" \
+REGISTRY_EMAIL="$REGISTRY_EMAIL" \
+./refresh-ecr-login.sh
 
-# Now we try to find the AWS credentials.  Let's look in the CLI
-if command -v aws >/dev/null 2>&1; then
-    # Try to retrieve AWS credentials from aws configure
-    AWS_ACCESS_KEY_ID_CMD=$(aws configure get aws_access_key_id 2>/dev/null)
-    AWS_SECRET_ACCESS_KEY_CMD=$(aws configure get aws_secret_access_key 2>/dev/null)
-fi
-# Use the CLI credentials if available, otherwise use environment variables
-AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_CMD:-$AWS_ACCESS_KEY_ID}
-AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_CMD:-$AWS_SECRET_ACCESS_KEY}
+MODEL_SYNC_SECRET_NAME=${MODEL_SYNC_SECRET_NAME:-object-store-credentials}
+MODEL_SYNC_CREDENTIALS_FILE=${MODEL_SYNC_CREDENTIALS_FILE:-}
 
-# Check that we have credentials
-if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-    fail "No AWS credentials found"
-fi
-
-# Create the secret with either retrieved or environment values
-$K delete --ignore-not-found secret aws-credentials
-$K create secret generic aws-credentials \
-    --from-literal=aws_access_key_id=$AWS_ACCESS_KEY_ID \
-    --from-literal=aws_secret_access_key=$AWS_SECRET_ACCESS_KEY
-
-# Verify secrets have been properly created
-if ! $K get secret registry-credentials; then
-    # These should have been created in refresh-ecr-login.sh
-    fail "registry-credentials secret not found"
+if [[ -z "$MODEL_SYNC_CREDENTIALS_FILE" ]]; then
+    DEFAULT_MODEL_FILE="$HOME/.aws/credentials"
+    if [[ -f "$DEFAULT_MODEL_FILE" ]]; then
+        MODEL_SYNC_CREDENTIALS_FILE="$DEFAULT_MODEL_FILE"
+    fi
 fi
 
-if ! $K get secret aws-credentials; then
-    echo "aws-credentials secret not found"
+if [[ -n "$MODEL_SYNC_CREDENTIALS_FILE" ]]; then
+    if [[ ! -f "$MODEL_SYNC_CREDENTIALS_FILE" ]]; then
+        echo "Model sync credentials file '$MODEL_SYNC_CREDENTIALS_FILE' not found; skipping secret creation." >&2
+    else
+        echo "Creating secret '$MODEL_SYNC_SECRET_NAME' from $MODEL_SYNC_CREDENTIALS_FILE"
+        $K delete --ignore-not-found secret "$MODEL_SYNC_SECRET_NAME"
+        $K create secret generic "$MODEL_SYNC_SECRET_NAME" \
+            --from-file=credentials="$MODEL_SYNC_CREDENTIALS_FILE"
+    fi
+else
+    echo "MODEL_SYNC_CREDENTIALS_FILE not provided and default credentials file not found; skipping object storage secret creation."
 fi
 
+$K get secret "$REGISTRY_SECRET_NAME" >/dev/null
+
+if ! $K get secret "$MODEL_SYNC_SECRET_NAME" >/dev/null 2>&1; then
+    echo "Warning: secret '$MODEL_SYNC_SECRET_NAME' not found. Inference model sync may fail if credentials are required." >&2
+fi

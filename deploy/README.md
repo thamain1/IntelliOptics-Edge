@@ -238,7 +238,19 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+You'll also need to provide credentials for the container registry that hosts the edge endpoint images. Set the following environment variables before running the setup script so that it can create the `registry-credentials` secret:
+
+```bash
+export REGISTRY_SERVER="acrintellioptics.azurecr.io"
+export REGISTRY_USERNAME="<your-registry-username>"
+# Provide either REGISTRY_PASSWORD or REGISTRY_PASSWORD_FILE
+export REGISTRY_PASSWORD_FILE="$HOME/.config/edge-endpoint/registry-password"
+
+# Optional: path to the credentials file used to sync inference models
+export MODEL_SYNC_CREDENTIALS_FILE="$HOME/.aws/credentials"
+```
+
+The registry variables can point at any OCI-compliant registry. The model sync credentials file should contain whatever secrets your deployment needs to download models (for example, an AWS credentials file if your models are stored in S3).
 
 To install the edge-endpoint, run:
 ```shell
@@ -325,10 +337,10 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Ensure that the `registry-credentials` secret exists in your namespace and contains valid credentials for the configured registry. You can re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) with the appropriate `REGISTRY_*` environment variables to update the secret if needed.
 
 ```
-kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
+kubectl get secret registry-credentials -n <YOUR-NAMESPACE>
 ```
 
 ### Changing IP Address Causes DNS Failures and Other Problems

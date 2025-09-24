@@ -190,7 +190,6 @@ $MAYBE_SUDO mkdir -p /opt/intellioptics/edge/pinamod-public
 apply_yaml deploy/k3s/service_account.yaml
 apply_yaml deploy/k3s/inference_deployment/warmup_inference_model.yaml
 apply_yaml deploy/k3s/edge_deployment/edge_deployment.yaml
-apply_yaml deploy/k3s/refresh_creds.yaml
 
 $K describe deployment edge-endpoint
 

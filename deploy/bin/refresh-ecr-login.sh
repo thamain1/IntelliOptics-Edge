@@ -1,36 +1,53 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 K=${KUBECTL_CMD:-"kubectl"}
-# No need to explicitly pick the namespace - this normally runs in its own namespace
+REGISTRY_SECRET_NAME=${REGISTRY_SECRET_NAME:-registry-credentials}
 
-ECR_REGISTRY="767397850842.dkr.ecr.us-west-2.amazonaws.com"
-# TODO: We should probably put this in DNS
+REGISTRY_SERVER=${REGISTRY_SERVER:-}
+REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
+REGISTRY_PASSWORD_FILE=${REGISTRY_PASSWORD_FILE:-}
+REGISTRY_EMAIL=${REGISTRY_EMAIL:-}
 
-ECR_PASSWORD=$(aws ecr get-login-password --region us-west-2)
-if [ $? -ne 0 ]; then
-    echo "Failed to get ECR password"
+if [[ -z "$REGISTRY_PASSWORD" && -n "$REGISTRY_PASSWORD_FILE" ]]; then
+    if [[ ! -f "$REGISTRY_PASSWORD_FILE" ]]; then
+        echo "Registry password file '$REGISTRY_PASSWORD_FILE' not found" >&2
+        exit 1
+    fi
+    REGISTRY_PASSWORD=$(<"$REGISTRY_PASSWORD_FILE")
+fi
+
+if [[ -z "$REGISTRY_SERVER" || -z "$REGISTRY_USERNAME" || -z "$REGISTRY_PASSWORD" ]]; then
+    echo "REGISTRY_SERVER, REGISTRY_USERNAME, and REGISTRY_PASSWORD (or REGISTRY_PASSWORD_FILE) must be provided." >&2
     exit 1
 fi
 
-echo "Fetched short-lived ECR credentials from AWS"
+echo "Updating registry secret '$REGISTRY_SECRET_NAME' for $REGISTRY_SERVER"
 
 if command -v docker >/dev/null 2>&1; then
-    echo $ECR_PASSWORD | docker login \
-        --username AWS \
-        --password-stdin  \
-        $ECR_REGISTRY
+    echo "$REGISTRY_PASSWORD" | docker login \
+        --username "$REGISTRY_USERNAME" \
+        --password-stdin \
+        "$REGISTRY_SERVER"
 else
-    echo "Docker is not installed. Skipping docker ECR login."
+    echo "Docker is not installed. Skipping local docker login."
 fi
 
-$K delete --ignore-not-found secret registry-credentials
+$K delete --ignore-not-found secret "$REGISTRY_SECRET_NAME"
 
-$K create secret docker-registry registry-credentials \
-    --docker-server=$ECR_REGISTRY \
-    --docker-username=AWS \
-    --docker-password=$ECR_PASSWORD
+create_args=(
+    create secret docker-registry "$REGISTRY_SECRET_NAME"
+    --docker-server="$REGISTRY_SERVER"
+    --docker-username="$REGISTRY_USERNAME"
+    --docker-password="$REGISTRY_PASSWORD"
+)
 
-echo "Stored ECR credentials in secret registry-credentials"
+if [[ -n "$REGISTRY_EMAIL" ]]; then
+    create_args+=(--docker-email="$REGISTRY_EMAIL")
+fi
 
+$K "${create_args[@]}"
+
+echo "Stored registry credentials in secret $REGISTRY_SECRET_NAME"

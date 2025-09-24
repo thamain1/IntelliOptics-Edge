@@ -44,10 +44,18 @@ intelliopticsApiToken: ""
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all IntelliOptics services are deployed in the us-west-2 region
-awsRegion: "us-west-2"
+# Registry configuration
+registry:
+  server: "acrintellioptics.azurecr.io"
+  repository: "intellioptics/edge-endpoint"
 
-ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+# Name of the imagePullSecret that contains registry credentials. The secret must
+# already exist in the namespace.
+registryCredentialsSecretName: "registry-credentials"
+
+# Name of the secret that stores credentials for syncing inference models. This secret
+# should contain a standard AWS credentials file at the key `credentials`.
+modelSyncCredentialsSecretName: "object-store-credentials"
 
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"

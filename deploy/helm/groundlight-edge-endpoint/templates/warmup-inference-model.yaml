@@ -10,11 +10,13 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+{{- if .Values.registryCredentialsSecretName }}
       imagePullSecrets:
-      - name: registry-credentials
+        - name: {{ .Values.registryCredentialsSecretName }}
+{{- end }}
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
@@ -25,15 +27,20 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
+{{- if .Values.modelSyncCredentialsSecretName }}
+        - name: object-store-credentials
           mountPath: /root/.aws
+{{- end }}
       volumes:
       - name: pina-models
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
-      - name: aws-credentials
+{{- if .Values.modelSyncCredentialsSecretName }}
+      - name: object-store-credentials
         secret:
-          secretName: aws-credentials-file
+          secretName: {{ .Values.modelSyncCredentialsSecretName }}
+          optional: true
+{{- end }}
   backoffLimit: 2
 
 

@@ -1,20 +1,15 @@
 #!/bin/bash
 
-# Put a specific tag on an existing image in ECR
+# Put a specific tag on an existing image in a container registry.
 # Assumptions:
-# - The image is already built and pushed to ECR
+# - The image is already built and pushed to the registry
 # - The image is tagged with the git commit hash
 
-set -e  # Exit immediately on error
-set -o pipefail
-
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+set -euo pipefail
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
 
-# Check if an argument is provided
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <new-tag>"
     exit 1
@@ -31,22 +26,29 @@ if [[ "$NEW_TAG" == "pre-release" || "$NEW_TAG" == "release" || "$NEW_TAG" == "l
 fi
 
 GIT_TAG=$(./git-tag-name.sh)
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
-ECR_REPO="${ECR_URL}/${EDGE_ENDPOINT_IMAGE}"
+IMAGE_REPOSITORY=${IMAGE_REPOSITORY:-acrintellioptics.azurecr.io/intellioptics/edge-endpoint}
+REGISTRY_SERVER=${REGISTRY_SERVER:-${IMAGE_REPOSITORY%%/*}}
+REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
+REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
+REGISTRY_PASSWORD_FILE=${REGISTRY_PASSWORD_FILE:-}
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [[ -z "$REGISTRY_PASSWORD" && -n "$REGISTRY_PASSWORD_FILE" ]]; then
+    if [[ ! -f "$REGISTRY_PASSWORD_FILE" ]]; then
+        echo "Registry password file '$REGISTRY_PASSWORD_FILE' not found" >&2
+        exit 1
+    fi
+    REGISTRY_PASSWORD=$(<"$REGISTRY_PASSWORD_FILE")
+fi
 
-# Tag the image with the new tag
-# To do this, we need to pull the digest SHA of the existing multiplatform image
-# and then create the tag on that SHA. Otherwise imagetools will create a tag for
-# just the platform where the command is run.
-echo "🏷️ Tagging image $ECR_REPO:$GIT_TAG with tag $NEW_TAG"
-digest=$(docker buildx imagetools inspect $ECR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
-docker buildx imagetools create --tag $ECR_REPO:$NEW_TAG $ECR_REPO@${digest}
+if [[ -n "$REGISTRY_USERNAME" && -n "$REGISTRY_PASSWORD" ]]; then
+    echo "$REGISTRY_PASSWORD" | docker login \
+        --username "$REGISTRY_USERNAME" \
+        --password-stdin \
+        "$REGISTRY_SERVER"
+fi
 
-echo "✅ Image successfully tagged: $ECR_REPO:$NEW_TAG"
+echo "🏷️ Tagging image $IMAGE_REPOSITORY:$GIT_TAG with tag $NEW_TAG"
+digest=$(docker buildx imagetools inspect $IMAGE_REPOSITORY:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
+docker buildx imagetools create --tag $IMAGE_REPOSITORY:$NEW_TAG $IMAGE_REPOSITORY@${digest}
 
+echo "✅ Image successfully tagged: $IMAGE_REPOSITORY:$NEW_TAG"
