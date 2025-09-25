@@ -2,7 +2,7 @@
 
 ## Overview
 
-The edge endpoint provides a way for clients to use the existing Groundlight API in a hybrid mode: most inference requests will be handled locally while all other requests will be forwarded to the Groundlight cloud service. This enables client programs to get low-latency results for most requests while still being able to use the full Groundlight API.
+The edge endpoint provides a way for clients to use the existing IntelliOptics API in a hybrid mode: most inference requests will be handled locally while all other requests will be forwarded to the IntelliOptics cloud service. This enables client programs to get low-latency results for most requests while still being able to use the full IntelliOptics API.
 
 ## Structure
 
@@ -23,7 +23,7 @@ The edge endpoint pod divides its work between four containers:
 
 ## Network flow
 
-By default, the edge endpoint exposes the Groundlight API on port 30101 on the local machine.
+By default, the edge endpoint exposes the IntelliOptics API on port 30101 on the local machine.
 
 The following diagram shows how HTTP requests are handled by the edge endpoint. 
 
