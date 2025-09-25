@@ -47,6 +47,8 @@ RUN cd /tmp && \
     ./aws/install --update && \
     rm -rf awscliv2.zip aws
 
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
