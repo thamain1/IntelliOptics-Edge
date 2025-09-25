@@ -49,15 +49,34 @@ spec:
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_BLOB_URL
+          value: {{ required "pinamodStorage.blobUrl must be provided" .Values.pinamodStorage.blobUrl | quote }}
+{{- if .Values.pinamodStorage.sasTokenSecretName }}
+        - name: PINAMOD_SAS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pinamodStorage.sasTokenSecretName }}
+              key: {{ default "sasToken" .Values.pinamodStorage.sasTokenSecretKey }}
+{{- end }}
+{{- if .Values.pinamodStorage.useManagedIdentity }}
+        - name: AZCOPY_AUTO_LOGIN_TYPE
+          value: MSI
+{{- if .Values.pinamodStorage.managedIdentityClientId }}
+        - name: AZCOPY_MSI_CLIENT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityClientId | quote }}
+{{- end }}
+{{- if .Values.pinamodStorage.managedIdentityTenantId }}
+        - name: AZCOPY_TENANT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityTenantId | quote }}
+{{- end }}
+{{- end }}
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
@@ -123,9 +142,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
 
 
 

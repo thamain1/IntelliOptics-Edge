@@ -52,6 +52,23 @@ ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"
 
+# Configuration for downloading the Pinamod model artifacts from Azure Blob Storage.
+# `blobUrl` should point to the container path that contains the Pinamod files. It can
+# optionally omit the SAS token if you're using a managed identity or if the container
+# is publicly accessible. When using a SAS token, include only the query string portion
+# (e.g. `?sv=...`).
+pinamodStorage:
+  blobUrl: ""
+  # Set to true if the cluster uses a managed identity that can access the blob.
+  useManagedIdentity: false
+  # Optional: provide the client ID of the managed identity.
+  managedIdentityClientId: ""
+  # Optional: provide the tenant ID for the managed identity.
+  managedIdentityTenantId: ""
+  # Optional SAS token secret reference. Leave blank when using managed identity.
+  sasTokenSecretName: ""
+  sasTokenSecretKey: "sasToken"
+
 # These values override the automated settings in _helpers.tpl to keep this short and sweet
 # Don't override these
 nameOverride: "edge-endpoint"
