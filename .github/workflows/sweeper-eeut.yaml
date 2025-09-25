@@ -4,8 +4,8 @@ name: sweeper-eeut
 # and we don't want to slow down the main pipeline for that.
 on:
   schedule:
+    # Note cron workflows only run from the main branch.
     - cron: "*/15 * * * *" # Every 15 minutes
-      # Note cron workflows only run from the main branch.
   push:
     branches:
       # If you're working on this stuff, name your branch e2e-something and this will run.
