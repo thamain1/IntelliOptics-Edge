@@ -11,9 +11,11 @@ on:
         required: true
         type: string
     secrets:
-      AWS_GL_PUBLIC_ACCESS_KEY_ID:
+      ACR_LOGIN_SERVER:
         required: true
-      AWS_GL_PUBLIC_SECRET_ACCESS_KEY:
+      ACR_USERNAME:
+        required: true
+      ACR_PASSWORD:
         required: true
 jobs:
   build-push-edge-endpoint-multiplatform:
@@ -24,23 +26,16 @@ jobs:
     # already done in the test-k3s-helm workflow.
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
       - name: Check out code
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
-      - name: Build and Push Multiplatform edge-endpoint Image to ECR
+      - name: Build and Push Multiplatform edge-endpoint Image to ACR
         # This is actually only taking about 4 minutes right now.
         timeout-minutes: 45
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
         run: ./deploy/bin/build-push-edge-endpoint-image.sh
