@@ -1,44 +1,81 @@
 """
 Fabric tools to connect to the EEUT and see how it's doing.
 """
-from functools import lru_cache
 from typing import Callable
+import json
 import os
 import time
 import io
+from urllib import request, error
 
-from fabric import task, Connection, Config
+from fabric import task, Connection
 from invoke import run as local
-import boto3
 import paramiko
 
+AZURE_KEY_VAULT_URL_ENV = "AZURE_KEY_VAULT_URL"
+AZURE_KEY_VAULT_TOKEN_ENV = "AZURE_KEY_VAULT_BEARER_TOKEN"
+AZURE_KEY_VAULT_API_VERSION_ENV = "AZURE_KEY_VAULT_API_VERSION"
+AZURE_SECRET_NAME_ENV = "AZURE_EEUT_PRIVATE_KEY_SECRET_NAME"
+
+
+def _build_secret_request(secret_id: str) -> request.Request:
+    """Prepare an authenticated request to Azure Key Vault for the given secret."""
+    vault_url = os.environ.get(AZURE_KEY_VAULT_URL_ENV)
+    if not vault_url:
+        raise RuntimeError(
+            f"Missing {AZURE_KEY_VAULT_URL_ENV}; set it to the base https://<vault-name>.vault.azure.net URL."
+        )
+
+    token = os.environ.get(AZURE_KEY_VAULT_TOKEN_ENV)
+    if not token:
+        raise RuntimeError(
+            f"Missing {AZURE_KEY_VAULT_TOKEN_ENV}; supply a bearer token obtained from Azure (e.g. via `az account get-access-token`)."
+        )
+
+    api_version = os.environ.get(AZURE_KEY_VAULT_API_VERSION_ENV, "7.4")
+    secret_uri = f"{vault_url.rstrip('/')}/secrets/{secret_id}?api-version={api_version}"
+    req = request.Request(secret_uri)
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("Content-Type", "application/json")
+    return req
+
+
 def fetch_secret(secret_id: str) -> str:
-    """Fetches a secret from AWS Secrets Manager."""
-    client = boto3.client("secretsmanager", region_name="us-west-2")
-    response = client.get_secret_value(SecretId=secret_id)
-    return response['SecretString']
+    """Fetch a secret value from Azure Key Vault."""
+    req = _build_secret_request(secret_id)
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            payload = json.load(resp)
+    except error.HTTPError as exc:
+        raise RuntimeError(f"Failed to fetch secret '{secret_id}' from Azure Key Vault: {exc.reason}") from exc
+    except error.URLError as exc:
+        raise RuntimeError(f"Unable to reach Azure Key Vault when fetching '{secret_id}': {exc.reason}") from exc
+
+    try:
+        return payload["value"]
+    except KeyError as exc:
+        raise RuntimeError(
+            f"Azure Key Vault response for secret '{secret_id}' did not include a value."
+        ) from exc
 
 def get_eeut_ip() -> str:
     """Gets the EEUT's IP address from Pulumi."""
     return local("pulumi stack output eeut_private_ip", hide=True).stdout.strip()
 
 def connect_server() -> Connection:
-    """Connects to the EEUT, using the private key stored in AWS Secrets Manager."""
+    """Connect to the EEUT using the SSH key stored in Azure Key Vault."""
     ip = get_eeut_ip()
-    try:
-        private_key = fetch_secret("ghar2eeut-private-key")
-        private_key_file = io.StringIO(private_key)
-        key = paramiko.Ed25519Key.from_private_key(private_key_file)
-        conn = Connection(
-            ip,
-            user='ubuntu',
-            connect_kwargs={"pkey": key},
-        )
-        conn.run(f"echo 'Successfully logged in to {ip}'")
-        return conn
-    except paramiko.ssh_exception.SSHException as e:
-        print(f"Failed to connect to {ip}")
-        raise
+    secret_name = os.environ.get(AZURE_SECRET_NAME_ENV, "eeut-ssh-private-key")
+    private_key = fetch_secret(secret_name)
+    private_key_file = io.StringIO(private_key)
+    key = paramiko.Ed25519Key.from_private_key(private_key_file)
+    conn = Connection(
+        ip,
+        user='ubuntu',
+        connect_kwargs={"pkey": key},
+    )
+    conn.run(f"echo 'Successfully logged in to {ip}'")
+    return conn
 
 
 class InfrequentUpdater:
