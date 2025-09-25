@@ -8,10 +8,13 @@ metadata:
     edge-pv-for-namespace: {{ .Values.namespace }}
     {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
-  capacity: 
+  capacity:
     storage: 2Gi
   accessModes:
-    - ReadWriteOnce 
+    - ReadWriteOnce
+  {{- with .Values.storage.data.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
   persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: /opt/intellioptics/edge
@@ -21,10 +24,14 @@ kind: PersistentVolumeClaim
 metadata:
   name: edge-endpoint-pvc
   namespace: {{ .Values.namespace }}
-spec: 
+spec:
   accessModes:
     - ReadWriteOnce
+  {{- if .Values.storage.data.storageClassName }}
+  storageClassName: {{ .Values.storage.data.storageClassName | quote }}
+  {{- else }}
   storageClassName: ""
+  {{- end }}
   resources:
     requests:
       storage: 2Gi
