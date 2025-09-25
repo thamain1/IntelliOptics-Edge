@@ -194,3 +194,212 @@ jobs:
     steps:
       - name: declare success
         run: echo "Main suite of tests all pass."
+
+  build-azure-image:
+    name: Build edge image for Azure
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - main-tests-pass
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: intellioptics/edge-endpoint
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+    outputs:
+      image-tag: ${{ steps.compute-tag.outputs.image_tag }}
+      image-repository: ${{ steps.compute-tag.outputs.image_repository }}
+      acr-name: ${{ steps.compute-tag.outputs.acr_name }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ env.ACR_USERNAME }}
+          password: ${{ env.ACR_PASSWORD }}
+
+      - name: Compute image tag
+        id: compute-tag
+        run: |
+          set -euo pipefail
+          sha_tag="${GITHUB_SHA::7}"
+          echo "image_tag=$sha_tag" >> "$GITHUB_OUTPUT"
+          echo "image_repository=${ACR_LOGIN_SERVER}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "acr_name=${ACR_LOGIN_SERVER%%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        env:
+          IMAGE_TAG: ${{ steps.compute-tag.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          REG="$ACR_LOGIN_SERVER"
+          IMG="$REG/${IMAGE_NAME}"
+          docker build -t "$IMG:$IMAGE_TAG" -t "$IMG:latest" .
+          docker push "$IMG:$IMAGE_TAG"
+          docker push "$IMG:latest"
+
+  deploy-azure-staging:
+    name: Deploy edge endpoint to Azure staging
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build-azure-image
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: intellioptics/edge-endpoint
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      AZ_RESOURCE_GROUP: ${{ secrets.AZ_RESOURCE_GROUP }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Select subscription (optional)
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
+            az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          fi
+
+      - name: Install template tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+      - name: Render staging container group manifest
+        env:
+          AZ_LOCATION: ${{ secrets.AZ_LOCATION }}
+          ACI_NAME: ${{ secrets.AZURE_STAGING_CONTAINER_GROUP }}
+          ACI_CONTAINER_NAME: edge-endpoint
+          EDGE_IMAGE_TAG: ${{ needs.build-azure-image.outputs.image-tag }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          INTELLIOPTICS_ENDPOINT: ${{ secrets.STAGING_INTELLIOPTICS_ENDPOINT }}
+          INTELLIOPTICS_API_TOKEN: ${{ secrets.STAGING_INTELLIOPTICS_API_TOKEN }}
+          FALLBACK_INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+          SERVICE_BUS_CONN: ${{ secrets.STAGING_SERVICE_BUS_CONN }}
+          FALLBACK_SERVICE_BUS_CONN: ${{ secrets.SERVICE_BUS_CONN }}
+          SB_IMAGE_QUEUE: ${{ secrets.STAGING_SB_IMAGE_QUEUE }}
+          SB_RESULTS_QUEUE: ${{ secrets.STAGING_SB_RESULTS_QUEUE }}
+          SB_FEEDBACK_QUEUE: ${{ secrets.STAGING_SB_FEEDBACK_QUEUE }}
+        run: |
+          set -euo pipefail
+          : "${ACI_NAME:?AZURE_STAGING_CONTAINER_GROUP secret is required}"
+          : "${AZ_RESOURCE_GROUP:?AZ_RESOURCE_GROUP secret is required}"
+          INTELLIOPTICS_API_TOKEN="${INTELLIOPTICS_API_TOKEN:-$FALLBACK_INTELLIOPTICS_API_TOKEN}"
+          SERVICE_BUS_CONN="${SERVICE_BUS_CONN:-$FALLBACK_SERVICE_BUS_CONN}"
+          export AZ_LOCATION ACI_NAME ACI_CONTAINER_NAME EDGE_IMAGE_TAG
+          export ACR_LOGIN_SERVER ACR_USERNAME ACR_PASSWORD
+          export INTELLIOPTICS_ENDPOINT INTELLIOPTICS_API_TOKEN SERVICE_BUS_CONN
+          export SB_IMAGE_QUEUE SB_RESULTS_QUEUE SB_FEEDBACK_QUEUE
+          envsubst < deploy/aci/edge-endpoint.yaml > edge-endpoint.staging.yaml
+
+      - name: Deploy staging container group
+        env:
+          ACI_NAME: ${{ secrets.AZURE_STAGING_CONTAINER_GROUP }}
+        run: |
+          set -euo pipefail
+          az container delete --resource-group "${AZ_RESOURCE_GROUP}" --name "${ACI_NAME}" --yes || true
+          az container create --resource-group "${AZ_RESOURCE_GROUP}" --file edge-endpoint.staging.yaml
+
+  release-azure:
+    name: Promote Azure release
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build-azure-image
+      - deploy-azure-staging
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      IMAGE_NAME: intellioptics/edge-endpoint
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+      AZ_RESOURCE_GROUP: ${{ secrets.AZ_RESOURCE_GROUP }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Select subscription (optional)
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
+            az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          fi
+
+      - name: Promote container image tags
+        env:
+          SOURCE_TAG: ${{ needs.build-azure-image.outputs.image-tag }}
+        run: |
+          set -euo pipefail
+          : "${ACR_LOGIN_SERVER:?ACR_LOGIN_SERVER secret is required}"
+          : "${SOURCE_TAG:?Missing image tag from build stage}"
+          ACR_NAME="${ACR_LOGIN_SERVER%%.*}"
+          SOURCE_IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SOURCE_TAG}"
+          az acr import --name "$ACR_NAME" --source "$SOURCE_IMAGE" --image "${IMAGE_NAME}:release" --force
+          az acr import --name "$ACR_NAME" --source "$SOURCE_IMAGE" --image "${IMAGE_NAME}:production" --force
+
+      - name: Install template tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+      - name: Render production container group manifest
+        env:
+          AZ_LOCATION: ${{ secrets.AZ_LOCATION }}
+          ACI_NAME: ${{ secrets.AZURE_PROD_CONTAINER_GROUP }}
+          ACI_CONTAINER_NAME: edge-endpoint
+          EDGE_IMAGE_TAG: release
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          INTELLIOPTICS_ENDPOINT: ${{ secrets.PROD_INTELLIOPTICS_ENDPOINT }}
+          INTELLIOPTICS_API_TOKEN: ${{ secrets.PROD_INTELLIOPTICS_API_TOKEN }}
+          FALLBACK_INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+          SERVICE_BUS_CONN: ${{ secrets.PROD_SERVICE_BUS_CONN }}
+          FALLBACK_SERVICE_BUS_CONN: ${{ secrets.SERVICE_BUS_CONN }}
+          SB_IMAGE_QUEUE: ${{ secrets.PROD_SB_IMAGE_QUEUE }}
+          SB_RESULTS_QUEUE: ${{ secrets.PROD_SB_RESULTS_QUEUE }}
+          SB_FEEDBACK_QUEUE: ${{ secrets.PROD_SB_FEEDBACK_QUEUE }}
+        run: |
+          set -euo pipefail
+          : "${ACI_NAME:?AZURE_PROD_CONTAINER_GROUP secret is required}"
+          : "${AZ_RESOURCE_GROUP:?AZ_RESOURCE_GROUP secret is required}"
+          INTELLIOPTICS_API_TOKEN="${INTELLIOPTICS_API_TOKEN:-$FALLBACK_INTELLIOPTICS_API_TOKEN}"
+          SERVICE_BUS_CONN="${SERVICE_BUS_CONN:-$FALLBACK_SERVICE_BUS_CONN}"
+          export AZ_LOCATION ACI_NAME ACI_CONTAINER_NAME EDGE_IMAGE_TAG
+          export ACR_LOGIN_SERVER ACR_USERNAME ACR_PASSWORD
+          export INTELLIOPTICS_ENDPOINT INTELLIOPTICS_API_TOKEN SERVICE_BUS_CONN
+          export SB_IMAGE_QUEUE SB_RESULTS_QUEUE SB_FEEDBACK_QUEUE
+          envsubst < deploy/aci/edge-endpoint.yaml > edge-endpoint.production.yaml
+
+      - name: Deploy production container group
+        env:
+          ACI_NAME: ${{ secrets.AZURE_PROD_CONTAINER_GROUP }}
+        run: |
+          set -euo pipefail
+          az container delete --resource-group "${AZ_RESOURCE_GROUP}" --name "${ACI_NAME}" --yes || true
+          az container create --resource-group "${AZ_RESOURCE_GROUP}" --file edge-endpoint.production.yaml
