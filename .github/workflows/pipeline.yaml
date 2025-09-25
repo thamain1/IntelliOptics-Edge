@@ -198,8 +198,9 @@ jobs:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
     secrets:
-      AWS_GL_PUBLIC_ACCESS_KEY_ID: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-      AWS_GL_PUBLIC_SECRET_ACCESS_KEY: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
 
   validate-setup-ee:
     runs-on: ubuntu-latest-4-cores
