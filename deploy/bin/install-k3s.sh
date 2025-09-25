@@ -110,8 +110,8 @@ EOF
 fi
 
 # Install and configure GPU support, if requested
-# Tested on an AWS EC2 G4 instance using the following AMI:
-# Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.3.0 (Ubuntu 20.04) 20240825
+# Tested on an IntelliOptics GPU reference instance running Ubuntu 20.04 with
+# the "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.3.0 (20240825)" image.
 
 # This guide was more helpful than others fwiw:
 # https://support.tools/post/nvidia-gpus-on-k3s/

@@ -58,8 +58,11 @@ see the [Configuration](#Configuration) section below (specifically, you will ne
 Configure the following variables via the `<fleet>/Variables` or `<device>/Device Variables` interfaces on the BalenaCloud dashboard:
 ```
 INTELLIOPTICS_API_TOKEN - so that we can authorize the fetching of edge model binaries
-AWS_ACCESS_KEY_ID - so we can pull the edge-endpoint and gl-edge-inference images from ECR
-AWS_SECRET_ACCESS_KEY - needed along with AWS_ACCESS_KEY_ID
+REGISTRY_URL - hostname for the IntelliOptics container registry
+REGISTRY_USERNAME - username for the registry
+REGISTRY_PASSWORD - password for the registry
+ARTIFACT_STORAGE_ACCESS_KEY - access key for model artifact storage
+ARTIFACT_STORAGE_SECRET_KEY - secret key for model artifact storage
 RUN_EDGE_ENDPOINT - Set this to anything (such as "1") to start the pods (added for glhub integration)
 INFERENCE_FLAVOR - Set this to `GPU` or `CPU` if you are running on a device that does not support GPU inferencing, defaults to "GPU" if not set
 ```

@@ -18,22 +18,30 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR; aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'mkdir -p "$PINAMOD_DIR"; if [ -n "$MODEL_SYNC_COMMAND" ]; then eval "$MODEL_SYNC_COMMAND"; else echo "Skipping model sync; MODEL_SYNC_COMMAND not set."; fi']
         env:
+        - name: MODEL_SYNC_COMMAND
+          valueFrom:
+            configMapKeyRef:
+              name: inference-deployment-template
+              key: model_sync_command
+              optional: true
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
+        envFrom:
+        - secretRef:
+            name: artifact-storage-credentials
+            optional: true
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
       volumes:
       - name: pina-models
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
-      - name: aws-credentials
+      - name: artifact-credentials
         secret:
-          secretName: aws-credentials-file
+          secretName: artifact-storage-credentials
   backoffLimit: 2
 
 

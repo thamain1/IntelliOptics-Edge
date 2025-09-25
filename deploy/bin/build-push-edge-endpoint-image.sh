@@ -1,20 +1,22 @@
 #!/bin/bash
 
-# This script builds and pushes the edge-endpoint Docker image to ECR.
+# This script builds and pushes the edge-endpoint Docker image to the
+# configured container registry.
 #
 # Usage:
 #   ./build-push-edge-endpoint-image.sh
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
-# 2. Authenticates Docker with ECR.
+# 2. Authenticates Docker with the registry if credentials are provided.
 # 3. Builds a multi-platform Docker image.
-# 4. Pushes the image to ECR.
+# 4. Pushes the image to the registry.
 #
-# Note: Ensure you have the necessary AWS credentials and Docker installed.
+# Note: Set REGISTRY_URL to the fully-qualified registry hostname (including
+# the project/namespace path if required). Optional REGISTRY_USERNAME and
+# REGISTRY_PASSWORD variables can be used to authenticate.
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+REGISTRY_URL=${REGISTRY_URL:?Set REGISTRY_URL to the destination registry}
 
 set -e
 
@@ -23,13 +25,14 @@ cd "$(dirname "$0")"
 
 TAG=$(./git-tag-name.sh)
 
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+if [ -n "${REGISTRY_USERNAME:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
+  echo "Authenticating to ${REGISTRY_URL}"
+  printf '%s' "${REGISTRY_PASSWORD}" | docker login \
+    --username "${REGISTRY_USERNAME}" \
+    --password-stdin "${REGISTRY_URL}"
+fi
 
 if [ "$1" == "dev" ]; then
   echo "'$0 dev' is no longer supported!!"
@@ -60,10 +63,10 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${REGISTRY_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+echo "Successfully pushed image to ${REGISTRY_URL}"
+echo "${REGISTRY_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
 

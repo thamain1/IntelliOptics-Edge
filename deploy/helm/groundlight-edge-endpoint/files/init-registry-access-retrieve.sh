@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Part one of getting AWS credentials set up.
-# This script runs in a aws-cli container and retrieves the credentials from Janzu.
-# Then it uses the credentials to get a login token for ECR.
+# Part one of getting registry and artifact credentials set up.
+# This script runs in a lightweight container and retrieves the credentials from the
+# IntelliOptics control plane.
 #
 # It saves three files to the shared volume for use by part two:
-# 1. /shared/credentials: The AWS credentials file that can be mounted into pods at ~/.aws/credentials
-# 2. /shared/token.txt: The ECR login token that can be used to pull images from ECR. This will
+# 1. /shared/credentials: The artifact storage credentials that can be mounted into pods.
+# 2. /shared/token.txt: The container registry password that can be used to pull images. This will
 #    be used to create a registry secret in k8s.
 # 3. /shared/done: A marker file to indicate that the script has completed successfully.
 
@@ -80,7 +80,7 @@ sanitize_endpoint_url() {
 sanitized_url=$(sanitize_endpoint_url "${INTELLIOPTICS_ENDPOINT}")
 echo "Sanitized URL: $sanitized_url"
 
-echo "Fetching temporary AWS credentials from the IntelliOptics cloud service..."
+echo "Fetching temporary credentials from the IntelliOptics cloud service..."
 HTTP_STATUS=$(curl -s -L -o /tmp/credentials.json -w "%{http_code}" --fail-with-body --header "x-api-token: ${INTELLIOPTICS_API_TOKEN}" ${sanitized_url}/reader-credentials)
 
 if [ $? -ne 0 ]; then
@@ -99,25 +99,27 @@ if [ "$validate" == "yes" ]; then
   exit 0
 fi
 
-export AWS_ACCESS_KEY_ID=$(sed 's/^.*"access_key_id":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SECRET_ACCESS_KEY=$(sed 's/^.*"secret_access_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
-export AWS_SESSION_TOKEN=$(sed 's/^.*"session_token":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+REGISTRY_USERNAME=$(sed 's/^.*"registry_username":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+REGISTRY_PASSWORD=$(sed 's/^.*"registry_password":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+ARTIFACT_ACCESS_KEY=$(sed 's/^.*"artifact_access_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+ARTIFACT_SECRET_KEY=$(sed 's/^.*"artifact_secret_key":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
+ARTIFACT_ENDPOINT=$(sed 's/^.*"artifact_endpoint":"\([^"]*\)".*$/\1/' /tmp/credentials.json)
 
 cat <<EOF > /shared/credentials
-[default]
-aws_access_key_id = ${AWS_ACCESS_KEY_ID}
-aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
-aws_session_token = ${AWS_SESSION_TOKEN}
+access_key = ${ARTIFACT_ACCESS_KEY}
+secret_key = ${ARTIFACT_SECRET_KEY}
+endpoint = ${ARTIFACT_ENDPOINT}
 EOF
 
 echo "Credentials fetched and saved to /shared/credentials"
 cat /shared/credentials; echo
 
-echo "Fetching AWS ECR login token..."
-TOKEN=$(aws ecr get-login-password --region {{ .Values.awsRegion }})
-echo $TOKEN > /shared/token.txt
+printf '%s' "${REGISTRY_USERNAME}" > /shared/registry_username
+printf '%s' "${REGISTRY_PASSWORD}" > /shared/registry_password
 
-echo "Token fetched and saved to /shared/token.txt"
+echo "Registry login saved to /shared/registry_username and registry_password"
+
+printf '%s' "${ARTIFACT_ENDPOINT}" > /shared/artifact_endpoint
 
 touch /shared/done
 

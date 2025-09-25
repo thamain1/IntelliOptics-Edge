@@ -238,7 +238,7 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+You'll also need to export credentials for the IntelliOptics container registry and artifact storage service. At a minimum set `REGISTRY_URL`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`, `ARTIFACT_STORAGE_ACCESS_KEY`, and `ARTIFACT_STORAGE_SECRET_KEY` so the setup script can propagate them into Kubernetes secrets. Populate the `registry-bootstrap-credentials` secret with keys `server`, `username`, and `password` so the refresh cron job can renew the registry login periodically.
 
 To install the edge-endpoint, run:
 ```shell
@@ -261,9 +261,9 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+We currently have a hard-coded docker image from the IntelliOptics registry in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+image see [Publishing custom images](#publishing-custom-images).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -325,7 +325,7 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-registry-login.sh](/deploy/bin/refresh-registry-login.sh) to update the credentials used by docker/k3s to pull images from the IntelliOptics registry.  If the script is running but failing, this indicates that the stored registry credentials (in secret `registry-credentials`) are invalid or not authorized to pull algorithm images.
 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
@@ -364,17 +364,17 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Publishing custom images
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
-then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+by first creating a docker image locally, pushing it to your registry, retrieving the image reference and
+then using that value in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
 Follow the following steps:
 
 ```shell
-# Build and push image to ECR
+# Build and push image to your registry
 > ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 

@@ -21,13 +21,9 @@ git clone https://github.com/groundlight/edge-endpoint
 
 or run `~/edge-endpoint/deploy/bin/install-k3s.sh cpu`
 
-4) AWS credentials
+4) Provide container registry credentials
 
-Make sure you are logged in with a valid AWS account to get the container images.
-
-```
-aws sts get-caller-identity
-```
+Ensure the machine has credentials to access the IntelliOptics container registry before continuing.
 
 
 5) Setup the edge endpoint.

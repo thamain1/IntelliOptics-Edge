@@ -45,20 +45,20 @@ spec:
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'if [ -n "$MODEL_SYNC_COMMAND" ]; then eval "$MODEL_SYNC_COMMAND"; else echo "Skipping model sync; MODEL_SYNC_COMMAND not set."; fi']
         env:
-        - name: AWS_ACCESS_KEY_ID
+        - name: MODEL_SYNC_COMMAND
           valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
+            configMapKeyRef:
+              name: inference-deployment-template
+              key: model_sync_command
+              optional: true
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        envFrom:
+        - secretRef:
+            name: artifact-storage-credentials
+            optional: true
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models

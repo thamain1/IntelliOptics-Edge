@@ -17,24 +17,29 @@ spec:
           imagePullSecrets:
             - name: registry-credentials
           containers:
-          - name: ecr
+          - name: registry
 
             command: [
               "/bin/sh",
               "-c",
-              "/intellioptics-edge/deploy/bin/refresh-ecr-login.sh"
+              "/intellioptics-edge/deploy/bin/refresh-registry-login.sh"
               ]
             env:
-            - name: AWS_ACCESS_KEY_ID
+            - name: REGISTRY_URL
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_access_key_id
-            - name: AWS_SECRET_ACCESS_KEY
+                  name: registry-bootstrap-credentials
+                  key: server
+            - name: REGISTRY_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_secret_access_key
+                  name: registry-bootstrap-credentials
+                  key: username
+            - name: REGISTRY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: registry-bootstrap-credentials
+                  key: password
             
           restartPolicy: OnFailure
 
