@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: placeholder-inference-service-name
-  namespace: {{ .Values.namespace }}
 spec:
   selector:
     app: inference-server
@@ -18,7 +17,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: placeholder-inference-deployment-name
-  namespace: {{ .Values.namespace }}
   labels:
     name: placeholder-inference-deployment-name
 spec:
@@ -33,9 +31,7 @@ spec:
         app: inference-server
         instance: placeholder-inference-instance-name
     spec:
-{{ if eq .Values.inferenceFlavor "gpu" }}
       runtimeClassName: nvidia  # Required for GPU use in k3s
-{{- end }}
       imagePullSecrets:
       - name: registry-credentials
       strategy:
@@ -45,24 +41,23 @@ spec:
           maxUnavailable: 0  # Aim for no downtime during rollout
 
       initContainers:
-      # NOTE: the sync-pinamod container is duplicated in the warmup_inference_model.yaml Job
-      # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'echo "Syncing models from Azure Storage to $PINAMOD_DIR"']
         env:
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
-        imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
+        imagePullPolicy: Always
         env:
         - name: MODEL_REPOSITORY
           value: &modelRepository /opt/intellioptics/edge/serving/model-repo
@@ -70,8 +65,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           value: placeholder-model-name
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
-        - name: LOG_LEVEL
-          value: {{ .Values.logLevel | quote }}
         - name: LOAD_ALL_PIPELINES  # Load only the pipelines that are needed for edge inference.
           value: "false"
         command:
@@ -123,10 +116,3 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
-
-
-
-

@@ -1,14 +1,7 @@
 #!/bin/sh
 
-# Part two of getting AWS credentials set up. 
-# This script runs in a minimal container with just kubectl, and applies the credentials to the cluster.
+set -euo pipefail
 
-# We do two things:
-# 1. Create a secret with an AWS credentials file. We use a file instead of environment variables
-#    so that we can change it without restarting the pod.
-# 2. Create a secret with a Docker registry credentials. This is used to pull images from ECR.
-
-# We wait for the credentials to be written to the shared volume by the previous script.
 TIMEOUT=60  # Maximum time to wait in seconds
 FILE="/shared/done"
 
@@ -30,15 +23,23 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
+if [ -z "${AZURE_ACR_LOGIN_SERVER:-}" ]; then
+  echo "AZURE_ACR_LOGIN_SERVER must be provided" >&2
+  exit 1
+fi
+
+if [ -z "${AZURE_ACR_USERNAME:-}" ]; then
+  echo "AZURE_ACR_USERNAME must be provided" >&2
+  exit 1
+fi
 
 echo "Creating Kubernetes secrets..."
 
-kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
+kubectl create secret generic azure-acr-credentials-file --from-file /shared/credentials \
     --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
-    --docker-username=AWS \
+    --docker-server="${AZURE_ACR_LOGIN_SERVER}" \
+    --docker-username="${AZURE_ACR_USERNAME}" \
     --docker-password="$(cat /shared/token.txt)" \
     --dry-run=client -o yaml | kubectl apply -f -
-

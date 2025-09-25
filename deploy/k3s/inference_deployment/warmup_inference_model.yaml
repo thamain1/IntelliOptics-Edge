@@ -10,22 +10,15 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'echo "Syncing models from Azure Storage to $PINAMOD_DIR"']
         env:
-        - name: AWS_ACCESS_KEY_ID
+        - name: AZURE_STORAGE_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
+              name: azure-storage-credentials
+              key: AZURE_STORAGE_CONNECTION_STRING
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         volumeMounts:
@@ -37,5 +30,3 @@ spec:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
   backoffLimit: 2
-
-

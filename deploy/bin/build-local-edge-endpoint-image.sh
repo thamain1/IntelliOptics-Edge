@@ -4,32 +4,31 @@
 # for development and testing. If the image already exists in the k3s cluster, it will
 # skip the upload step.
 #
-# It creates a single-platform image with the full ECR-style name, but it always uses 
-# the 'dev' tag. When deploying application to your local test k3s cluster, add the
-# following Helm value:
-# `--set edgeEndpointTag=dev (or add it to your values.yaml file)
-
+# It creates a single-platform image tagged with the Azure Container Registry (ACR)
+# login server, but it always uses the 'dev' tag. When deploying the application to your
+# local test k3s cluster, add the following Helm value:
+# `--set edgeEndpointTag=dev (or add it to your values.yaml file)`
+#
 # This works by:
 # 1. Building the image with the local Docker daemon
 # 2. Checking the image SHA in the local Docker daemon and in k3s
 # 3. If they are the same, exit successfully
 # 4. If they are different, export the image to stdout (it's a compressed tarball)
-#    and pipe it to import it into k3s using the containerd CLI connectied to k3s's
+#    and pipe it to import it into k3s using the containerd CLI connected to k3s's
 #    containerd.
 # The last step is kind of slow.
 #
 # Note than when you use an image tagged "dev" in your Kubernetes app, helm will set
-# imagePullPolicy=Never so K8s doesn't try to pull the image from ECR.
+# imagePullPolicy=Never so K8s doesn't try to pull the image from ACR.
 
 set -e
 
 cd "$(dirname "$0")"
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+AZURE_ACR_NAME=${AZURE_ACR_NAME:-intellioptics}
+AZURE_ACR_LOGIN_SERVER=${AZURE_ACR_LOGIN_SERVER:-${AZURE_ACR_NAME}.azurecr.io}
 TAG=dev # In local mode, we always use the 'dev' tag
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
 
 # The socket that's used by the k3s containerd
 SOCK=/run/k3s/containerd/containerd.sock
@@ -41,7 +40,7 @@ build_and_upload() {
     local path=. # Edge endpoint is built from the root directory
     echo "Building and uploading ${name}..."
     cd "${project_root}/${path}"
-    local full_name=${ECR_URL}/${name}:${TAG}
+    local full_name=${AZURE_ACR_LOGIN_SERVER}/${name}:${TAG}
     docker build -t ${full_name} .
     local id=$(docker image inspect ${full_name} | jq -r '.[0].Id')
     local on_server=$(sudo crictl images -q | grep $id)
@@ -54,4 +53,3 @@ build_and_upload() {
 }
 
 build_and_upload "${EDGE_ENDPOINT_IMAGE}"
-
