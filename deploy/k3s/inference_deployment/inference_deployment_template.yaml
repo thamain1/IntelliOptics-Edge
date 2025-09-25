@@ -40,29 +40,6 @@ spec:
           maxSurge: 1
           maxUnavailable: 0  # Aim for no downtime during rollout
 
-      initContainers:
-      # NOTE: the sync-pinamod container is duplicated in the warmup_inference_model.yaml Job
-      # TODO: refactor to share code between the Job and the initContainer in the Deployment
-      - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
-        env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
-        - name: PINAMOD_DIR
-          value: /opt/models/pinamod
-        volumeMounts:
-        - name: pina-models
-          mountPath: /opt/models
-
       containers:
       - name: inference-server
 
