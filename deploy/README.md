@@ -238,7 +238,16 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+Before running the legacy installer you must provide Azure credentials that allow image pulls from Azure Container Registry (ACR). Export the service-principal values so `make-azure-secret.sh` can mirror them into Kubernetes secrets:
+
+```bash
+export AZURE_TENANT_ID="<tenant-guid>"
+export AZURE_CLIENT_ID="<sp-app-id>"
+export AZURE_CLIENT_SECRET="<sp-password>"
+export AZURE_ACR_NAME="<acr-name>"  # or AZURE_ACR_LOGIN_SERVER="<acr-name>.azurecr.io"
+```
+
+If you prefer to populate the Docker registry secret with different credentials, set `AZURE_ACR_USERNAME` and `AZURE_ACR_PASSWORD` before invoking the installer. The Azure CLI is optional, but when available it is used to automatically resolve `AZURE_ACR_LOGIN_SERVER`.
 
 To install the edge-endpoint, run:
 ```shell
@@ -261,9 +270,9 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+We currently have a hard-coded docker image from Azure Container Registry (ACR) in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+image to your registry see [Publishing Custom Images to ACR](#publishing-custom-images-to-azure-container-registry).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -325,7 +334,7 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-acr-login.sh](/deploy/bin/refresh-acr-login.sh) to update the credentials used by docker/k3s to pull images from Azure Container Registry. If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-acr-credentials`) are invalid or not authorized to pull algorithm images from your registry.
 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
@@ -364,17 +373,25 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Publishing Custom Images to Azure Container Registry
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
-If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
-then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+If you're testing things locally and want to use a different docker image, build and
+push the container to your Azure Container Registry and then reference the resulting
+tag in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
-Follow the following steps:
+One way to publish a custom build is:
 
 ```shell
-# Build and push image to ECR
-> ./deploy/bin/build-push-edge-endpoint-image.sh
+# Authenticate the Azure CLI and Azure Container Registry
+az login --tenant "$AZURE_TENANT_ID"
+az acr login --name "$AZURE_ACR_NAME"
+
+# Build and push an updated image (from repository root)
+docker build -t "$AZURE_ACR_NAME.azurecr.io/edge-endpoint:latest" ./edge-endpoint
+docker push "$AZURE_ACR_NAME.azurecr.io/edge-endpoint:latest"
 ```
+
+After the image is available in ACR, update the deployment manifests to point at your
+new tag and rerun the installer or Helm upgrade.
 
