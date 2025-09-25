@@ -11,10 +11,10 @@ spec:
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:
-      - name: registry-credentials
+      - name: acr-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.azureRegistry }}/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
@@ -25,15 +25,10 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
       volumes:
       - name: pina-models
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
   backoffLimit: 2
 
 

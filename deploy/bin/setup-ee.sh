@@ -84,8 +84,8 @@ export PERSISTENT_VOLUME_NAME=${PERSISTENT_VOLUME_NAME:-"edge-endpoint-pv"}
 export EDGE_ENDPOINT_PORT=${EDGE_ENDPOINT_PORT:-30101}
 
 # Create Secrets
-if ! ./deploy/bin/make-aws-secret.sh; then
-    echo "Failed to execute make-aws-secret.sh successfully. Exiting."
+if ! ./deploy/bin/make-acr-secret.sh; then
+    echo "Failed to execute make-acr-secret.sh successfully. Exiting."
     exit 1
 fi
 

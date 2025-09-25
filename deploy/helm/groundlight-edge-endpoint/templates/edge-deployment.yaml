@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.azureRegistry }}/intellioptics/edge-endpoint:latest
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -207,7 +207,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           mountPath: /opt/intellioptics/device
 
       imagePullSecrets:
-      - name: registry-credentials
+      - name: acr-credentials
 
       volumes:
       - name: edge-config-volume

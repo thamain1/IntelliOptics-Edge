@@ -37,7 +37,7 @@ spec:
       runtimeClassName: nvidia  # Required for GPU use in k3s
 {{- end }}
       imagePullSecrets:
-      - name: registry-credentials
+      - name: acr-credentials
       strategy:
         type: RollingUpdate
         rollingUpdate:
@@ -56,12 +56,10 @@ spec:
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.azureRegistry }}/intellioptics/edge-endpoint:latest
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
@@ -123,9 +121,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
 
 
 
