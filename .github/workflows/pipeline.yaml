@@ -19,13 +19,15 @@ env:
   POETRY_VERSION: "2.1.3"
   # This is the token associated with "prod-biggies" (with shared credentials on 1password)
   INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+  ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
 
 jobs:
   test-general-edge-endpoint:
     runs-on: ubuntu-22.04
     env:
       # This is the NGINX proxy endpoint
-     INTELLIOPTICS_ENDPOINT: http://localhost:30101
+      INTELLIOPTICS_ENDPOINT: http://localhost:30101
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -197,9 +199,10 @@ jobs:
     with:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
+      acr_name: ${{ vars.AZURE_ACR_NAME }}
+      acr_login_server: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
     secrets:
-      AWS_GL_PUBLIC_ACCESS_KEY_ID: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-      AWS_GL_PUBLIC_SECRET_ACCESS_KEY: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
   validate-setup-ee:
     runs-on: ubuntu-latest-4-cores
@@ -215,12 +218,13 @@ jobs:
         run: |
           ./deploy/bin/install-k3s.sh cpu
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Install poetry
         uses: snok/install-poetry@v1
@@ -251,7 +255,7 @@ jobs:
     env:
       # associated with roxanne+test_edge account since for some reason it was failing with
       # prod biggies
-      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_ INTELLIOPTICS_API_TOKEN }}
+      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -287,12 +291,13 @@ jobs:
         run: |
           ./deploy/bin/install-k3s.sh cpu
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Install poetry
         uses: snok/install-poetry@v1
@@ -499,17 +504,12 @@ jobs:
       - main-tests-pass
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
       - name: Check out code
         uses: actions/checkout@v4
 
@@ -528,17 +528,12 @@ jobs:
       - tag-pre-release
     runs-on: ubuntu-22.04
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
       - name: Check out code
         uses: actions/checkout@v4
       - name: Tag main images with the "latest" and "release" tags

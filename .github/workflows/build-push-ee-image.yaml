@@ -10,10 +10,16 @@ on:
       ref:
         required: true
         type: string
-    secrets:
-      AWS_GL_PUBLIC_ACCESS_KEY_ID:
+      acr_name:
+        description: Azure Container Registry name (e.g. acrintellioptics)
         required: true
-      AWS_GL_PUBLIC_SECRET_ACCESS_KEY:
+        type: string
+      acr_login_server:
+        description: Azure Container Registry login server (e.g. acrintellioptics.azurecr.io)
+        required: true
+        type: string
+    secrets:
+      AZURE_CREDENTIALS:
         required: true
 jobs:
   build-push-edge-endpoint-multiplatform:
@@ -24,23 +30,21 @@ jobs:
     # already done in the test-k3s-helm workflow.
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Azure Login
+        uses: azure/login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ inputs.acr_name }}
       - name: Check out code
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
-      - name: Build and Push Multiplatform edge-endpoint Image to ECR
+      - name: Build and Push Multiplatform edge-endpoint Image to ACR
         # This is actually only taking about 4 minutes right now.
         timeout-minutes: 45
+        env:
+          ACR_NAME: ${{ inputs.acr_name }}
+          ACR_LOGIN_SERVER: ${{ inputs.acr_login_server }}
         run: ./deploy/bin/build-push-edge-endpoint-image.sh
