@@ -1,6 +1,9 @@
 name: auto-format
 on: pull_request
 
+permissions:
+  contents: write
+
 env: 
   POETRY_VERSION: "1.5.1"
   PYTHON_VERSION: "3.11"
