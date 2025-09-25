@@ -6,7 +6,7 @@ The edge endpoint provides a way for clients to use the existing Groundlight API
 
 ## Structure
 
-The edge endpoint is implemented as a set of Kubernetes resources (defined by the helm chart in the [helm directory](deploy/helm/groundlight-edge-endpoint/)).
+The edge endpoint is implemented as a set of Kubernetes resources (defined by the helm chart in the [helm directory](deploy/helm/intellioptics-edge-endpoint/)).
 
 There is a single pod for the main logic of the edge endpoint and one pod for each inference model.
 
