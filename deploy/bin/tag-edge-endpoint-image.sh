@@ -1,15 +1,19 @@
 #!/bin/bash
 
-# Put a specific tag on an existing image in ECR
+# Put a specific tag on an existing image in a container registry
 # Assumptions:
-# - The image is already built and pushed to ECR
+# - The image is already built and pushed to the registry
 # - The image is tagged with the git commit hash
 
 set -e  # Exit immediately on error
 set -o pipefail
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+REGISTRY_LOGIN_SERVER=${REGISTRY_LOGIN_SERVER:-${CONTAINER_REGISTRY:-}}
+
+if [ -z "$REGISTRY_LOGIN_SERVER" ]; then
+    echo "REGISTRY_LOGIN_SERVER (or CONTAINER_REGISTRY) must be provided"
+    exit 1
+fi
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
@@ -32,21 +36,15 @@ fi
 
 GIT_TAG=$(./git-tag-name.sh)
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
-ECR_REPO="${ECR_URL}/${EDGE_ENDPOINT_IMAGE}"
-
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+REGISTRY_REPO="${REGISTRY_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
 
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
 # and then create the tag on that SHA. Otherwise imagetools will create a tag for
 # just the platform where the command is run.
-echo "🏷️ Tagging image $ECR_REPO:$GIT_TAG with tag $NEW_TAG"
-digest=$(docker buildx imagetools inspect $ECR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
-docker buildx imagetools create --tag $ECR_REPO:$NEW_TAG $ECR_REPO@${digest}
+echo "🏷️ Tagging image $REGISTRY_REPO:$GIT_TAG with tag $NEW_TAG"
+digest=$(docker buildx imagetools inspect $REGISTRY_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
+docker buildx imagetools create --tag $REGISTRY_REPO:$NEW_TAG $REGISTRY_REPO@${digest}
 
-echo "✅ Image successfully tagged: $ECR_REPO:$NEW_TAG"
+echo "✅ Image successfully tagged: $REGISTRY_REPO:$NEW_TAG"
 
