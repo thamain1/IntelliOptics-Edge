@@ -145,6 +145,7 @@ _mount_router(
 
 # 3) Annotated snapshots server
 _mount_router("annotated", "app.annotated")
+_mount_router("reviews", "app.reviews")
 
 # 4) iq_* last (these have historically caused circular-import warnings)
 _mount_router("iq_read", "app.iq_read")
