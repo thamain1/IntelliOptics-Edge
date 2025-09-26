@@ -152,6 +152,12 @@ _mount_router(
 # 3) Annotated snapshots server
 _mount_router("annotated", "app.annotated")
 _mount_router("review_ui", "app.review_ui")
+_mount_router("alerts_ui", "app.alerts_ui")
+_mount_router(
+    "alert_rules",
+    "app.alert_rules",
+    {"dependencies": _alerts_dependencies()},
+)
 _mount_router("reviews", "app.reviews")
 
 # 4) iq_* last (these have historically caused circular-import warnings)
