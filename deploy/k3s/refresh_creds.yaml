@@ -17,25 +17,19 @@ spec:
           imagePullSecrets:
             - name: registry-credentials
           containers:
-          - name: ecr
-
+          - name: acr
+            image: mcr.microsoft.com/azure-cli:2.60.0
             command: [
               "/bin/sh",
               "-c",
-              "/intellioptics-edge/deploy/bin/refresh-ecr-login.sh"
+              "/intellioptics-edge/deploy/bin/refresh-acr-login.sh"
               ]
             env:
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: aws_access_key_id
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: aws_secret_access_key
-            
+            - name: ACR_NAME
+              value: your-acr-name
+            - name: ACR_LOGIN_SERVER
+              value: your-acr-name.azurecr.io
+
           restartPolicy: OnFailure
 
 

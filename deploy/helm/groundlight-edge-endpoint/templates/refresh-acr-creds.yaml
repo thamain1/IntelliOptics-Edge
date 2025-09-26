@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: refresh-acr-creds
+  namespace: "{{ .Values.namespace }}"
+  labels:
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
+spec:
+  schedule: "0 */2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+        {{- include "edge-endpoint.registry-credentials.podSpec" . | nindent 10 }}

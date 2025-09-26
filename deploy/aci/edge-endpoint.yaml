@@ -6,14 +6,14 @@ properties:
   restartPolicy: Always
 
   imageRegistryCredentials:
-    - server: ${ACR_LOGIN_SERVER}       # e.g. acrintellioptics.azurecr.io
+    - server: ${ACR_LOGIN_SERVER}       # e.g. your-acr-name.azurecr.io
       username: ${ACR_USERNAME}
       password: ${ACR_PASSWORD}
 
   containers:
     - name: edge-endpoint
       properties:
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+image: ${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${EDGE_IMAGE_TAG:-latest}
         resources:
           requests:
             cpu: 2

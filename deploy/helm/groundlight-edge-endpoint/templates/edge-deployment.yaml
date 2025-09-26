@@ -52,7 +52,7 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -61,7 +61,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
       containers:
       - name: nginx
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -98,7 +98,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           failureThreshold: 4  # after 40 seconds of failure, restart the pod
 
       - name: edge-endpoint
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -132,7 +132,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           mountPath: /opt/intellioptics/device
 
       - name: status-monitor
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 
@@ -160,7 +160,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             mountPath: /opt/intellioptics/device
 
       - name: inference-model-updater
-
+        image: {{ include "IntelliOptics-edge-endpoint.edgeEndpointImage" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         # Allocate some memory for this container. System-critical containers have memory requests so 
         # that they are never evicted, even when the system is under memory pressure. 

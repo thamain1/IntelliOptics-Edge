@@ -45,18 +45,18 @@ spec:
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && az storage blob download-batch --source $AZURE_STORAGE_CONTAINER --destination $PINAMOD_DIR --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --pattern "*" --overwrite']
         env:
-        - name: AWS_ACCESS_KEY_ID
+        - name: AZURE_STORAGE_CONNECTION_STRING
           valueFrom:
             secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
+              name: azure-storage
+              key: connection_string
+        - name: AZURE_STORAGE_CONTAINER
           valueFrom:
             secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
+              name: azure-storage
+              key: container
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         volumeMounts:

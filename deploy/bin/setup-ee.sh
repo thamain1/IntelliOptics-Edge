@@ -84,8 +84,8 @@ export PERSISTENT_VOLUME_NAME=${PERSISTENT_VOLUME_NAME:-"edge-endpoint-pv"}
 export EDGE_ENDPOINT_PORT=${EDGE_ENDPOINT_PORT:-30101}
 
 # Create Secrets
-if ! ./deploy/bin/make-aws-secret.sh; then
-    echo "Failed to execute make-aws-secret.sh successfully. Exiting."
+if ! ./deploy/bin/make-azure-storage-secret.sh; then
+    echo "Failed to execute make-azure-storage-secret.sh successfully. Exiting."
     exit 1
 fi
 
@@ -162,25 +162,35 @@ if [[ "${DEPLOY_LOCAL_VERSION}" == "1" ]]; then
     echo $PERSISTENT_VOLUME_NAME
 
 else
-    # If environment variable EFS_VOLUME_ID is not set, exit
-    if [[ -z "${EFS_VOLUME_ID}" ]]; then
-        fail "EFS_VOLUME_ID environment variable not set"
+    if [[ -z "${AZURE_STORAGE_ACCOUNT}" ]]; then
+        fail "AZURE_STORAGE_ACCOUNT environment variable not set"
+    fi
+    if [[ -z "${AZURE_FILE_SHARE_NAME}" ]]; then
+        fail "AZURE_FILE_SHARE_NAME environment variable not set"
     fi
 
-    if ! check_pv_conflict "$PERSISTENT_VOLUME_NAME" "efs-sc"; then
+    if ! check_pv_conflict "$PERSISTENT_VOLUME_NAME" "azure-file-sc"; then
         fail "PersistentVolume $PERSISTENT_VOLUME_NAME conflicts with the existing resource."
     fi
 
-    apply_yaml deploy/k3s/efs_persistent_volume.yaml
+    if [[ -z "${AZURE_STORAGE_ACCOUNT_KEY}" ]]; then
+        AZURE_STORAGE_ACCOUNT_KEY=$(az storage account keys list --account-name "$AZURE_STORAGE_ACCOUNT" --query "[0].value" -o tsv)
+    fi
+    if [[ -z "${AZURE_STORAGE_ACCOUNT_KEY}" ]]; then
+        fail "AZURE_STORAGE_ACCOUNT_KEY environment variable not set and automatic retrieval failed"
+    fi
+
+    $K delete secret azure-file-credentials --ignore-not-found
+    $K create secret generic azure-file-credentials \
+        --from-literal=azurestorageaccountname=${AZURE_STORAGE_ACCOUNT} \
+        --from-literal=azurestorageaccountkey=${AZURE_STORAGE_ACCOUNT_KEY}
+
+    apply_yaml deploy/k3s/azure_files_persistent_volume.yaml
 fi
 
 # Check if the persistent volume claim exists. If not, create it
 if ! $K get pvc edge-endpoint-pvc; then
-    # If environment variable EFS_VOLUME_ID is not set, exit
-    if [[ -z "${EFS_VOLUME_ID}" ]]; then
-        fail "EFS_VOLUME_ID environment variable not set"
-    fi
-    apply_yaml deploy/k3s/persistentvolume.yaml
+    apply_yaml deploy/k3s/azure_files_persistent_volume.yaml
 fi
 
 # Make pinamod directory for hostmapped volume

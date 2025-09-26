@@ -21,12 +21,13 @@ git clone https://github.com/groundlight/edge-endpoint
 
 or run `~/edge-endpoint/deploy/bin/install-k3s.sh cpu`
 
-4) AWS credentials
+4) Azure authentication
 
-Make sure you are logged in with a valid AWS account to get the container images.
+Make sure you are logged in with an Azure account that has access to the container registry hosting the edge images.
 
 ```
-aws sts get-caller-identity
+az login
+az acr login --name <your-acr-name>
 ```
 
 

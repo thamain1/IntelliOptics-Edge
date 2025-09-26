@@ -88,6 +88,14 @@ Create the name of the service account to use
 {{- .Values.inferenceTag | default .Values.imageTag }}
 {{- end }}
 
+{{- define "IntelliOptics-edge-endpoint.edgeEndpointImage" -}}
+{{- printf "%s/%s:%s" .Values.azure.loginServer .Values.azure.edgeEndpointRepository (include "IntelliOptics-edge-endpoint.edgeEndpointTag" .) -}}
+{{- end }}
+
+{{- define "IntelliOptics-edge-endpoint.inferenceImage" -}}
+{{- printf "%s/%s:%s" .Values.azure.loginServer .Values.azure.inferenceRepository (include "IntelliOptics-edge-endpoint.inferenceTag" .) -}}
+{{- end }}
+
 {{/*
   Determine the correct pull policy to use for each container type. If it is 
   a dev tag, we use "Never" to avoid pulling from the registry. Otherwise,

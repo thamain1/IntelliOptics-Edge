@@ -236,9 +236,18 @@ export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
 export INFERENCE_FLAVOR="CPU"
 # OR
 export INFERENCE_FLAVOR="GPU"
+
+# Configure Azure resources used by the deployment.
+# These values control image pulls, persistent storage, and model synchronization.
+export ACR_NAME="your-acr-name"
+export ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
+export AZURE_STORAGE_ACCOUNT="yourstorageaccount"
+export AZURE_FILE_SHARE_NAME="edgeendpoint"
+# Optionally provide the storage account key directly; otherwise setup-ee.sh will attempt to fetch it with the Azure CLI.
+# export AZURE_STORAGE_ACCOUNT_KEY="<storage-account-key>"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+You'll also need to authenticate with Azure so the deployment can pull images and models. Run `az login` and make sure you have permissions to the Azure Container Registry (ACR) that stores the edge images. If you do not already have the Azure CLI installed, follow the [official installation instructions](https://learn.microsoft.com/cli/azure/install-azure-cli) first.
 
 To install the edge-endpoint, run:
 ```shell
@@ -261,9 +270,7 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
-deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+The Helm chart defaults to pulling images from an Azure Container Registry. If you want to build and publish your own version of the edge endpoint, see [Pushing/Pulling Images from Azure Container Registry](#pushingpulling-images-from-azure-container-registry-acr).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -325,7 +332,7 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-acr-login.sh](/deploy/bin/refresh-acr-login.sh) to update the credentials used by docker/k3s to pull images from Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-storage`) are invalid or not authorized to pull algorithm images from ACR.
 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
@@ -364,17 +371,17 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Pushing/Pulling Images from Azure Container Registry (ACR)
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
+by first creating a docker image locally, pushing it to ACR, retrieving the image ID and
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
 Follow the following steps:
 
 ```shell
-# Build and push image to ECR
+# Build and push image to ACR
 > ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 
