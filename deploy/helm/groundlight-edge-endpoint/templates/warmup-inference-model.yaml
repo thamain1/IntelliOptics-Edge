@@ -14,7 +14,7 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 

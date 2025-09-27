@@ -61,7 +61,7 @@ spec:
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
