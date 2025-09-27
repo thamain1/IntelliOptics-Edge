@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import uuid
-from pathlib import Path
-from threading import Lock
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ValidationError, validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .db import get_db
-from .models import ImageQueryRow
+from .models import AlertRuleRow, ImageQueryRow
 
 
 class TriggerCondition(BaseModel):
@@ -135,106 +132,91 @@ class AlertRule(AlertRuleBase):
     id: str = Field(..., description="Stable alert identifier")
 
 
-class AlertRuleStore:
-    """Lightweight JSON backed persistence for alert rules."""
-
-    def __init__(self, path: Path):
-        self.path = path
-        self._lock = Lock()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            path.write_text("[]", encoding="utf-8")
-
-    def _load(self) -> List[AlertRule]:
-        raw: List[dict]
-        try:
-            raw = json.loads(self.path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            raw = []
-        return [AlertRule(**item) for item in raw]
-
-    def _write(self, items: List[AlertRule]) -> None:
-        payload = [item.dict() for item in items]
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-        tmp.replace(self.path)
-
-    def list(self) -> List[AlertRule]:
-        with self._lock:
-            return self._load()
-
-    def get(self, rule_id: str) -> Optional[AlertRule]:
-        with self._lock:
-            for rule in self._load():
-                if rule.id == rule_id:
-                    return rule
-        return None
-
-    def upsert(self, rule: AlertRule) -> AlertRule:
-        with self._lock:
-            items = self._load()
-            updated: List[AlertRule] = []
-            found = False
-            for existing in items:
-                if existing.id == rule.id:
-                    updated.append(rule)
-                    found = True
-                else:
-                    updated.append(existing)
-            if not found:
-                updated.append(rule)
-            self._write(updated)
-            return rule
-
-    def delete(self, rule_id: str) -> None:
-        with self._lock:
-            items = [rule for rule in self._load() if rule.id != rule_id]
-            self._write(items)
-
-
-_store = AlertRuleStore(Path(__file__).resolve().parent / "data" / "alert_rules.json")
-
 router = APIRouter(prefix="/v1/alert-rules", tags=["alert-rules"])
 
 
+def _row_to_rule(row: AlertRuleRow) -> AlertRule:
+    try:
+        condition = TriggerCondition(**(row.condition or {}))
+        notification = NotificationSettings(**(row.notification or {}))
+    except (ValidationError, ValueError, TypeError) as exc:  # pragma: no cover - defensive
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Stored alert rule {row.id} is invalid: {exc}",
+        ) from exc
+    return AlertRule(
+        id=row.id,
+        name=row.name,
+        detector_id=row.detector_id,
+        detector_name=row.detector_name,
+        enabled=bool(row.enabled),
+        condition=condition,
+        confirm_with_cloud=bool(row.confirm_with_cloud),
+        notification=notification,
+    )
+
+
 @router.get("", response_model=List[AlertRule])
-def list_rules() -> List[AlertRule]:
+def list_rules(db: Session = Depends(get_db)) -> List[AlertRule]:
     """Return all configured alert rules."""
 
-    return _store.list()
+    rows = db.scalars(select(AlertRuleRow).order_by(AlertRuleRow.created_at.desc())).all()
+    return [_row_to_rule(row) for row in rows]
 
 
 @router.post("", response_model=AlertRule, status_code=status.HTTP_201_CREATED)
-def create_rule(payload: AlertRuleCreate) -> AlertRule:
+def create_rule(payload: AlertRuleCreate, db: Session = Depends(get_db)) -> AlertRule:
     """Create a brand new alert rule."""
 
-    rule = AlertRule(id="arl_" + uuid.uuid4().hex, **payload.dict())
-    return _store.upsert(rule)
+    row = AlertRuleRow(
+        id="arl_" + uuid.uuid4().hex,
+        name=payload.name,
+        detector_id=payload.detector_id,
+        detector_name=payload.detector_name,
+        enabled=payload.enabled,
+        condition=payload.condition.dict(),
+        confirm_with_cloud=payload.confirm_with_cloud,
+        notification=payload.notification.dict(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _row_to_rule(row)
 
 
 @router.get("/{rule_id}", response_model=AlertRule)
-def get_rule(rule_id: str) -> AlertRule:
-    rule = _store.get(rule_id)
-    if not rule:
+def get_rule(rule_id: str, db: Session = Depends(get_db)) -> AlertRule:
+    row = db.get(AlertRuleRow, rule_id)
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert rule not found")
-    return rule
+    return _row_to_rule(row)
 
 
 @router.put("/{rule_id}", response_model=AlertRule)
-def update_rule(rule_id: str, payload: AlertRuleCreate) -> AlertRule:
-    existing = _store.get(rule_id)
-    if not existing:
+def update_rule(rule_id: str, payload: AlertRuleCreate, db: Session = Depends(get_db)) -> AlertRule:
+    row = db.get(AlertRuleRow, rule_id)
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert rule not found")
-    updated = AlertRule(id=rule_id, **payload.dict())
-    return _store.upsert(updated)
+    row.name = payload.name
+    row.detector_id = payload.detector_id
+    row.detector_name = payload.detector_name
+    row.enabled = payload.enabled
+    row.condition = payload.condition.dict()
+    row.confirm_with_cloud = payload.confirm_with_cloud
+    row.notification = payload.notification.dict()
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _row_to_rule(row)
 
 
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_rule(rule_id: str) -> None:
-    existing = _store.get(rule_id)
-    if not existing:
+def delete_rule(rule_id: str, db: Session = Depends(get_db)) -> None:
+    row = db.get(AlertRuleRow, rule_id)
+    if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert rule not found")
-    _store.delete(rule_id)
+    db.delete(row)
+    db.commit()
 
 
 @router.get("/detectors")
