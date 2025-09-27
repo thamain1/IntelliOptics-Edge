@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 # --- App code ---
 # Your FastAPI package lives here in your repo:
 #   Azure/intellioptics-oneclick/backend/app  --> copied to /app/app
-COPY Azure/intellioptics-oneclick/backend/app /app/app
+COPY backend/api/app /app/app
 
 # --- IntelliOptics SDK (wheel) ---
 # Keep this line only if that wheel exists in your build context
