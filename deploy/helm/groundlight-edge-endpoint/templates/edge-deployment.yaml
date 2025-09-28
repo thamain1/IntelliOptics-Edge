@@ -30,7 +30,7 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-edge-endpoint
+  name: edge-endpoint
   namespace: {{ .Values.namespace }}
   labels:
     app: edge-endpoint
@@ -52,7 +52,13 @@ spec:
       serviceAccountName: edge-endpoint-service-account
       initContainers:
       - name: database-prep
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
+
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
         volumeMounts:
         - name: edge-endpoint-persistent-volume
@@ -224,7 +230,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           name: inference-deployment-template
       - name: edge-endpoint-persistent-volume
         persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
+          claimName: {{ .Values.storage.data.claimName }}
       - name: device-info-volume
         hostPath:
           path: /opt/intellioptics/device
