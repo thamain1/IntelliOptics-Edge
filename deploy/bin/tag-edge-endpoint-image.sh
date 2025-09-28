@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Put a specific tag on an existing image in a container registry
+# Assumptions:
+# - The image is already built and pushed to the selected registry
 
 # Put a specific tag on an existing image in Azure Container Registry (ACR)
 # Assumptions:
@@ -76,9 +79,10 @@ ACR_NAME=${ACR_NAME:-intelliopticsedge}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
 
 
-
 # Ensure that you're in the same directory as this script before running it
 cd "${SCRIPT_DIR}"
+
+source ./registry.sh
 
 # Check if an argument is provided
 if [ $# -ne 1 ]; then
@@ -146,6 +150,12 @@ else
     echo "ACR credentials not provided; assuming docker is already logged in to ${ACR_LOGIN_SERVER}."
 fi
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
+REGISTRY_URL=$(registry_url)
+IMAGE_REF="${REGISTRY_URL}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker/cli to registry
+registry_login
 
 ACR_REPO="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
 
@@ -232,6 +242,10 @@ fi
 # To do this, we need to pull the digest SHA of the existing multiplatform image
 # and then create the tag on that SHA. Otherwise imagetools will create a tag for
 # just the platform where the command is run.
+echo "🏷️ Tagging image $IMAGE_REF:$GIT_TAG with tag $NEW_TAG"
+registry_create_tag "$EDGE_ENDPOINT_IMAGE" "$GIT_TAG" "$NEW_TAG"
+
+echo "✅ Image successfully tagged: $IMAGE_REF:$NEW_TAG"
 
 echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
 digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)

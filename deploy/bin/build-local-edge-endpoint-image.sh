@@ -4,6 +4,8 @@
 # for development and testing. If the image already exists in the k3s cluster, it will
 # skip the upload step.
 #
+# It creates a single-platform image with the registry-qualified name, but it always uses
+
 
 # It creates a single-platform image with the full ACR-style name, but it always uses
 
@@ -26,6 +28,7 @@
 # The last step is kind of slow.
 #
 # Note than when you use an image tagged "dev" in your Kubernetes app, helm will set
+# imagePullPolicy=Never so K8s doesn't try to pull the image from a remote registry.
 # imagePullPolicy=Never so K8s doesn't try to pull the image from ACR.
 
 set -e
@@ -34,6 +37,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 
+source ./registry.sh
+
+TAG=dev # In local mode, we always use the 'dev' tag
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+REGISTRY_URL=$(registry_url)
 ACR_NAME=${ACR_NAME:-acrintellioptics}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
 TAG=dev # In local mode, we always use the 'dev' tag
@@ -49,7 +57,6 @@ source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
 TAG=dev # In local mode, we always use the 'dev' tag
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 ACR_URL="${ACR_LOGIN_SERVER}"
-
 # The socket that's used by the k3s containerd
 SOCK=/run/k3s/containerd/containerd.sock
 
@@ -59,6 +66,7 @@ build_and_upload() {
     local path=. # Edge endpoint is built from the root directory
     echo "Building and uploading ${IMAGE_REPO}:${TAG}..."
     cd "${project_root}/${path}"
+    local full_name=${REGISTRY_URL}/${name}:${TAG}
 
     local full_name=${IMAGE_REPO}:${TAG}
 

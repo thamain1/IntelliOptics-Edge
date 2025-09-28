@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This script builds and pushes the edge-endpoint Docker image to a container registry.
+# Supported registries:
+#   * AWS Elastic Container Registry (default)
+#   * Azure Container Registry (`REGISTRY_PROVIDER=azure` with `ACR_NAME` or `ACR_LOGIN_SERVER`)
 
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
@@ -36,6 +40,9 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+# 2. Authenticates Docker with the configured registry.
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to the configured registry.
 
 # 2. Authenticates Docker with ACR (when credentials are provided).
 # 3. Builds a multi-platform Docker image.
@@ -136,6 +143,8 @@ set -euo pipefail
 # Ensure that you're in the same directory as this script before running it
 cd "${SCRIPT_DIR}"
 
+source ./registry.sh
+
 TAG=$(./git-tag-name.sh)
 
 
@@ -188,6 +197,11 @@ REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
 REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
 REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+REGISTRY_URL=$(registry_url)
+IMAGE_REF="$(registry_repository "${EDGE_ENDPOINT_IMAGE}")"
+
+# Authenticate docker to the chosen registry
+registry_login
 
 if ! command -v az >/dev/null 2>&1; then
   echo "The Azure CLI (az) is required to push to ACR." >&2
@@ -299,6 +313,11 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+  --tag ${IMAGE_REF}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to REGISTRY_URL=${REGISTRY_URL}"
+echo "${IMAGE_REF}:${TAG}"
 
   --tag ${IMAGE_REPO}:${TAG} \
   ../.. --push
