@@ -1,19 +1,19 @@
-location: eastus
-name: io-edge-endpoint
+location: ${AZ_LOCATION:-eastus}
+name: ${ACI_NAME}
 type: Microsoft.ContainerInstance/containerGroups
 properties:
   osType: Linux
   restartPolicy: Always
 
   imageRegistryCredentials:
-    - server: ${ACR_LOGIN_SERVER}       # e.g. acrintellioptics.azurecr.io
+    - server: ${ACR_LOGIN_SERVER}
       username: ${ACR_USERNAME}
       password: ${ACR_PASSWORD}
 
   containers:
-    - name: edge-endpoint
+    - name: ${ACI_CONTAINER_NAME}
       properties:
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:${EDGE_IMAGE_TAG}
         resources:
           requests:
             cpu: 2
@@ -23,7 +23,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         environmentVariables:
           # Non-secrets
           - name: INTELLIOPTICS_ENDPOINT
-            value: https://intellioptics-api-37558.azurewebsites.net
+            value: ${INTELLIOPTICS_ENDPOINT:-https://intellioptics-api-37558.azurewebsites.net}
           - name: MODEL_CACHE_DIR
             value: /tmp/model
 
@@ -35,9 +35,9 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
           # Optional
           - name: SB_IMAGE_QUEUE
-            value: image-queries
+            value: ${SB_IMAGE_QUEUE:-image-queries}
           - name: SB_RESULTS_QUEUE
-            value: inference-results
+            value: ${SB_RESULTS_QUEUE:-inference-results}
           - name: SB_FEEDBACK_QUEUE
-            value: feedback
+            value: ${SB_FEEDBACK_QUEUE:-feedback}
 
