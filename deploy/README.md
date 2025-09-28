@@ -238,6 +238,9 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
+
+You'll also need to authenticate with Azure so Docker can pull images from the appropriate Azure Container Registry (ACR) location. Make sure the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) is installed and that you've run `az login` (and, if required, `az account set --subscription <subscription-id>`) prior to running the deployment scripts.
+=======
 You must also provide Azure credentials with permission to query the IntelliOptics Azure Container Registry. Export the following variables for a service principal that can read the registry (and associated storage) before running the setup script:
 
 ```bash
@@ -252,6 +255,7 @@ If your service principal should target a non-default registry, you can optional
 export ACR_NAME="customRegistryName"
 export ACR_LOGIN_SERVER="customRegistryName.azurecr.io"
 ```
+
 
 To install the edge-endpoint, run:
 ```shell
@@ -274,9 +278,9 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+We currently have a hard-coded docker image from ACR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+image to ACR see [Pushing/Pulling Images from ACR](#pushingpulling-images-from-azure-container-registry-acr).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -377,17 +381,17 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Pushing/Pulling Images from Azure Container Registry (ACR)
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
+by first creating a docker image locally, pushing it to ACR, retrieving the image ID and
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
 Follow the following steps:
 
 ```shell
-# Build and push image to ECR
+# Build and push image to ACR
 > ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 
