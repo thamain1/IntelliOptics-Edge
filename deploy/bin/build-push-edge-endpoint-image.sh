@@ -1,6 +1,9 @@
 #!/bin/bash
 
 
+# This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
+
 # This script builds and pushes the edge-endpoint Docker image to a container
 # registry that is not Amazon ECR.
 
@@ -11,6 +14,7 @@
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
 
+
 #
 # Usage:
 #   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
@@ -19,6 +23,17 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+
+# 2. Authenticates Docker with ACR.
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to ACR.
+#
+# Note: Ensure you have the necessary Azure credentials and Docker installed.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
+
 # 2. Authenticates Docker with the target registry when credentials are provided.
 
 # 3. Builds a multi-platform Docker image.
@@ -38,6 +53,7 @@
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
 
+
 # Note: Ensure you have the necessary Azure credentials and Docker installed.
 
 ACR_NAME=${ACR_NAME:-intelliopticsedge}
@@ -47,7 +63,7 @@ ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
 set -euo pipefail
 
 # Ensure that you're in the same directory as this script before running it
-cd "$(dirname "$0")"
+cd "${SCRIPT_DIR}"
 
 TAG=$(./git-tag-name.sh)
 
@@ -56,6 +72,12 @@ REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
 REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
 REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
+ACR_URL="${ACR_LOGIN_SERVER}"
+
+# Authenticate docker to ACR
+azure_acr_login "$ACR_URL" "$ACR_REGISTRY_NAME"
+
 
 if [[ -z "${REGISTRY_SERVER}" ]]; then
   echo "Error: REGISTRY_SERVER must be set (for example, ghcr.io)." >&2
@@ -75,6 +97,7 @@ else
   echo "Skipping registry login because REGISTRY_USERNAME or REGISTRY_PASSWORD is not set." >&2
   echo "Ensure you are already logged in via 'docker login ${REGISTRY_SERVER}'." >&2
 fi
+
 
 
 
@@ -148,6 +171,13 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+
+  --tag ${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ACR_URL=${ACR_URL}"
+echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+
   --tag ${IMAGE_REPOSITORY}:${TAG} \
   ../.. --push
 
@@ -166,6 +196,7 @@ echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
 echo "Successfully pushed image to ACR_REGISTRY=${ACR_REGISTRY}"
 echo "${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+
 
 
 
