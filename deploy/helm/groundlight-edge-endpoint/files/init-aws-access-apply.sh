@@ -31,13 +31,24 @@ if [ ! -f "$FILE" ]; then
 fi
 
 
+REGISTRY_SERVER="{{ .Values.registry.server }}"
+if [ -z "$REGISTRY_SERVER" ] && [ -f /shared/registry-server ]; then
+    REGISTRY_SERVER=$(cat /shared/registry-server)
+fi
+
+if [ -z "$REGISTRY_SERVER" ]; then
+    echo "❌ Error: Registry server hostname is not set." >&2
+    exit 1
+fi
+
+
 echo "Creating Kubernetes secrets..."
 
 kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
     --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
+    --docker-server=$REGISTRY_SERVER \
     --docker-username=AWS \
     --docker-password="$(cat /shared/token.txt)" \
     --dry-run=client -o yaml | kubectl apply -f -

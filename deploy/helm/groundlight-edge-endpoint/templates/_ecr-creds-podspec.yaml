@@ -16,6 +16,16 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
+      - name: REGISTRY_PROVIDER
+        value: "{{ .Values.registry.provider | default "aws" }}"
+{{- with .Values.registry.server }}
+      - name: REGISTRY_SERVER
+        value: "{{ . }}"
+{{- end }}
+{{- with .Values.registry.azure.registryName }}
+      - name: AZURE_REGISTRY_NAME
+        value: "{{ . }}"
+{{- end }}
 
     volumeMounts:
       - name: shared-volume
@@ -29,6 +39,17 @@ containers:
     command:
       - /bin/sh
       - /app/init-aws-access-apply.sh
+    env:
+      - name: REGISTRY_PROVIDER
+        value: "{{ .Values.registry.provider | default "aws" }}"
+{{- with .Values.registry.server }}
+      - name: REGISTRY_SERVER
+        value: "{{ . }}"
+{{- end }}
+{{- with .Values.registry.azure.registryName }}
+      - name: AZURE_REGISTRY_NAME
+        value: "{{ . }}"
+{{- end }}
     volumeMounts:
       - name: shared-volume
         mountPath: /shared

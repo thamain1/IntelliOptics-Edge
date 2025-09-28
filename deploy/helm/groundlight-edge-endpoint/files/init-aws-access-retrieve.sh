@@ -11,9 +11,65 @@
 # 3. /shared/done: A marker file to indicate that the script has completed successfully.
 
 # Note: This script is also used to validate the INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT
-# settings. If you run it with the first argument being "validate", it will only run through the 
-# check of the curl results and exit with 0 if they are valid or 1 if they are not. In the latter 
+# settings. If you run it with the first argument being "validate", it will only run through the
+# check of the curl results and exit with 0 if they are valid or 1 if they are not. In the latter
 # case, it will also log the results.
+
+# Registry configuration values are passed in via the Helm chart.
+REGISTRY_PROVIDER=$(echo "${REGISTRY_PROVIDER:-aws}" | tr '[:upper:]' '[:lower:]')
+REGISTRY_SERVER="${REGISTRY_SERVER:-}"
+AZURE_REGISTRY_NAME="${AZURE_REGISTRY_NAME:-}"
+
+derive_azure_login_server() {
+  if ! command -v az >/dev/null 2>&1; then
+    echo "Azure CLI (az) is required to derive the Azure registry login server." >&2
+    return 1
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "python3 is required to parse the Azure login server response." >&2
+    return 1
+  fi
+
+  local login_output
+  if ! login_output=$(az acr login --name "$AZURE_REGISTRY_NAME" --expose-token --output json); then
+    echo "Failed to fetch Azure Container Registry login details for '$AZURE_REGISTRY_NAME'." >&2
+    return 1
+  fi
+
+  local derived_server
+  if ! derived_server=$(printf '%s' "$login_output" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("loginServer", ""))'); then
+    echo "Failed to parse Azure Container Registry login server." >&2
+    return 1
+  fi
+
+  if [[ -z "$derived_server" || "$derived_server" == "None" || "$derived_server" == "null" ]]; then
+    echo "Azure login response did not include a loginServer." >&2
+    return 1
+  fi
+
+  REGISTRY_SERVER="$derived_server"
+  export REGISTRY_SERVER
+  echo "Using Azure Container Registry server: $REGISTRY_SERVER"
+}
+
+if [[ "$REGISTRY_PROVIDER" == "azure" ]]; then
+  if [[ -z "$AZURE_REGISTRY_NAME" ]]; then
+    echo "AZURE_REGISTRY_NAME must be provided when REGISTRY_PROVIDER is 'azure'." >&2
+    exit 1
+  fi
+
+  if [[ -z "$REGISTRY_SERVER" || ! "$REGISTRY_SERVER" =~ \.azurecr\.io$ ]]; then
+    if ! derive_azure_login_server; then
+      echo "Failed to determine Azure Container Registry login server." >&2
+      exit 1
+    fi
+  fi
+fi
+
+if [[ -n "$REGISTRY_SERVER" ]]; then
+  echo "$REGISTRY_SERVER" > /shared/registry-server
+fi
 
 if [ "$1" == "validate" ]; then
   echo "Validating INTELLIOPTICS_API_TOKEN and INTELLIOPTICS_ENDPOINT..."
