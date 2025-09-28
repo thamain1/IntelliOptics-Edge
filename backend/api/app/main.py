@@ -3,12 +3,16 @@ from __future__ import annotations
 
 import os
 import logging
+from pathlib import Path
 from typing import List
+
+from fastapi import Depends, FastAPI
 
 from sqlalchemy import create_engine
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 
 # ------------------------------------------------------------------------------
@@ -107,6 +111,10 @@ app = FastAPI(
     openapi_url=openapi_url,
 )
 
+_static_dir = Path(__file__).resolve().parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -156,6 +164,14 @@ _mount_router(
 
 # 3) Annotated snapshots server
 _mount_router("annotated", "app.annotated")
+_mount_router("review_ui", "app.review_ui")
+_mount_router("alerts_ui", "app.alerts_ui")
+_mount_router(
+    "alert_rules",
+    "app.alert_rules",
+    {"dependencies": _alerts_dependencies()},
+)
+_mount_router("reviews", "app.reviews")
 
 # 4) iq_* last (these have historically caused circular-import warnings)
 _mount_router("iq_read", "app.iq_read")
