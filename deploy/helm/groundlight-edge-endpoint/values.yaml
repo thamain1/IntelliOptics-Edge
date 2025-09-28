@@ -44,10 +44,15 @@ intelliopticsApiToken: ""
 # you can override this value.
 upstreamEndpoint: "https://intellioptics-api-37558.azurewebsites.net"
 
-# Currently, all IntelliOptics services are deployed in the us-west-2 region
-awsRegion: "us-west-2"
+# Azure Container Registry settings used for pulling images
+acrName: "acrintellioptics"
+acrLoginServer: "acrintellioptics.azurecr.io"
 
-ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+registryCredentials:
+  azureCliImage: "mcr.microsoft.com/azure-cli:2.57.0"
+  kubectlImage: "bitnami/kubectl:1.29.3"
+
+pinamodContainer: "pinamod"
 
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"
