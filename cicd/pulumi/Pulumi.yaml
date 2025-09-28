@@ -5,7 +5,10 @@ runtime:
     toolchain: uv
 description: CI/CD for Edge Endpoint
 config:
-  ee-cicd:instanceType: g4dn.xlarge
+  ee-cicd:vmSize: Standard_NC4as_T4_v3
   # Default to "main" so things are sensible if this doesn't get customized.
   # But for testing purposes, this should be set to the specific commit you want to test.
   ee-cicd:targetCommit: main
+  # Provide the location/region for Azure resources if different from westus2.
+  # ee-cicd:location: westus2
+  # Set ee-cicd:sshPublicKey with `pulumi config set --secret`.
