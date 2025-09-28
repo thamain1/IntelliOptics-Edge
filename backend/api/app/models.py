@@ -1,7 +1,16 @@
+
 from typing import Any
 
+from __future__ import annotations
+
+import datetime as dt
+import uuid
+from typing import Any, Dict
+
+
 from sqlalchemy.orm import Mapped, mapped_column, declarative_base
-from sqlalchemy import String, Float, Boolean, JSON, TIMESTAMP, func
+from sqlalchemy import String, Float, Boolean, JSON, TIMESTAMP, func, inspect
+from sqlalchemy.engine import Engine
 
 Base = declarative_base()
 
@@ -55,3 +64,41 @@ class AlertRuleRow(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+class AlertEvent(Base):
+    __tablename__ = "alert_events"
+
+    id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    detector_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    image_query_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    answer: Mapped[str | None] = mapped_column(String, nullable=True)
+    payload: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        default=lambda: dt.datetime.now(dt.timezone.utc),
+        nullable=False,
+        index=True,
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        created = self.created_at.isoformat() if self.created_at else None
+        return {
+            "id": self.id,
+            "detector_id": self.detector_id,
+            "image_query_id": self.image_query_id,
+            "answer": self.answer,
+            "created_at": created,
+            "payload": self.payload,
+        }
+
+
+def ensure_alert_events_table(engine: Engine) -> bool:
+    """Create the alert_events table if it does not exist."""
+    inspector = inspect(engine)
+    existing = inspector.has_table(AlertEvent.__tablename__)
+    AlertEvent.__table__.create(bind=engine, checkfirst=True)
+    return not existing
