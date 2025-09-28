@@ -165,6 +165,20 @@ If you're deploying the Edge Endpoint into Azure Kubernetes Service (AKS) or ano
      --docker-password "$ACR_PASSWORD"
    ```
    The same secret is referenced by [deploy/aci/edge-endpoint.yaml](aci/edge-endpoint.yaml) when running the Edge Endpoint in Azure Container Instances, and by the Helm chart values in [deploy/helm/groundlight-edge-endpoint/values.yaml](helm/groundlight-edge-endpoint/values.yaml).
+
+#### Smoke check: verify the Azure pull secret
+
+After the Helm jobs run (or after you manually refresh the credentials), confirm that the generated `registry-credentials` secret points at your Azure Container Registry. The following commands print the registry server and username embedded in the secret; the server should end with `.azurecr.io`, and the username should match the value returned by `az acr login --expose-token`:
+
+```shell
+NAMESPACE=edge   # replace with the namespace used by the chart
+kubectl get secret registry-credentials \
+  --namespace "$NAMESPACE" \
+  --output jsonpath='{.data.\.dockerconfigjson}' | \
+  base64 --decode | jq '.auths | to_entries[] | {server: .key, username: .value.username}'
+```
+
+If the server is not your Azure registry or the username is missing, rerun the credential job (`kubectl create job --from=cronjob/refresh-acr-creds manual-refresh`), check the logs for the `init-aws-access-retrieve` container, and ensure the `az acr login --expose-token` call is succeeding with the expected service principal.
 6. **Push updated images to ACR (optional).** When you need to publish a local image build directly to your registry, tag it with the fully-qualified login server and push:
    ```shell
    docker build -t "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:local" .
