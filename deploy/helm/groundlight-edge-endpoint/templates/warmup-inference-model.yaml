@@ -16,6 +16,8 @@ spec:
       - name: image-puller
 
         image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: pinamod-bootstrap
         image: acrintellioptics.azurecr.io/intellioptics/pinamod-artifacts:latest
@@ -33,6 +35,7 @@ spec:
           cp -a /pinamod/. "${PINAMOD_DIR}/"
 
         image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
+
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
