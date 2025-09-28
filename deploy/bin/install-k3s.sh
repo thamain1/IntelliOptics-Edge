@@ -42,9 +42,9 @@ check_cgroup() {
         echo "Cgroup v2 is enabled."
         
         # Check if memory controller is available and enabled in cgroup v2
-        if [ -f "/sys/fs/cgroup/cgroup.controllers" ] && 
-           grep -q "memory" "/sys/fs/cgroup/cgroup.controllers" ] && 
-           [ -f "/sys/fs/cgroup/cgroup.subtree_control" ] && 
+        if [ -f "/sys/fs/cgroup/cgroup.controllers" ] &&
+           grep -q "memory" "/sys/fs/cgroup/cgroup.controllers" &&
+           [ -f "/sys/fs/cgroup/cgroup.subtree_control" ] &&
            grep -q "memory" "/sys/fs/cgroup/cgroup.subtree_control"; then
             echo "Memory controller is properly enabled in cgroup v2."
             return 0
