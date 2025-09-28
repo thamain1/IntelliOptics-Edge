@@ -123,6 +123,21 @@ def list_streams(session: Session) -> List[StreamConfig]:
     return items
 
 
+def get_stream(session: Session, name: str) -> StreamConfig:
+    """Return a single stream definition from the configuration store."""
+
+    doc = ensure_document(session)
+    streams: Dict[str, dict] = doc.streams or {}
+    payload = streams.get(name)
+    if payload is None:
+        raise KeyError(name)
+    try:
+        return StreamConfig(**{"name": name, **(payload or {})})
+    except Exception as exc:  # pragma: no cover - invalid data guarded via create/update
+        log.error("Stream '%s' in storage is invalid: %s", name, exc)
+        raise
+
+
 def create_stream(session: Session, stream: StreamConfig) -> StreamConfig:
     doc = ensure_document(session)
     streams = dict(doc.streams or {})
