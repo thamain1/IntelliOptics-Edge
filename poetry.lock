@@ -849,6 +849,7 @@ docs = ["Sphinx", "furo"]
 test = ["objgraph", "psutil"]
 
 [[package]]
+
 name = "groundlight"
 version = "0.23.2"
 description = "Build computer vision systems using natural language with Groundlight"
@@ -1046,6 +1047,7 @@ files = [
 name = "intellioptics"
 version = "0.1.0"
 description = "IntelliOptics SDK wrapper"
+description = "IntelliOptics Python SDK"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
@@ -1058,6 +1060,18 @@ groundlight = ">=0.23.2"
 [package.source]
 type = "directory"
 url = "vendor/intellioptics-sdk"
+httpx = ">=0.27"
+numpy = ">=2.0"
+pillow = ">=10.4"
+pydantic = ">=2.7"
+typing-extensions = ">=4.12"
+
+[package.source]
+type = "git"
+url = "https://github.com/thamain1/IntelliOptics.git"
+reference = "HEAD"
+resolved_reference = "31e2902fd43fd537eb31fc97cb76f99a1e4eb1e6"
+subdirectory = "python-sdk"
 
 [[package]]
 name = "isort"
@@ -3082,4 +3096,10 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
+
 content-hash = "40b9bfd0c1f5e652988e7cd4a931f295d59e2e7067a268dc0aef18eee0d8af5e"
+
+content-hash = "d4f7ece8bb09bb9ad11ec6279137b57a1303fba707997b1ac665e3040c9e71a7"
+
+content-hash = "13a9cb173af8286aed5770def8d79100c813eb6c46f70bc2e0575a74f8a9dedb"
+

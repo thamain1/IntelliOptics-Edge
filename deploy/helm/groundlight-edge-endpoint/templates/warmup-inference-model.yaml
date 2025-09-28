@@ -14,26 +14,166 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        command: ["echo", "Successfully pulled image to warm cache"]
+      - name: pinamod-bootstrap
+        image: acrintellioptics.azurecr.io/intellioptics/pinamod-artifacts:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -eu
+          mkdir -p "${PINAMOD_DIR}"
+          if [ ! -d /pinamod ]; then
+            echo "Expected pinamod artifacts at /pinamod" >&2
+            exit 1
+          fi
+          find "${PINAMOD_DIR}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          cp -a /pinamod/. "${PINAMOD_DIR}/"
+
+        image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
+
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
-        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR; aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
+
+
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
+
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
+        - name: AZCOPY_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_name
+        - name: AZCOPY_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_key
+
+
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
+        env:
+        - name: AZCOPY_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_name
+        - name: AZCOPY_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_key
+
+
+        command: [
+          "/bin/sh",
+          "-c",
+          "/intellioptics-edge/deploy/bin/sync-pinamod.sh"
+        ]
+
+        image: {{ .Values.registryCredentials.azureCliImage }}
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
+
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant_id
+        - name: PINAMOD_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_account
+        - name: PINAMOD_STORAGE_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_container
+        - name: PINAMOD_STORAGE_PREFIX
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_prefix
+              optional: true
+
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
+
+        - name: PINAMOD_BLOB_URL
+          value: {{ required "pinamodStorage.blobUrl must be provided" .Values.pinamodStorage.blobUrl | quote }}
+{{- if .Values.pinamodStorage.sasTokenSecretName }}
+        - name: PINAMOD_SAS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pinamodStorage.sasTokenSecretName }}
+              key: {{ default "sasToken" .Values.pinamodStorage.sasTokenSecretKey }}
+{{- end }}
+{{- if .Values.pinamodStorage.useManagedIdentity }}
+        - name: AZCOPY_AUTO_LOGIN_TYPE
+          value: MSI
+{{- if .Values.pinamodStorage.managedIdentityClientId }}
+        - name: AZCOPY_MSI_CLIENT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityClientId | quote }}
+{{- end }}
+{{- if .Values.pinamodStorage.managedIdentityTenantId }}
+        - name: AZCOPY_TENANT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityTenantId | quote }}
+{{- end }}
+{{- end }}
+
+
+        - name: PINAMOD_CONTAINER
+          value: "{{ .Values.pinamodContainer }}"
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
+
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
       volumes:
       - name: pina-models
         persistentVolumeClaim:
+
           claimName: edge-endpoint-pvc
+
+
+
+
+
+          claimName: {{ .Values.storage.data.claimName }}
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file
+
+          claimName: edge-endpoint-pvc
+
+
+
   backoffLimit: 2
 
 
