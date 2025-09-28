@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: refresh-creds
+  name: refresh-acr-creds
 spec:
   schedule: "0 */2 * * *"  # Every 2 hours
   jobTemplate:
@@ -11,30 +11,46 @@ spec:
       template:
         metadata:
           labels:
-            app: refresh_creds
+            app: refresh-acr-creds
         spec:
           serviceAccountName: edge-endpoint-service-account
           imagePullSecrets:
             - name: registry-credentials
           containers:
-          - name: ecr
-
+          - name: acr
             command: [
               "/bin/sh",
               "-c",
               "/intellioptics-edge/deploy/bin/refresh-ecr-login.sh"
-              ]
+            ]
             env:
-            - name: AWS_ACCESS_KEY_ID
+            - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_access_key_id
-            - name: AWS_SECRET_ACCESS_KEY
+                  name: azure-service-principal
+                  key: AZURE_CLIENT_ID
+            - name: AZURE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: aws-credentials
-                  key: aws_secret_access_key
+                  name: azure-service-principal
+                  key: AZURE_CLIENT_SECRET
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: AZURE_TENANT_ID
+            - name: ACR_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: ACR_NAME
+                  optional: true
+            - name: ACR_LOGIN_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: ACR_LOGIN_SERVER
+                  optional: true
             
           restartPolicy: OnFailure
 
