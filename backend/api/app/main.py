@@ -5,6 +5,8 @@ import os
 import logging
 from typing import List
 
+from sqlalchemy import create_engine
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
@@ -56,6 +58,15 @@ if not DB_URL:
     DB_URL = "sqlite:///./data/dev.db"
 if DB_URL.startswith("postgres://"):
     DB_URL = DB_URL.replace("postgres://", "postgresql://", 1)
+
+try:
+    from .db import engine as _shared_engine
+    engine = _shared_engine
+    log.info("DB engine imported from app.db")
+except Exception as exc:
+    log.warning(f"Failed to import engine from app.db ({exc}); creating local engine")
+    engine = create_engine(DB_URL, pool_pre_ping=True)
+
 log.info(f"DB_URL resolved to: {DB_URL}")
 
 # ------------------------------------------------------------------------------
