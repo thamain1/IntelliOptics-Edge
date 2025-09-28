@@ -237,8 +237,6 @@ export INFERENCE_FLAVOR="CPU"
 # OR
 export INFERENCE_FLAVOR="GPU"
 ```
-
-
 You'll also need to authenticate Docker with the container registry that hosts the edge-endpoint image. The helper scripts expect the registry host to be provided via `REGISTRY_SERVER` and, optionally, a namespace via `REGISTRY_NAMESPACE`. When using GitHub Container Registry, for example, you can create a Personal Access Token with the `write:packages` scope and run:
 
 ```bash
@@ -253,7 +251,7 @@ If your registry is already configured locally (for example via a credential hel
 
 
 You'll also need to authenticate with Azure so Docker can pull images from the appropriate Azure Container Registry (ACR) location. Make sure the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) is installed and that you've run `az login` (and, if required, `az account set --subscription <subscription-id>`) prior to running the deployment scripts.
-=======
+
 You must also provide Azure credentials with permission to query the IntelliOptics Azure Container Registry. Export the following variables for a service principal that can read the registry (and associated storage) before running the setup script:
 
 ```bash
@@ -268,6 +266,7 @@ If your service principal should target a non-default registry, you can optional
 export ACR_NAME="customRegistryName"
 export ACR_LOGIN_SERVER="customRegistryName.azurecr.io"
 ```
+
 
 
 
@@ -297,10 +296,14 @@ We currently have a hard-coded docker image from our container registry in the [
 deployment. If you want to make modifications to the edge endpoint code and push a different
 image to the registry see [Pushing/Pulling Images from the Container Registry](#pushingpulling-images-from-the-container-registry).
 
+
+We currently have a hard-coded docker image from our container registry in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+deployment. If you want to make modifications to the edge endpoint code and push a different
+image to the registry see [Pushing/Pulling Images from the Container Registry](#pushingpulling-images-from-the-container-registry).
+
 We currently have a hard-coded docker image from ACR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
 image to ACR see [Pushing/Pulling Images from ACR](#pushingpulling-images-from-azure-container-registry-acr).
-
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -365,6 +368,8 @@ Then, re-run the Helm install command.
 
 Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to refresh the stored container registry credentials so docker/k3s can continue pulling images.  If the script is running but failing, update the secret that stores your registry credentials so that it has permission to pull the required images.
 
+Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to refresh the stored container registry credentials so docker/k3s can continue pulling images.  If the script is running but failing, update the secret that stores your registry credentials so that it has permission to pull the required images.
+
 Check the `refresh-acr-creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from the Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-service-principal`) are invalid or not authorized to pull algorithm images from ACR.
 
 
@@ -417,6 +422,7 @@ by first creating a docker image locally, pushing it to the configured registry,
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
 by first creating a docker image locally, pushing it to ACR, retrieving the image ID and
+
 
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 

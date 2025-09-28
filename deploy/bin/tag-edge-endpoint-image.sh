@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+
+# Put a specific tag on an existing image in the configured container
+# registry. This script no longer depends on AWS ECR tooling.
+
+set -euo pipefail
+
 # Put a specific tag on an existing image in Azure Container Registry (ACR)
 # Assumptions:
 # - The image is already built and pushed to ACR
@@ -20,6 +26,7 @@ ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
 =======
 ACR_NAME=${ACR_NAME:-intelliopticsedge}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+
 
 
 
@@ -54,6 +61,22 @@ if [[ -z "${REGISTRY_SERVER}" ]]; then
     exit 1
 fi
 
+
+IMAGE_REPOSITORY="${REGISTRY_SERVER}/"
+if [[ -n "${REGISTRY_NAMESPACE}" ]]; then
+    IMAGE_REPOSITORY+="${REGISTRY_NAMESPACE}/"
+fi
+IMAGE_REPOSITORY+="${EDGE_ENDPOINT_IMAGE}"
+
+if [[ -n "${REGISTRY_USERNAME}" && -n "${REGISTRY_PASSWORD}" ]]; then
+    echo "Logging in to ${REGISTRY_SERVER} as ${REGISTRY_USERNAME}" >&2
+    echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY_SERVER}" --username "${REGISTRY_USERNAME}" --password-stdin
+else
+    echo "Skipping registry login because REGISTRY_USERNAME or REGISTRY_PASSWORD is not set." >&2
+    echo "Ensure you are already logged in via 'docker login ${REGISTRY_SERVER}'." >&2
+fi
+
+
 IMAGE_REPOSITORY="${REGISTRY_SERVER}/"
 if [[ -n "${REGISTRY_NAMESPACE}" ]]; then
     IMAGE_REPOSITORY+="${REGISTRY_NAMESPACE}/"
@@ -78,7 +101,7 @@ fi
 
 echo "Logging into Azure Container Registry '${ACR_REGISTRY_NAME}' (${ACR_URL})"
 az acr login --name "${ACR_REGISTRY_NAME}"
-=======
+
 ACR_REGISTRY="${ACR_LOGIN_SERVER}"
 ACR_REPO="${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}"
 
@@ -93,6 +116,7 @@ fi
 
 
 
+
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
 # and then create the tag on that SHA. Otherwise imagetools will create a tag for
@@ -100,10 +124,15 @@ fi
 echo "🏷️ Tagging image $IMAGE_REPOSITORY:$GIT_TAG with tag $NEW_TAG"
 digest=$(docker buildx imagetools inspect $IMAGE_REPOSITORY:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
 docker buildx imagetools create --tag $IMAGE_REPOSITORY:$NEW_TAG $IMAGE_REPOSITORY@${digest}
+
+
+echo "✅ Image successfully tagged: $IMAGE_REPOSITORY:$NEW_TAG"
+
 echo "✅ Image successfully tagged: $IMAGE_REPOSITORY:$NEW_TAG"
 echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
 digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
 docker buildx imagetools create --tag $ACR_REPO:$NEW_TAG $ACR_REPO@${digest}
 echo "✅ Image successfully tagged: $ACR_REPO:$NEW_TAG"
+
 
 
