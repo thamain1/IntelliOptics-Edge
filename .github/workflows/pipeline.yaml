@@ -272,6 +272,19 @@ jobs:
       INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
 
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install k3s
+        run: |
+          ./deploy/bin/install-k3s.sh cpu
+
+      - name: Validate setup edge endpoint
+        run: |
+          make validate-setup-helm
+
+
+    steps:
       - name: declare success
         run: echo "Main suite of tests all pass."
 
