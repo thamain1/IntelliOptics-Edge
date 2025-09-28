@@ -9,10 +9,17 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: efs-sc
+  storageClassName: azurefile-csi
   csi:
-    driver: efs.csi.aws.com
-    volumeHandle: ${EFS_VOLUME_ID} 
+    driver: file.csi.azure.com
+    volumeHandle: ${AZURE_STORAGE_ACCOUNT}#${AZURE_FILE_SHARE}
+    volumeAttributes:
+      shareName: ${AZURE_FILE_SHARE}
+      secretName: azure-storage-credentials
+      secretNamespace: ${DEPLOYMENT_NAMESPACE}
+    nodeStageSecretRef:
+      name: azure-storage-credentials
+      namespace: ${DEPLOYMENT_NAMESPACE}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -24,5 +31,5 @@ spec:
   resources:
     requests:
       storage: 2Gi
-  storageClassName: efs-sc
+  storageClassName: azurefile-csi
 

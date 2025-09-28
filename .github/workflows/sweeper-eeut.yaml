@@ -1,3 +1,4 @@
+# yamllint disable rule:comments-indentation
 name: sweeper-eeut
 # This workflow tears down old EEUT stacks from pulumi.
 # We do this as a background sweeper job, because the teardown is VERY slow (~7 minutes for a g4)
@@ -5,7 +6,19 @@ name: sweeper-eeut
 on:
   schedule:
     - cron: "*/15 * * * *" # Every 15 minutes
+
     # Note cron workflows only run from the main branch.
+
+
+    # Note cron workflows only run from the main branch.
+
+
+    # Note cron workflows only run from the main branch.
+
+        # Note cron workflows only run from the main branch.
+  # yamllint enable rule:comments-indentation
+
+
   push:
     branches:
       # If you're working on this stuff, name your branch e2e-something and this will run.
@@ -27,17 +40,22 @@ jobs:
         working-directory: cicd/pulumi
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
 
       - name: Log in to Azure
         uses: azure/login@v2
+
+      - name: Set AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
