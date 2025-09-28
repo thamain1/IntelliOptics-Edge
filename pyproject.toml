@@ -22,6 +22,9 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
+azure-identity = "^1.25.0"
+azure-servicebus = "^7.14.2"
+azure-storage-blob = "^12.26.0"
 
 
 intellioptics = { git = "https://github.com/thamain1/IntelliOptics-SDK.git" }
