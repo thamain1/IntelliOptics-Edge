@@ -1,35 +1,36 @@
 #!/bin/bash
 
-# This script builds and pushes the edge-endpoint Docker image to ECR.
+# This script builds and pushes the edge-endpoint Docker image to a container registry.
+# Supported registries:
+#   * AWS Elastic Container Registry (default)
+#   * Azure Container Registry (`REGISTRY_PROVIDER=azure` with `ACR_NAME` or `ACR_LOGIN_SERVER`)
 #
 # Usage:
 #   ./build-push-edge-endpoint-image.sh
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
-# 2. Authenticates Docker with ECR.
+# 2. Authenticates Docker with the configured registry.
 # 3. Builds a multi-platform Docker image.
-# 4. Pushes the image to ECR.
+# 4. Pushes the image to the configured registry.
 #
 # Note: Ensure you have the necessary AWS credentials and Docker installed.
-
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
 
 set -e
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
 
+source ./registry.sh
+
 TAG=$(./git-tag-name.sh)
 
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+REGISTRY_URL=$(registry_url)
+IMAGE_REF="$(registry_repository "${EDGE_ENDPOINT_IMAGE}")"
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
+# Authenticate docker to the chosen registry
+registry_login
 
 if [ "$1" == "dev" ]; then
   echo "'$0 dev' is no longer supported!!"
@@ -60,10 +61,10 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${IMAGE_REF}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+echo "Successfully pushed image to REGISTRY_URL=${REGISTRY_URL}"
+echo "${IMAGE_REF}:${TAG}"
 
 

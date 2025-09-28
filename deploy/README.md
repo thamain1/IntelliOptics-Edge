@@ -364,17 +364,45 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Container registry configuration
+
+The helper scripts in [`deploy/bin`](./bin) default to AWS Elastic Container Registry.
+You can override the target provider and registry coordinates with the following
+environment variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REGISTRY_PROVIDER` | `aws` | Selects the registry backend (`aws` or `azure`). |
+| `ECR_ACCOUNT` | `767397850842` | AWS account for Elastic Container Registry (used when `REGISTRY_PROVIDER=aws`). |
+| `ECR_REGION` | `us-west-2` | AWS region for Elastic Container Registry. |
+| `ACR_NAME` | _required for Azure_ | Azure Container Registry name (e.g. `myregistry`). |
+| `ACR_LOGIN_SERVER` | derived from `ACR_NAME` | Fully-qualified Azure registry login server (e.g. `myregistry.azurecr.io`). |
+| `ACR_RESOURCE_GROUP` | _(optional)_ | Resource group that hosts the Azure Container Registry. Useful for CI credentials and Azure CLI logins. |
+
+When deploying from CI, set `REGISTRY_PROVIDER=azure` and supply the Azure CLI login
+credentials in addition to `ACR_NAME`/`ACR_LOGIN_SERVER` (and optionally
+`ACR_RESOURCE_GROUP`) before running the build/push or tagging scripts. For AWS-based
+pipelines you do not need to change anything; the defaults remain backwards compatible.
+
+## Pushing/Pulling Images from Container Registries
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
-then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+by first creating a docker image locally, pushing it to your registry, retrieving the
+image ID and then using that ID in the
+[edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
 Follow the following steps:
 
 ```shell
-# Build and push image to ECR
+# Build and push image to the configured registry
 > ./deploy/bin/build-push-edge-endpoint-image.sh
+```
+
+For Azure Container Registry builds, set the provider and registry name when invoking the
+script:
+
+```shell
+REGISTRY_PROVIDER=azure ACR_NAME=myregistry ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 
