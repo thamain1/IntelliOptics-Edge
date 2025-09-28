@@ -40,12 +40,23 @@ COPY api/app /app/app
 =======
 # Your FastAPI package lives here in your repo:
 
+
+# --- Python requirements ---
+COPY backend/api/requirements.txt /app/
+
+# --- IntelliOptics SDK (wheel) ---
+# Keep this line only if that wheel exists in your build context
+COPY intellioptics-python-sdk/dist/intellioptics-0.1.0-py3-none-any.whl /tmp/
+RUN ls -l /tmp || true
+
 #   backend/api/app  --> copied to /app/app
 COPY backend/api/app /app/app
 
 # --- Python deps ---
 # Install the published IntelliOptics SDK from your package registry (e.g. PyPI).
 # If you don’t need Postgres in this image, you can drop "psycopg[binary]"
+
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 #   Azure/intellioptics-oneclick/backend/app  --> copied to /app/app
 COPY backend/api/app /app/app
