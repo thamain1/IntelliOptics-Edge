@@ -1,31 +1,36 @@
+from __future__ import annotations
+
+import importlib
 import json
 import logging
 import time
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import cachetools
 import ksuid
 from fastapi import HTTPException
-from model import (
-    ROI,
-    BinaryClassificationResult,
-    CountingResult,
-    CountModeConfiguration,
-    ImageQuery,
-    ImageQueryTypeEnum,
-    Label,
-    ModeEnum,
-    MultiClassificationResult,
-    MultiClassModeConfiguration,
-    ResultTypeEnum,
-    Source,
-)
 from PIL import Image
 from pydantic import BaseModel, ValidationError
 
 from app.core import constants
+
+if TYPE_CHECKING:
+    from model import (
+        ROI,
+        BinaryClassificationResult,
+        CountingResult,
+        CountModeConfiguration,
+        ImageQuery,
+        ImageQueryTypeEnum,
+        Label,
+        ModeEnum,
+        MultiClassificationResult,
+        MultiClassModeConfiguration,
+        ResultTypeEnum,
+        Source,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +39,20 @@ METADATA_SIZE_LIMIT_BYTES = (
 )
 
 
+_model_module: Any | None = None
+
+
+def _load_model_module():
+    """Import the shared model package lazily."""
+    global _model_module
+    if _model_module is None:
+        _model_module = importlib.import_module("model")
+    return _model_module
+
+
 def create_iq(  # noqa: PLR0913
     detector_id: str,
-    mode: ModeEnum,
+    mode: "ModeEnum",
     mode_configuration: dict[str, Any] | None,
     result_value: int,
     confidence: float,
@@ -44,11 +60,10 @@ def create_iq(  # noqa: PLR0913
     is_done_processing: bool,
     query: str = "",
     patience_time: float | None = None,
-    rois: list[ROI] | None = None,
+    rois: list["ROI"] | None = None,
     text: str | None = None,
-) -> ImageQuery:
-    """
-    Creates an ImageQuery object for the appropriate detector with the given result.
+) -> "ImageQuery":
+    """Creates an ImageQuery object for the appropriate detector with the given result.
 
     :param mode: The mode of the detector.
     :param mode_configuration: A dict version of the config for the mode. None for binary detectors.
@@ -65,7 +80,13 @@ def create_iq(  # noqa: PLR0913
     """
     if patience_time is None:
         patience_time = constants.DEFAULT_PATIENCE_TIME
+
+    model = _load_model_module()
+
     result_type, result = _mode_to_result_and_type(mode, mode_configuration, confidence, result_value)
+
+    ImageQuery = getattr(model, 'ImageQuery')
+    ImageQueryTypeEnum = getattr(model, 'ImageQueryTypeEnum')
 
     return ImageQuery(
         metadata={"is_from_edge": True},
@@ -84,9 +105,21 @@ def create_iq(  # noqa: PLR0913
     )
 
 
+
+
+
 def _mode_to_result_and_type(
-    mode: ModeEnum, mode_configuration: dict[str, Any] | None, confidence: float, result_value: int
-) -> tuple[ResultTypeEnum, BinaryClassificationResult | CountingResult | MultiClassificationResult]:
+    mode: "ModeEnum", mode_configuration: dict[str, Any] | None, confidence: float, result_value: int
+) -> tuple["ResultTypeEnum", "BinaryClassificationResult | CountingResult | MultiClassificationResult"]:
+    model = _load_model_module()
+    ModeEnum = getattr(model, 'ModeEnum')
+    ResultTypeEnum = getattr(model, 'ResultTypeEnum')
+    BinaryClassificationResult = getattr(model, 'BinaryClassificationResult')
+    CountingResult = getattr(model, 'CountingResult')
+    MultiClassificationResult = getattr(model, 'MultiClassificationResult')
+    Label = getattr(model, 'Label')
+    Source = getattr(model, 'Source')
+
     """
     Maps the detector mode to the corresponding result type and generates the result object
     based on the provided mode, confidence, and result value.
