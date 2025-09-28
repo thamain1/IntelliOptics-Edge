@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import SQLAlchemyError
 
 # --- Logging ---------------------------------------------------------------
 import logging
@@ -32,6 +33,10 @@ except Exception as e:  # pragma: no cover
 
 
 router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
+
+from . import db, migrations
+from .db import SessionLocal
+from .models import AlertEvent, ensure_alert_events_table
 
 # =============================================================================
 # Models
@@ -161,15 +166,41 @@ def _maybe_upload_to_blob(local_path: Path) -> Tuple[Optional[str], Optional[str
 
 def _store_event_best_effort(payload: dict) -> Optional[str]:
     """
-    Placeholder: write to DB if available. Here we just synthesize an ID.
-    Keep this best-effort to avoid breaking alert paths when DB is down.
+    Attempt to persist an alert event. Returns the event ID or None on failure.
     """
+
     try:
-        # TODO: integrate real DB write
-        return str(uuid.uuid4())
-    except Exception as e:  # pragma: no cover
-        logger.warning("[alerts] DB write skipped: %s", e)
+        ensure_alert_events_table(db.get_engine())
+    except Exception as exc:  # pragma: no cover
+        logger.warning("[alerts] unable to ensure alert_events table: %s", exc)
+
+    try:
+        session = SessionLocal()
+    except Exception as exc:  # pragma: no cover
+        logger.warning("[alerts] failed to obtain DB session: %s", exc)
         return None
+
+    try:
+        event = AlertEvent(
+            detector_id=payload.get("detector_id"),
+            image_query_id=payload.get("image_query_id"),
+            answer=payload.get("answer"),
+            payload=payload,
+        )
+        session.add(event)
+        session.commit()
+        session.refresh(event)
+        return event.id
+    except SQLAlchemyError as exc:
+        session.rollback()
+        logger.warning("[alerts] event store failed: %s", exc, exc_info=True)
+    except Exception as exc:  # pragma: no cover
+        session.rollback()
+        logger.warning("[alerts] unexpected event store failure: %s", exc, exc_info=True)
+    finally:
+        session.close()
+
+    return None
 
 
 # =============================================================================
@@ -261,16 +292,48 @@ def simulate_alert(body: SimulateIn) -> SimulateOut:
 
 @router.get("/events/recent")
 def recent_events(limit: int = 10) -> dict:
-    """
-    Placeholder recent events endpoint. Returns an empty list here so we
-    keep the shape stable (your DB impl can plug in).
-    """
-    return {"ok": True, "items": [], "limit": limit}
+    """Return the most recent stored alert events."""
+
+    limit = max(1, min(limit, 100))
+
+    try:
+        ensure_alert_events_table(db.get_engine())
+    except Exception as exc:  # pragma: no cover
+        logger.warning("[alerts] unable to ensure alert_events table before query: %s", exc)
+
+    try:
+        with SessionLocal() as session:
+            records = (
+                session.query(AlertEvent)
+                .order_by(AlertEvent.created_at.desc(), AlertEvent.id.desc())
+                .limit(limit)
+                .all()
+            )
+    except SQLAlchemyError as exc:
+        logger.warning("[alerts] failed to load recent events: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="event storage unavailable")
+    except Exception as exc:  # pragma: no cover
+        logger.warning("[alerts] unexpected error loading events: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="event storage unavailable")
+
+    return {
+        "ok": True,
+        "items": [record.to_dict() for record in records],
+        "limit": limit,
+    }
 
 
 @router.post("/admin/migrate")
 def admin_migrate() -> dict:
-    """
-    Placeholder migration endpoint (no-op).
-    """
-    return {"ok": True, "migrations": []}
+    """Run database migrations required for alert storage."""
+
+    try:
+        applied = migrations.migrate()
+    except SQLAlchemyError as exc:
+        logger.warning("[alerts] migration failure: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="migration failed")
+    except Exception as exc:  # pragma: no cover
+        logger.warning("[alerts] unexpected migration failure: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="migration failed")
+
+    return {"ok": True, "migrations": applied}
