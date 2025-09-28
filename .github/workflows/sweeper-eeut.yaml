@@ -6,8 +6,12 @@ name: sweeper-eeut
 on:
   schedule:
     - cron: "*/15 * * * *" # Every 15 minutes
+
+    # Note cron workflows only run from the main branch.
+
         # Note cron workflows only run from the main branch.
   # yamllint enable rule:comments-indentation
+
   push:
     branches:
       # If you're working on this stuff, name your branch e2e-something and this will run.
