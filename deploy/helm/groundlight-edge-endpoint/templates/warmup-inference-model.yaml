@@ -18,6 +18,8 @@ spec:
         image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
         image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: pinamod-bootstrap
         image: acrintellioptics.azurecr.io/intellioptics/pinamod-artifacts:latest

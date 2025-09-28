@@ -165,6 +165,9 @@ spec:
 
       containers:
       - name: inference-server
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
         image: {{ .Values.acrLoginServer }}/intellioptics/inference-server:{{ include "IntelliOptics-edge-endpoint.inferenceTag" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:

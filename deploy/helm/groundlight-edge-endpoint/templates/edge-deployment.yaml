@@ -55,6 +55,8 @@ spec:
 
         image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
 
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+
         image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
 
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
