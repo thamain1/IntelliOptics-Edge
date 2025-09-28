@@ -3,10 +3,18 @@ set -euo pipefail
 DIR=$(cd "$(dirname "$0")" && pwd)
 . "$DIR/common.sh"
 
+IMAGE_NAME=${IMAGE_NAME:-intellioptics-worker}
+IMAGE_TAG=${IMAGE_TAG:-latest}
+REPO_ROOT=$(cd "$DIR/../../.." && pwd)
+
 IMG="$ACR_LOGIN_SERVER/${IMAGE_NAME}:${IMAGE_TAG}"
 
 az acr login --name "$ACR" >/dev/null
-( cd worker-shim && docker build -t "$IMG" . && docker push "$IMG" )
+docker build \
+  -t "$IMG" \
+  -f "$REPO_ROOT/backend/worker/Dockerfile" \
+  "$REPO_ROOT/backend/worker"
+docker push "$IMG"
 
 ACI_NAME=${ACI_NAME:-io-worker}
 ENVVARS=(
