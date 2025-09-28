@@ -97,4 +97,15 @@ serviceAccount:
   create: true
   name: ""
 
+# Optional configuration for the RTSP stream ingest worker that now runs inside the edge-endpoint pod.
+# Use `extraEnv` to surface environment variables (for example, RTSP credentials) or `secretEnvs` to
+# source values from Kubernetes secrets. `extraVolumeMounts` and `extraVolumes` can be used to make
+# multimedia libraries (e.g., GStreamer plugins) available to OpenCV at runtime.
+streaming:
+  enabled: false
+  extraEnv: []
+  secretEnvs: []
+  extraVolumeMounts: []
+  extraVolumes: {}
+
 

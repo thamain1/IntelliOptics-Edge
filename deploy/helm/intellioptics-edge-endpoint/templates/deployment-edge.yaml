@@ -105,6 +105,24 @@ spec:
               value: "1"
             - name: INTELLIOPTICS_ENDPOINT
               value: {{ .Values.upstreamEndpoint | quote }}
+            {{- if and .Values.streaming.enabled (gt (len .Values.streaming.extraEnv) 0) }}
+            {{- range .Values.streaming.extraEnv }}
+            - name: {{ .name | quote }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if and .Values.streaming.enabled (gt (len .Values.streaming.secretEnvs) 0) }}
+            {{- range .Values.streaming.secretEnvs }}
+            - name: {{ .name | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName | quote }}
+                  key: {{ .secretKey | quote }}
+                  {{- if hasKey . "optional" }}
+                  optional: {{ .optional }}
+                  {{- end }}
+            {{- end }}
+            {{- end }}
           volumeMounts:
             - name: edge-config-volume
               mountPath: /etc/intellioptics/edge-config
@@ -115,6 +133,18 @@ spec:
               mountPath: /opt/intellioptics/edge/sqlite
             - name: device-info-volume
               mountPath: /opt/intellioptics/device
+            {{- if and .Values.streaming.enabled (gt (len .Values.streaming.extraVolumeMounts) 0) }}
+            {{- range .Values.streaming.extraVolumeMounts }}
+            - name: {{ .name | quote }}
+              mountPath: {{ .mountPath | quote }}
+              {{- if hasKey . "subPath" }}
+              subPath: {{ .subPath | quote }}
+              {{- end }}
+              {{- if hasKey . "readOnly" }}
+              readOnly: {{ .readOnly }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
         - name: status-monitor
           image: {{ .Values.image.stat | quote }}
           imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" | quote }}
@@ -199,3 +229,9 @@ spec:
           hostPath:
             path: /opt/intellioptics/device
             type: DirectoryOrCreate
+        {{- if and .Values.streaming.enabled (gt (len (keys .Values.streaming.extraVolumes)) 0) }}
+        {{- range $name, $volume := .Values.streaming.extraVolumes }}
+        - name: {{ $name | quote }}
+{{ toYaml $volume | indent 10 }}
+        {{- end }}
+        {{- end }}
