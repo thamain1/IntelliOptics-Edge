@@ -52,8 +52,8 @@ HELM_TOKEN_ARG = $(if $(strip $(INTELLIOPTICS_API_TOKEN)),--set intelliopticsApi
 HELM_RELEASE_NAME = edge-endpoint
 
 # Note that the namespace we specify here is the namespace where we keep the helm history (always "default") not
-# the namespace where the resources are deployed. The namespace where the resources are deployed is 
-# specified in the values.yaml file (default is "edge").
+# the namespace where the resources are deployed. The namespace where the resources are deployed is
+# specified in the values.yaml file (default is "intellioptics-edge").
 helm-install:
        helm upgrade -i -n default ${HELM_ARGS} ${HELM_TOKEN_ARG} ${HELM_RELEASE_NAME} deploy/helm/groundlight-edge-endpoint
 
