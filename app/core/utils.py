@@ -155,7 +155,7 @@ def safe_call_sdk(api_method: Callable, **kwargs):
     """
     try:
         return api_method(**kwargs)
-    # except groundlight.NotFoundError as ex:
+    # except IntelliOpticsClientError as ex:
     #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ex))
     except Exception as ex:
         if hasattr(ex, "status"):

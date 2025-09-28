@@ -1,25 +1,16 @@
-"""IntelliOptics SDK compatibility wrapper around the Groundlight SDK."""
+"""First-party IntelliOptics SDK exports."""
 from __future__ import annotations
 
-from groundlight import (
-    ApiException,
-    ApiTokenError,
-    ExperimentalApi,
-    Groundlight,
-    GroundlightClientError,
-    Label,
-    NotFoundError,
-)
-
-IntelliOptics = Groundlight
+from .client import IntelliOptics
+from .exceptions import ApiException, ApiTokenError, IntelliOpticsClientError
+from .experimental import ExperimentalApi
+from .models import Label
 
 __all__ = [
     "IntelliOptics",
-    "Groundlight",
     "ExperimentalApi",
     "ApiException",
-    "GroundlightClientError",
+    "IntelliOpticsClientError",
     "ApiTokenError",
-    "NotFoundError",
     "Label",
 ]
