@@ -94,6 +94,11 @@ if ! ./deploy/bin/make-azure-storage-secret.sh; then
     exit 1
 fi
 
+if ! ./deploy/bin/make-azure-storage-secret.sh; then
+    echo "Failed to execute make-azure-storage-secret.sh successfully. Exiting."
+    exit 1
+fi
+
 # Configmaps, secrets, and deployments
 $K delete configmap --ignore-not-found edge-config -n ${DEPLOYMENT_NAMESPACE}
 $K delete configmap --ignore-not-found inference-deployment-template -n ${DEPLOYMENT_NAMESPACE}

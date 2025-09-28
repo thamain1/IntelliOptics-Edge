@@ -27,6 +27,19 @@ spec:
               name: azure-storage-credentials
               key: account_key
 
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
+        env:
+        - name: AZCOPY_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_name
+        - name: AZCOPY_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_key
+
 
         command: [
           "/bin/sh",
@@ -73,6 +86,7 @@ spec:
             "set -euo pipefail\nrm -rf ${PINAMOD_DIR:?}/*\ncp -a ${PINAMOD_SOURCE_DIR}/. ${PINAMOD_DIR}/"
           ]
         env:
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         - name: PINAMOD_SOURCE_DIR
