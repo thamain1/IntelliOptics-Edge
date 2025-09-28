@@ -1,5 +1,15 @@
+from __future__ import annotations
+
+import logging
+from typing import List
+
 from sqlalchemy import text
-from .db import engine
+from sqlalchemy.exc import SQLAlchemyError
+
+from . import db
+from .models import ensure_alert_events_table
+
+logger = logging.getLogger("intellioptics.api")
 
 DDL = [
     """
@@ -34,7 +44,25 @@ DDL = [
     """CREATE INDEX IF NOT EXISTS ix_image_queries_created_at ON image_queries(created_at);""",
 ]
 
-def migrate():
-    with engine.begin() as conn:
-        for stmt in DDL:
-            conn.execute(text(stmt))
+
+def migrate() -> List[str]:
+    engine = db.get_engine()
+    applied: List[str] = []
+
+    if engine.dialect.name.startswith("postgres"):
+        try:
+            with engine.begin() as conn:
+                for stmt in DDL:
+                    conn.execute(text(stmt))
+                    applied.append(stmt.strip().splitlines()[0])
+        except SQLAlchemyError:  # pragma: no cover - exercised via API tests
+            logger.exception("[migrations] failed to apply legacy DDL")
+            raise
+    else:
+        logger.info(
+            "[migrations] skipping legacy DDL for dialect %s", engine.dialect.name
+        )
+
+    created = ensure_alert_events_table(engine)
+    applied.append("alert_events.create" if created else "alert_events.exists")
+    return applied
