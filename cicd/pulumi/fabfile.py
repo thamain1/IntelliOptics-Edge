@@ -10,6 +10,7 @@ from urllib import request, error
 
 from fabric import task, Connection
 from invoke import run as local
+
 import paramiko
 
 AZURE_KEY_VAULT_URL_ENV = "AZURE_KEY_VAULT_URL"
@@ -58,12 +59,37 @@ def fetch_secret(secret_id: str) -> str:
             f"Azure Key Vault response for secret '{secret_id}' did not include a value."
         ) from exc
 
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+import paramiko
+
+@lru_cache(maxsize=1)
+def _get_secret_client() -> SecretClient:
+    """Creates a Key Vault secret client using the default Azure credentials."""
+    vault_name = os.environ.get("AZURE_KEY_VAULT_NAME")
+    if not vault_name:
+        raise RuntimeError("AZURE_KEY_VAULT_NAME environment variable must be set")
+    vault_url = f"https://{vault_name}.vault.azure.net"
+    credential = DefaultAzureCredential()
+    return SecretClient(vault_url=vault_url, credential=credential)
+
+
+def fetch_secret(secret_id: str) -> str:
+    """Fetches a secret from Azure Key Vault."""
+    client = _get_secret_client()
+    return client.get_secret(secret_id).value
+
+
 def get_eeut_ip() -> str:
     """Gets the EEUT's IP address from Pulumi."""
     return local("pulumi stack output eeut_private_ip", hide=True).stdout.strip()
 
 def connect_server() -> Connection:
+
     """Connect to the EEUT using the SSH key stored in Azure Key Vault."""
+
+    """Connects to the EEUT, using the private key stored in Azure Key Vault."""
+
     ip = get_eeut_ip()
     secret_name = os.environ.get(AZURE_SECRET_NAME_ENV, "eeut-ssh-private-key")
     private_key = fetch_secret(secret_name)
