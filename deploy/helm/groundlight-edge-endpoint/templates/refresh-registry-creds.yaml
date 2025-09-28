@@ -1,13 +1,13 @@
-# Cron job to refresh our local credentials
+# Cron job to refresh local container registry credentials
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: refresh-ecr-creds
+  name: refresh-registry-creds
   namespace: {{ .Values.namespace }}
   labels:
     {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 spec:
-  schedule: "0 * * * *"  # Every 2 hours
+  schedule: "0 * * * *"  # Every hour
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: 3600
@@ -15,7 +15,7 @@ spec:
       template:
         metadata:
           labels:
-            app: refresh-ecr-creds
+            app: refresh-registry-creds
         spec:
           {{- include "edge-endpoint.registry-credentials.podSpec" . | nindent 10 }}
 

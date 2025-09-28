@@ -207,7 +207,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
           mountPath: /opt/intellioptics/device
 
       imagePullSecrets:
-      - name: registry-credentials
+      - name: {{ default "registry-credentials" (.Values.registry.secretName) }}
 
       volumes:
       - name: edge-config-volume

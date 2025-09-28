@@ -1,12 +1,24 @@
 {{- define "edge-endpoint.registry-credentials.podSpec" -}}
+{{- $registry := .Values.registry | default (dict) -}}
+{{- $registryAws := $registry.aws | default (dict) -}}
+{{- $registryAzure := $registry.azure | default (dict) -}}
+{{- $provider := $registry.provider | default "aws" -}}
+{{- $server := $registry.server | default .Values.ecrRegistry -}}
+{{- $username := $registry.username | default "" -}}
+{{- $passwordCommand := $registry.passwordCommand | default "" -}}
+{{- $resolvedPasswordCommand := tpl $passwordCommand . -}}
+{{- $secretName := $registry.secretName | default "registry-credentials" -}}
+{{- $secretType := $registry.secretType | default "kubernetes.io/dockerconfigjson" -}}
+{{- $awsRegion := $registryAws.region | default .Values.awsRegion -}}
+{{- $azureRegistryName := $registryAzure.registryName | default "" -}}
+{{- $azureLoginMode := $registryAzure.loginMode | default "service-principal" -}}
 restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
 
 containers:
-  - name: aws-cli
-
+  - name: registry-fetcher
     command:
-      - /bin/sh
+      - /bin/bash
       - /app/init-aws-access-retrieve.sh
     env:
       - name: INTELLIOPTICS_ENDPOINT
@@ -16,6 +28,42 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
+      - name: REGISTRY_PROVIDER
+        value: "{{ $provider }}"
+      - name: REGISTRY_SERVER
+        value: "{{ $server }}"
+      - name: REGISTRY_USERNAME
+        value: "{{ $username }}"
+      - name: REGISTRY_PASSWORD_COMMAND
+        value: "{{ $resolvedPasswordCommand }}"
+      - name: REGISTRY_SECRET_NAME
+        value: "{{ $secretName }}"
+      - name: REGISTRY_SECRET_TYPE
+        value: "{{ $secretType }}"
+      - name: AWS_REGION
+        value: "{{ $awsRegion }}"
+      - name: REGISTRY_AWS_REGION
+        value: "{{ $awsRegion }}"
+      - name: AZURE_ACR_NAME
+        value: "{{ $azureRegistryName }}"
+      - name: AZURE_LOGIN_MODE
+        value: "{{ $azureLoginMode }}"
+      {{- with $registryAzure.tenantId }}
+      - name: AZURE_TENANT_ID
+        value: "{{ . }}"
+      {{- end }}
+      {{- with $registryAzure.clientId }}
+      - name: AZURE_CLIENT_ID
+        value: "{{ . }}"
+      {{- end }}
+      {{- with $registryAzure.clientSecret }}
+      - name: AZURE_CLIENT_SECRET
+        value: "{{ . }}"
+      {{- end }}
+      {{- with $registryAzure.managedIdentityClientId }}
+      - name: AZURE_MANAGED_IDENTITY_CLIENT_ID
+        value: "{{ . }}"
+      {{- end }}
 
     volumeMounts:
       - name: shared-volume
@@ -25,10 +73,16 @@ containers:
         subPath: init-aws-access-retrieve.sh
 
   - name: kubectl
-
     command:
-      - /bin/sh
+      - /bin/bash
       - /app/init-aws-access-apply.sh
+    env:
+      - name: REGISTRY_SECRET_NAME
+        value: "{{ $secretName }}"
+      - name: REGISTRY_SECRET_TYPE
+        value: "{{ $secretType }}"
+      - name: REGISTRY_SERVER
+        value: "{{ $server }}"
     volumeMounts:
       - name: shared-volume
         mountPath: /shared

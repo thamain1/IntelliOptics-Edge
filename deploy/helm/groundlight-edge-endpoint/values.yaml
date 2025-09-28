@@ -49,6 +49,26 @@ awsRegion: "us-west-2"
 
 ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
 
+# Container registry configuration. The historical values above (awsRegion and
+# ecrRegistry) are still honoured for backwards compatibility but you should
+# prefer to configure the registry block directly.
+registry:
+  provider: aws
+  server: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+  username: ""
+  passwordCommand: ""
+  secretName: "registry-credentials"
+  secretType: "kubernetes.io/dockerconfigjson"
+  aws:
+    region: "us-west-2"
+  azure:
+    registryName: ""
+    loginMode: "service-principal"
+    tenantId: ""
+    clientId: ""
+    clientSecret: ""
+    managedIdentityClientId: ""
+
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"
 

@@ -11,7 +11,7 @@ spec:
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:
-      - name: registry-credentials
+      - name: {{ default "registry-credentials" (.Values.registry.secretName) }}
       containers:
       - name: image-puller
 image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
