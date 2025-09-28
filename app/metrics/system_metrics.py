@@ -36,7 +36,7 @@ def get_deployments() -> str:
     config.load_incluster_config()
     v1_apps = client.AppsV1Api()
 
-    deployments = v1_apps.list_namespaced_deployment(namespace=os.getenv("NAMESPACE", "edge"))
+    deployments = v1_apps.list_namespaced_deployment(namespace=os.getenv("NAMESPACE", "intellioptics-edge"))
 
     deployment_names = []
     for dep in deployments.items:
@@ -47,7 +47,7 @@ def get_deployments() -> str:
 def get_pods() -> str:
     config.load_incluster_config()
     v1_core = client.CoreV1Api()
-    pods = v1_core.list_namespaced_pod(namespace=os.getenv("NAMESPACE", "edge"))
+    pods = v1_core.list_namespaced_pod(namespace=os.getenv("NAMESPACE", "intellioptics-edge"))
 
     # Convert the pods dict to a JSON string to prevent opensearch from indexing all
     # the individual pod fields
@@ -57,7 +57,7 @@ def get_pods() -> str:
 def get_container_images() -> str:
     config.load_incluster_config()
     v1_core = client.CoreV1Api()
-    pods = v1_core.list_namespaced_pod(namespace=os.getenv("NAMESPACE", "edge"))
+    pods = v1_core.list_namespaced_pod(namespace=os.getenv("NAMESPACE", "intellioptics-edge"))
 
     containers = {}
     for pod in pods.items:
