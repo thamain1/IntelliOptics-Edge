@@ -59,6 +59,48 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
 
 You're done. You can skip down to [Verifying the Installation](#verifying-the-installation) to confirm that the Edge Endpoint is running.
 
+### Azure prerequisites and registry setup
+
+If you're deploying the Edge Endpoint into Azure Kubernetes Service (AKS) or another Kubernetes cluster that only has access to Azure Container Registry (ACR), complete the following steps before running Helm:
+
+1. **Install the Azure CLI.** Follow the [official installation guide](https://learn.microsoft.com/cli/azure/install-azure-cli) for your platform. The commands below assume the `az` CLI is available on your `PATH`.
+2. **Authenticate with Azure.**
+   ```shell
+   az login                      # Opens browser or device code auth
+   az account set --subscription "<your-subscription-id>"
+   ```
+3. **Configure registry environment variables.** The sample [`.env.example`](../.env.example) lists the commonly used values.
+   ```shell
+   export ACR_LOGIN_SERVER="acrintellioptics.azurecr.io"  # or your registry FQDN
+   export ACR_NAME="acrintellioptics"                     # registry name without domain
+   ```
+   When you need admin credentials for scripting (for example, to create the Kubernetes pull secret), capture them with:
+   ```shell
+   export ACR_USERNAME=$(az acr credential show --name "$ACR_NAME" --query username -o tsv)
+   export ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
+   ```
+4. **Log Docker into ACR so you can push images.**
+   ```shell
+   az acr login --name "$ACR_NAME"
+   ```
+5. **Create or refresh the Kubernetes image pull secret.** If you're running in AKS, first merge credentials with your local kubeconfig (`az aks get-credentials`). Then create the secret that the Helm chart expects (`registry-credentials`):
+   ```shell
+   kubectl create secret docker-registry registry-credentials \
+     --namespace edge \
+     --docker-server "$ACR_LOGIN_SERVER" \
+     --docker-username "$ACR_USERNAME" \
+     --docker-password "$ACR_PASSWORD"
+   ```
+   The same secret is referenced by [deploy/aci/edge-endpoint.yaml](aci/edge-endpoint.yaml) when running the Edge Endpoint in Azure Container Instances, and by the Helm chart values in [deploy/helm/groundlight-edge-endpoint/values.yaml](helm/groundlight-edge-endpoint/values.yaml).
+6. **Push updated images to ACR (optional).** When you need to publish a local image build directly to your registry, tag it with the fully-qualified login server and push:
+   ```shell
+   docker build -t "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:local" .
+   docker push "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:local"
+   ```
+   The Azure one-click provisioning scripts in [infra/azure-oneclick/deploy](../infra/azure-oneclick/deploy) show complete examples of using `az acr login` before pushing and of injecting the resulting tag into downstream workloads.
+
+After these prerequisites are in place you can follow the Helm instructions below without needing any AWS credentials. If your cluster also needs to pull from AWS Elastic Container Registry (ECR), continue to manage those credentials alongside the Azure secret.
+
 ### Setting up Single-Node Kubernetes with k3s
 
 If you don't have [k3s](https://docs.k3s.io/) installed, there is a script which can install it depending on whether you have a NVidia GPU or not.  If you don't set up a GPU, the models will run on the CPU, but be somewhat slower.
@@ -330,6 +372,20 @@ Check the `refresh_creds` cron job to see if it's running. If it's not, you may 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
 ```
+
+For AKS clusters pulling exclusively from Azure Container Registry, the most common reason for `ImagePullBackOff` is an expired or deleted `registry-credentials` secret. Regenerate it after refreshing your ACR credentials:
+
+```shell
+az acr login --name "$ACR_NAME"
+kubectl delete secret registry-credentials -n <YOUR-NAMESPACE>
+kubectl create secret docker-registry registry-credentials \
+  --namespace <YOUR-NAMESPACE> \
+  --docker-server "$ACR_LOGIN_SERVER" \
+  --docker-username "$(az acr credential show --name "$ACR_NAME" --query username -o tsv)" \
+  --docker-password "$(az acr credential show --name "$ACR_NAME" --query 'passwords[0].value' -o tsv)"
+```
+
+After recreating the secret, restart the affected pods or let Kubernetes retry the pulls automatically.
 
 ### Changing IP Address Causes DNS Failures and Other Problems
 When the IP address of the machine you're using to run edge-endpoint changes, it creates an inconsistent environment for the
