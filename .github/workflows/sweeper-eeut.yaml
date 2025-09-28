@@ -1,3 +1,4 @@
+# yamllint disable rule:comments-indentation
 name: sweeper-eeut
 # This workflow tears down old EEUT stacks from pulumi.
 # We do this as a background sweeper job, because the teardown is VERY slow (~7 minutes for a g4)
@@ -5,7 +6,12 @@ name: sweeper-eeut
 on:
   schedule:
     - cron: "*/15 * * * *" # Every 15 minutes
+
     # Note cron workflows only run from the main branch.
+
+        # Note cron workflows only run from the main branch.
+  # yamllint enable rule:comments-indentation
+
   push:
     branches:
       # If you're working on this stuff, name your branch e2e-something and this will run.
