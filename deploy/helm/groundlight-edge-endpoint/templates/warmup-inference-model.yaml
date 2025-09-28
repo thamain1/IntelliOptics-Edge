@@ -14,6 +14,24 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
+
+        image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        command: ["echo", "Successfully pulled image to warm cache"]
+      - name: pinamod-bootstrap
+        image: acrintellioptics.azurecr.io/intellioptics/pinamod-artifacts:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -eu
+          mkdir -p "${PINAMOD_DIR}"
+          if [ ! -d /pinamod ]; then
+            echo "Expected pinamod artifacts at /pinamod" >&2
+            exit 1
+          fi
+          find "${PINAMOD_DIR}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          cp -a /pinamod/. "${PINAMOD_DIR}/"
+
         image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
@@ -137,6 +155,7 @@ spec:
         persistentVolumeClaim:
 
           claimName: edge-endpoint-pvc
+
 
 
 
