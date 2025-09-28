@@ -14,26 +14,28 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR; aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        image: {{ .Values.registryCredentials.azureCliImage }}
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
+        - name: PINAMOD_CONTAINER
+          value: "{{ .Values.pinamodContainer }}"
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
       volumes:
       - name: pina-models
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
   backoffLimit: 2
 
 

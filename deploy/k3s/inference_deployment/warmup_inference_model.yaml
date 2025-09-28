@@ -10,24 +10,20 @@ spec:
       - name: registry-credentials
       containers:
       - name: image-puller
-
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        image: mcr.microsoft.com/azure-cli:2.57.0
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws_secret_access_key
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_CONTAINER
+          value: pinamod
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models

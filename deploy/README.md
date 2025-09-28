@@ -136,7 +136,7 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}"
 ```
 
-This will install the Edge Endpoint doing GPU-based inference in the `edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
+This will install the Edge Endpoint doing GPU-based inference in the `intellioptics-edge` namespace in your k3s cluster and expose it on port 30101 on your local node. Helm will keep a history of the installation in the `default` namespace (signified by the `-n default` flag).
 
 To change values that you've customized after you've installed the Edge Endpoint or to install an updated chart, use the `helm upgrade` command. For example, to change the `intelliopticsApiToken` value, you can run:
 
@@ -182,7 +182,7 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
 After installation, verify your pods are running:
 
 ```bash
-kubectl get pods -n edge
+kubectl get pods -n intellioptics-edge
 ```
 
 You should see output similar to:
@@ -238,7 +238,24 @@ export INFERENCE_FLAVOR="CPU"
 export INFERENCE_FLAVOR="GPU"
 ```
 
-You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+
+You'll also need to authenticate with Azure so Docker can pull images from the appropriate Azure Container Registry (ACR) location. Make sure the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) is installed and that you've run `az login` (and, if required, `az account set --subscription <subscription-id>`) prior to running the deployment scripts.
+=======
+You must also provide Azure credentials with permission to query the IntelliOptics Azure Container Registry. Export the following variables for a service principal that can read the registry (and associated storage) before running the setup script:
+
+```bash
+export AZURE_CLIENT_ID="<service-principal-client-id>"
+export AZURE_CLIENT_SECRET="<service-principal-secret>"
+export AZURE_TENANT_ID="<azure-tenant-id>"
+```
+
+If your service principal should target a non-default registry, you can optionally set:
+
+```bash
+export ACR_NAME="customRegistryName"
+export ACR_LOGIN_SERVER="customRegistryName.azurecr.io"
+```
+
 
 To install the edge-endpoint, run:
 ```shell
@@ -261,9 +278,9 @@ inferencemodel-primary-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m     1/1 
 inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1     Running   0          2s
 ```
 
-We currently have a hard-coded docker image from ECR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+We currently have a hard-coded docker image from ACR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
-image to ECR see [Pushing/Pulling Images from ECR](#pushingpulling-images-from-elastic-container-registry-ecr).
+image to ACR see [Pushing/Pulling Images from ACR](#pushingpulling-images-from-azure-container-registry-acr).
 
 ### Converting from `setup-ee.sh` to Helm
 
@@ -285,7 +302,7 @@ Here are some common issues you might encounter when deploying the edge endpoint
 If you see an error like this when running the Helm install command:
 ```
 Error: failed pre-install: 1 error occurred:
-        * job validate-api-token-edge failed: BackoffLimitExceeded
+        * job validate-api-token-intellioptics-edge failed: BackoffLimitExceeded
 ```
 it means that the API token you provided is not giving access.
 
@@ -293,13 +310,13 @@ There are two possible reasons for this:
 1. The API token is invalid. Check the value you're providing and make sure it maps to a valid API token in the IntelliOptics web app.
 2. Your account does not have permission to use edge services. Not all plans enable edge inference. To find out more and get your account enabled, contact IntelliOptics support at [support@IntelliOptics.ai](mailto:support@IntelliOptics.ai).
 
-To diagnose which of these is the issue (or if it's something else entirely), you can check the logs of the `validate-api-token-edge` job:
+To diagnose which of these is the issue (or if it's something else entirely), you can check the logs of the `validate-api-token-intellioptics-edge` job:
 
 ```shell
-kubectl logs -n default job/validate-api-token-edge
+kubectl logs -n default job/validate-api-token-intellioptics-edge
 ```
 
-(If you're installing into a different namespace, replace `edge` in the job name with the name of your namespace.)
+(If you're installing into a different namespace, replace `intellioptics-edge` in the job name with the name of your namespace.)
 
 This will show you the error returned by the IntelliOptics cloud service.
 
@@ -311,7 +328,7 @@ helm uninstall -n default edge-endpoint --keep-history
 
 Then, re-run the Helm install command.
 
-### Helm deployment fails with `namespaces "edge" not found`.
+### Helm deployment fails with `namespaces "intellioptics-edge" not found`.
 
 This happens when there was an initial failure in the Helm install command and the namespace was not created. 
 
@@ -325,10 +342,10 @@ Then, re-run the Helm install command.
 
 ### Pods with `ImagePullBackOff` Status
 
-Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from ECR.  If the script is running but failing, this indicates that the stored AWS credentials (in secret `aws-credentials`) are invalid or not authorized to pull algorithm images from ECR.
+Check the `refresh-acr-creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from the Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-service-principal`) are invalid or not authorized to pull algorithm images from ACR.
 
 ```
-kubectl logs -n <YOUR-NAMESPACE> -l app=refresh_creds
+kubectl logs -n <YOUR-NAMESPACE> -l app=refresh-acr-creds
 ```
 
 ### Changing IP Address Causes DNS Failures and Other Problems
@@ -364,17 +381,17 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Pushing/Pulling Images from Azure Container Registry (ACR)
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
+by first creating a docker image locally, pushing it to ACR, retrieving the image ID and
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
 Follow the following steps:
 
 ```shell
-# Build and push image to ECR
+# Build and push image to ACR
 > ./deploy/bin/build-push-edge-endpoint-image.sh
 ```
 

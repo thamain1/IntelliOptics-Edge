@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: create-ecr-creds
+  name: create-acr-creds
   namespace: "{{ .Values.namespace }}"
   labels:
     {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
