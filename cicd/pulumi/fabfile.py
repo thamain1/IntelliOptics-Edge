@@ -7,23 +7,34 @@ import os
 import time
 import io
 
-from fabric import task, Connection, Config
+from fabric import task, Connection
 from invoke import run as local
-import boto3
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 import paramiko
 
+@lru_cache(maxsize=1)
+def _get_secret_client() -> SecretClient:
+    """Creates a Key Vault secret client using the default Azure credentials."""
+    vault_name = os.environ.get("AZURE_KEY_VAULT_NAME")
+    if not vault_name:
+        raise RuntimeError("AZURE_KEY_VAULT_NAME environment variable must be set")
+    vault_url = f"https://{vault_name}.vault.azure.net"
+    credential = DefaultAzureCredential()
+    return SecretClient(vault_url=vault_url, credential=credential)
+
+
 def fetch_secret(secret_id: str) -> str:
-    """Fetches a secret from AWS Secrets Manager."""
-    client = boto3.client("secretsmanager", region_name="us-west-2")
-    response = client.get_secret_value(SecretId=secret_id)
-    return response['SecretString']
+    """Fetches a secret from Azure Key Vault."""
+    client = _get_secret_client()
+    return client.get_secret(secret_id).value
 
 def get_eeut_ip() -> str:
     """Gets the EEUT's IP address from Pulumi."""
     return local("pulumi stack output eeut_private_ip", hide=True).stdout.strip()
 
 def connect_server() -> Connection:
-    """Connects to the EEUT, using the private key stored in AWS Secrets Manager."""
+    """Connects to the EEUT, using the private key stored in Azure Key Vault."""
     ip = get_eeut_ip()
     try:
         private_key = fetch_secret("ghar2eeut-private-key")
