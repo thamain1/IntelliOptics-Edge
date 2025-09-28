@@ -5,13 +5,18 @@ description = "Run intellioptics on the edge!"
 authors = ["IntelliOptics AI <admin@4wardmotions.com>"]
 license = "MIT"
 
+[[tool.poetry.source]]
+name = "intellioptics"
+url = "https://intelliopticsweb37558.z13.web.core.windows.net/python-sdk/simple/"
+priority = "supplemental"
+
 [tool.poetry.dependencies]
 APScheduler = "3.10.4"
 cachetools = "^5.3.1"
 fastapi = "^0.115.0"
 framegrab = "^0.5.0"
-groundlight = ">=0.23.0, <0.24.0"
 httpx = "^0.27.2"
+intellioptics = {version = "0.1.0", source = "intellioptics"}
 jinja2 = "^3.1.6"
 kubernetes = "^27.2.0"
 opencv-python = "^4.10.0.84"
@@ -23,9 +28,6 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
-
-
-intellioptics = { git = "https://github.com/thamain1/IntelliOptics.git", subdirectory = "python-sdk" }
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.1"
