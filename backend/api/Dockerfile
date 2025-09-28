@@ -39,6 +39,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 COPY api/app /app/app
 =======
 # Your FastAPI package lives here in your repo:
+
+#   backend/api/app  --> copied to /app/app
+COPY backend/api/app /app/app
+
+# --- Python deps ---
+# Install the published IntelliOptics SDK from your package registry (e.g. PyPI).
+# If you don’t need Postgres in this image, you can drop "psycopg[binary]"
+
 #   Azure/intellioptics-oneclick/backend/app  --> copied to /app/app
 COPY backend/api/app /app/app
 
@@ -64,6 +72,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
       fastapi "uvicorn[standard]" pydantic sqlalchemy python-multipart \
 
       azure-identity azure-servicebus azure-storage-blob httpx \
+
+      intellioptics-sdk
+
 
       "intellioptics @ git+https://github.com/thamain1/IntelliOptics.git#subdirectory=python-sdk"
       /tmp/io-sdk
