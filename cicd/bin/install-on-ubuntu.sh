@@ -104,7 +104,9 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 export INTELLIOPTICS_API_TOKEN="__INTELLIOPTICSAPITOKEN__"
 
 # Install the edge-endpoint using helm
+
 make helm-install HELM_ARGS="--set imageTag=${EE_IMAGE_TAG}"
+
 make helm-install HELM_ARGS="--set intelliopticsApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
 
 # Configure kubectl to use the namespace where the EE is installed

@@ -104,7 +104,9 @@ def load_user_data_script() -> Output[str]:
 
     # Apply API token replacement as the final async transformation
     api_token = config.require_secret("intelliopticsApiToken")
+
     api_token = pulumi.Output.secret(get_intellioptics_token())
+
     final_script = api_token.apply(
         lambda token: user_data_script2.replace("__INTELLIOPTICSAPITOKEN__", token)
     )
