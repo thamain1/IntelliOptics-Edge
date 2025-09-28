@@ -12,6 +12,19 @@ spec:
       - name: image-puller
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
+
+        command:
+          [
+            "sh",
+            "-c",
+            "set -euo pipefail\nrm -rf ${PINAMOD_DIR:?}/*\ncp -a ${PINAMOD_SOURCE_DIR}/. ${PINAMOD_DIR}/"
+          ]
+        env:
+        - name: PINAMOD_DIR
+          value: /opt/models/pinamod
+        - name: PINAMOD_SOURCE_DIR
+          value: /opt/pinamod-source
+
         image: mcr.microsoft.com/azure-cli:2.57.0
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
@@ -24,14 +37,18 @@ spec:
             secretKeyRef:
               name: azure-service-principal
               key: AZURE_STORAGE_CONNECTION_STRING
+
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
+        - name: pina-models-source
+          mountPath: /opt/pinamod-source
       volumes:
       - name: pina-models
-        hostPath:
-          path: /opt/intellioptics/edge/pinamod-public
-          type: Directory
+        emptyDir: {}
+      - name: pina-models-source
+        persistentVolumeClaim:
+          claimName: pinamod-artifacts-pvc
   backoffLimit: 2
 
 
