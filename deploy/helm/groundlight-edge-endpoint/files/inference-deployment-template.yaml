@@ -49,6 +49,7 @@ spec:
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
 
+
         command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: AZCOPY_ACCOUNT_NAME
@@ -61,15 +62,78 @@ spec:
             secretKeyRef:
               name: azure-storage-credentials
               key: account_key
+
+
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
+        env:
+        - name: AZCOPY_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_name
+        - name: AZCOPY_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_key
+
+        command: [
+          "/bin/sh",
+          "-c",
+          "/intellioptics-edge/deploy/bin/sync-pinamod.sh"
+        ]
+
+        image: {{ .Values.registryCredentials.azureCliImage }}
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant_id
+        - name: PINAMOD_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_account
+        - name: PINAMOD_STORAGE_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_container
+        - name: PINAMOD_STORAGE_PREFIX
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_prefix
+              optional: true
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_CONTAINER
+          value: "{{ .Values.pinamodContainer }}"
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.acrLoginServer }}/intellioptics/inference-server:{{ include "IntelliOptics-edge-endpoint.inferenceTag" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
@@ -126,7 +190,7 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
       volumes:
       - name: edge-endpoint-persistent-volume
         persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
+          claimName: {{ .Values.storage.data.claimName }}
       - name: pina-models
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public

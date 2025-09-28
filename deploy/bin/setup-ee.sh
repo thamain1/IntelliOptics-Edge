@@ -84,8 +84,13 @@ export PERSISTENT_VOLUME_NAME=${PERSISTENT_VOLUME_NAME:-"edge-endpoint-pv"}
 export EDGE_ENDPOINT_PORT=${EDGE_ENDPOINT_PORT:-30101}
 
 # Create Secrets
-if ! ./deploy/bin/make-aws-secret.sh; then
-    echo "Failed to execute make-aws-secret.sh successfully. Exiting."
+if ! ./deploy/bin/make-azure-secret.sh; then
+    echo "Failed to execute make-azure-secret.sh successfully. Exiting."
+    exit 1
+fi
+
+if ! ./deploy/bin/make-azure-storage-secret.sh; then
+    echo "Failed to execute make-azure-storage-secret.sh successfully. Exiting."
     exit 1
 fi
 
