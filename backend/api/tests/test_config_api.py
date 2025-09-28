@@ -60,6 +60,10 @@ def test_stream_crud_flow(sqlite_config_db):
     assert listing["count"] == 1
     assert listing["items"][0]["detector_id"] == "det_test"
 
+    detail = client.get("/v1/config/streams/line-1")
+    assert detail.status_code == 200
+    assert detail.json()["item"]["name"] == "line-1"
+
     payload_update = dict(payload)
     payload_update["sampling_interval_seconds"] = 2.0
     resp = client.put("/v1/config/streams/line-1", json=payload_update)
@@ -72,6 +76,9 @@ def test_stream_crud_flow(sqlite_config_db):
     resp = client.get("/v1/config/streams")
     assert resp.status_code == 200
     assert resp.json()["count"] == 0
+
+    missing = client.get("/v1/config/streams/line-1")
+    assert missing.status_code == 404
 
 
 def test_duplicate_stream_rejected(sqlite_config_db):

@@ -16,6 +16,7 @@ from .config_store import (
     create_stream,
     delete_stream,
     export_yaml_payload,
+    get_stream,
     list_detectors,
     list_streams,
     update_stream,
@@ -67,6 +68,16 @@ def get_streams() -> dict:
             "items": [_json_stream(stream) for stream in streams],
             "count": len(streams),
         }
+
+
+@router.get("/streams/{name}")
+def get_stream_detail(name: str) -> dict:
+    with _session_scope() as session:
+        try:
+            stream = get_stream(session, name)
+        except KeyError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Stream '{name}' not found") from exc
+        return {"item": _json_stream(stream)}
 
 
 @router.post("/streams", status_code=status.HTTP_201_CREATED)
