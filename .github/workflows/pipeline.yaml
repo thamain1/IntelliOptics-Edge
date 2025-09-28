@@ -8,8 +8,20 @@ on:
       - main
     types: [opened, synchronize, reopened]
   workflow_dispatch:
-    # This allows it to be triggered manually in the github console
-    # You could put inputs here, but we don't need them.
+
+  # This allows it to be triggered manually in the github console
+  # You could put inputs here, but we don't need them.
+
+
+  # This allows it to be triggered manually in the github console
+  # You could put inputs here, but we don't need them.
+
+      # yamllint disable rule:comments-indentation
+      # This allows it to be triggered manually in the github console
+      # You could put inputs here, but we don't need them.
+      # yamllint enable rule:comments-indentation
+
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   # This causes it to cancel previous in-progress actions in the same PR
@@ -130,7 +142,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install docker-ce
       - name: Build Docker Image
-        run: docker build --tag groundlight-edge .
+        run: docker build --tag intellioptics-edge .
 
       - name: Start Docker Container
         id: start_container
@@ -185,12 +197,80 @@ jobs:
         if: always()
         run: docker stop ${{ steps.start_container.outputs.container_id }}
 
+
   main-tests-pass:
     runs-on: ubuntu-latest
     # This is a dummy step to avoid repeating the list of tests
     needs:
       - test-general-edge-endpoint
       - test-sdk
+
+  call-build-push-ee-image:
+    # We run this at the beginning of every PR so that the various full k3s tests
+    # can use this image
+    uses: ./.github/workflows/build-push-ee-image.yaml
+    with:
+      repo: ${{ github.repository }}
+      ref: ${{ github.ref }}
+    secrets:
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
+  validate-setup-ee:
+    runs-on: ubuntu-latest-4-cores
+    # We need more disk space than the default (2 core) runners have.
+    # They have 73GB total, 21GB available.  4-cores has 145GB raw, 93 GB available.
+    needs:
+      - call-build-push-ee-image
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install k3s
+        run: |
+          ./deploy/bin/install-k3s.sh cpu
+
+      - name: Log in to Azure Container Registry
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            "${{ secrets.ACR_LOGIN_SERVER }}" \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install edge-endpoint's python dependencies
+        run: |
+          poetry install --no-interaction --no-root
+
+      - name: Validate setup edge endpoint
+        run: |
+          export IMAGE_TAG=$(./deploy/bin/git-tag-name.sh)
+          make validate-setup-ee
+
+      - name: Diagnose failure
+        if: failure()
+        run: |
+          NAMESPACE=validate-setup-ee ./deploy/bin/diagnose-k8-failure.sh
+
+  validate-setup-helm:
+    runs-on: ubuntu-latest-4-cores
+    needs:
+      - call-build-push-ee-image
+    env:
+      # associated with roxanne+test_edge account since for some reason it was failing with
+      # prod biggies
+      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
+
     steps:
       - name: declare success
         run: echo "Main suite of tests all pass."
@@ -214,10 +294,24 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+
       - name: Log in to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install k3s
+        run: |
+          ./deploy/bin/install-k3s.sh cpu
+
+      - name: Log in to Azure Container Registry
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            "${{ secrets.ACR_LOGIN_SERVER }}" \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
 
       - name: Log in to Azure Container Registry
         uses: docker/login-action@v3
@@ -333,6 +427,7 @@ jobs:
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
       AZ_RESOURCE_GROUP: ${{ secrets.AZ_RESOURCE_GROUP }}
     steps:
+
       - name: Check out code
         uses: actions/checkout@v4
 
@@ -340,6 +435,61 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            "${{ secrets.ACR_LOGIN_SERVER }}" \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Tag main images with the "pre-release" tag after all the tests pass
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: ./deploy/bin/tag-edge-endpoint-image.sh pre-release
+
+  tag-release:
+    # The environment rules are not defined in code -- instead, they are defined in the Github UI:
+    #   https://github.com/groundlight/edge-endpoint/settings/environments/5838966020/edit
+    # As of this time of writing, the environment rules require manual approval for tagging a release.
+    environment: live
+    # This will run (after manual approval) if a commit is pushed to the `main` branch
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - main-tests-pass
+      - tag-pre-release
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Log in to Azure Container Registry
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
+            "${{ secrets.ACR_LOGIN_SERVER }}" \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Tag main images with the "latest" and "release" tags
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |-
+          ./deploy/bin/tag-edge-endpoint-image.sh latest
+          ./deploy/bin/tag-edge-endpoint-image.sh release
+
+  publish-chart:
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - tag-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+
 
       - name: Select subscription (optional)
         env:
