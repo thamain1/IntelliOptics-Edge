@@ -305,6 +305,41 @@ export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountNa
 ```
 
 
+You'll also need Azure credentials with permission to pull images from your Azure Container Registry (ACR). Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) if it is not already available on the node. For interactive environments you can authenticate with:
+
+```bash
+az login
+az acr login --name <your-acr-name>
+```
+
+For unattended clusters, create a service principal that has the `acrpull` role on the registry and store those credentials so Kubernetes can refresh them:
+
+```bash
+ACR_NAME=<your-acr-name>
+ACR_ID=$(az acr show --name "$ACR_NAME" --query id -o tsv)
+az ad sp create-for-rbac \
+  --name edge-endpoint-pull \
+  --role acrpull \
+  --scopes "$ACR_ID"
+
+# Capture the output values
+export ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
+export ACR_USERNAME=<service-principal-appId>
+export ACR_PASSWORD=<service-principal-password>
+
+kubectl create secret docker-registry registry-credentials \
+  --docker-server="${ACR_LOGIN_SERVER}" \
+  --docker-username="${ACR_USERNAME}" \
+  --docker-password="${ACR_PASSWORD}"
+```
+
+If your deployment needs to upload artifacts to Azure Storage (for example, alert snapshots or detector logs), make sure `AZURE_STORAGE_CONNECTION_STRING` is set for the helm release or provided via a Kubernetes secret:
+
+```bash
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=..."
+```
+
+
 To install the edge-endpoint, run:
 ```shell
 ./deploy/bin/setup-ee.sh
@@ -328,6 +363,10 @@ inferencemodel-oodd-det-3jemxiunjuekdjzbuxavuevw15k-5d8b454bcb-xqf8m        1/1 
 
 
 We currently have a hard-coded docker image from Azure Container Registry (ACR) in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
+deployment. If you want to make modifications to the edge endpoint code and push a different
+
+
+We currently have a hard-coded docker image from Azure Container Registry (ACR) in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 
 We currently have a hard-coded docker image from our container registry in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 deployment. If you want to make modifications to the edge endpoint code and push a different
@@ -341,6 +380,7 @@ image to the registry see [Pushing/Pulling Images from the Container Registry](#
 We currently have a hard-coded docker image from ACR in the [edge-endpoint](/edge-endpoint/deploy/k3s/edge_deployment.yaml)
 
 deployment. If you want to make modifications to the edge endpoint code and push a different
+
 image to ACR see [Pushing/Pulling Images from ACR](#pushingpulling-images-from-azure-container-registry-acr).
 
 ### Converting from `setup-ee.sh` to Helm
@@ -407,6 +447,9 @@ Then, re-run the Helm install command.
 Check the `refresh_creds` cron job to see if it's running. If it's not, manually refresh the pull secret with the latest ACR credentials. You can do this by re-running the `kubectl create secret docker-registry registry-credentials ...` command above or by using `az acr login` to seed Docker before recreating the secret. If the cron job is running but failing, confirm that the stored Azure service principal (for example, in the `registry-credentials` secret) still has the `acrpull` role and that the password has not expired.
 
 
+Check the `refresh_creds` cron job to see if it's running. If it's not, manually refresh the pull secret with the latest ACR credentials. You can do this by re-running the `kubectl create secret docker-registry registry-credentials ...` command above or by using `az acr login` to seed Docker before recreating the secret. If the cron job is running but failing, confirm that the stored Azure service principal (for example, in the `registry-credentials` secret) still has the `acrpull` role and that the password has not expired.
+
+
 Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to refresh the stored container registry credentials so docker/k3s can continue pulling images.  If the script is running but failing, update the secret that stores your registry credentials so that it has permission to pull the required images.
 
 Check the `refresh_creds` cron job to see if it's running. If it's not, you may need to refresh the stored container registry credentials so docker/k3s can continue pulling images.  If the script is running but failing, update the secret that stores your registry credentials so that it has permission to pull the required images.
@@ -460,6 +503,14 @@ If you're testing things locally and want to use a different docker image, you c
 by first creating a docker image locally, pushing it to ACR, retrieving the image name and
 then using that image reference in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
+
+## Pushing/Pulling Images from Azure Container Registry (ACR)
+
+We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
+If you're testing things locally and want to use a different docker image, you can do so
+by first creating a docker image locally, pushing it to ACR, retrieving the image name and
+then using that image reference in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+
 ## Pushing/Pulling Images from the Container Registry
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
@@ -474,6 +525,7 @@ by first creating a docker image locally, pushing it to ACR, retrieving the imag
 
 
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+
 
 
 Follow the following steps:
@@ -492,6 +544,7 @@ docker buildx build \
   . --push
 
 echo "Pushed ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:$(./deploy/bin/git-tag-name.sh)"
+
 
 # Build and push image to your configured registry
 > REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
