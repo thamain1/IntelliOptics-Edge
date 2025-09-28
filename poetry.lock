@@ -849,28 +849,6 @@ docs = ["Sphinx", "furo"]
 test = ["objgraph", "psutil"]
 
 [[package]]
-name = "groundlight"
-version = "0.23.0"
-description = "Build computer vision systems using natural language with Groundlight"
-optional = false
-python-versions = "<4.0,>=3.9"
-groups = ["main"]
-files = [
-    {file = "groundlight-0.23.0-py3-none-any.whl", hash = "sha256:4cf09a30801812965d698e805bde487f55ab9f6286fd67393709b149a41f6256"},
-    {file = "groundlight-0.23.0.tar.gz", hash = "sha256:058440efa6b113cbe1a0a745c32f56bd9fd7742a4a1acd00720cf14645f9d83d"},
-]
-
-[package.dependencies]
-certifi = ">=2023.7.22"
-frozendict = ">=2.3.2,<3.0.0"
-pillow = ">=11.0.0"
-pydantic = ">=2.0.0,<3.0.0"
-python-dateutil = ">=2.9.0,<3.0.0"
-requests = ">=2.28.2,<3.0.0"
-typer = ">=0.15.4,<0.16.0"
-urllib3 = ">=1.26.9,<2.0.0"
-
-[[package]]
 name = "h11"
 version = "0.16.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"

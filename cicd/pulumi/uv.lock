@@ -364,25 +364,6 @@ wheels = [
 ]
 
 [[package]]
-name = "groundlight"
-version = "0.22.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "frozendict" },
-    { name = "pillow" },
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-    { name = "requests" },
-    { name = "typer" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/07/51170db687d401c7a52d2f646e49ca5e2a71a32369f2e9bc6e73360a768b/groundlight-0.22.7.tar.gz", hash = "sha256:6b4c0daafe2768a3b8269a959a3880d0a55137d6126989339e20c9e2ad513a41", size = 106430 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/76/4c/8d04836f86f9481a7d85deb2f8ec7b0937cd2c9f63b90aed504402ecee85/groundlight-0.22.7-py3-none-any.whl", hash = "sha256:afcbe9ada5a9d7dee2881ef312aa3646509ca68e27c97857270b15a46eb916bd", size = 314541 },
-]
-
-[[package]]
 name = "grpcio"
 version = "1.66.2"
 source = { registry = "https://pypi.org/simple" }
@@ -631,7 +612,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
     { name = "fabric" },
-    { name = "groundlight" },
+    { name = "intellioptics" },
     { name = "pulumi" },
     { name = "pulumi-aws" },
 ]
@@ -640,7 +621,7 @@ dependencies = [
 requires-dist = [
     { name = "boto3", specifier = ">=1.36.1" },
     { name = "fabric", specifier = ">=3.2.2" },
-    { name = "groundlight", specifier = ">=0.22.6,<0.23.0" },
+    { name = "intellioptics", specifier = "==0.1.0" },
     { name = "pulumi", specifier = ">=3" },
     { name = "pulumi-aws", specifier = ">=6.13.3" },
 ]
