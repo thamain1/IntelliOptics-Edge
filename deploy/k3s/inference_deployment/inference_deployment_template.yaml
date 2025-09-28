@@ -45,6 +45,7 @@ spec:
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
 
+
         command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: AZCOPY_ACCOUNT_NAME
@@ -57,15 +58,82 @@ spec:
             secretKeyRef:
               name: azure-storage-credentials
               key: account_key
+
+
+        command: [
+          "/bin/sh",
+          "-c",
+          "/intellioptics-edge/deploy/bin/sync-pinamod.sh"
+        ]
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant_id
+        - name: PINAMOD_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_account
+        - name: PINAMOD_STORAGE_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_container
+        - name: PINAMOD_STORAGE_PREFIX
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_prefix
+              optional: true
+
+
+        command:
+          [
+            "sh",
+            "-c",
+            "set -euo pipefail\nrm -rf ${PINAMOD_DIR:?}/*\ncp -a ${PINAMOD_SOURCE_DIR}/. ${PINAMOD_DIR}/"
+          ]
+        env:
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_SOURCE_DIR
+          value: /opt/pinamod-source
+
+        image: mcr.microsoft.com/azure-cli:2.57.0
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
+        env:
+
+        - name: PINAMOD_DIR
+          value: /opt/models/pinamod
+        - name: PINAMOD_CONTAINER
+          value: pinamod
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
+
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
+        - name: pina-models-source
+          mountPath: /opt/pinamod-source
 
       containers:
       - name: inference-server
-
         imagePullPolicy: Always
         env:
         - name: MODEL_REPOSITORY
@@ -122,8 +190,9 @@ spec:
         persistentVolumeClaim:
           claimName: edge-endpoint-pvc
       - name: pina-models
-        hostPath:
-          path: /opt/intellioptics/edge/pinamod-public
-          type: Directory
+        emptyDir: {}
+      - name: pina-models-source
+        persistentVolumeClaim:
+          claimName: pinamod-artifacts-pvc
 
 
