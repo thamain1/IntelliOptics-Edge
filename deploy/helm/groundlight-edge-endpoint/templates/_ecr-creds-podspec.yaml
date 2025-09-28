@@ -6,8 +6,16 @@ containers:
   - name: azure-cli
     image: {{ .Values.registryCredentials.azureCliImage }}
     command:
+
+      - /bin/bash
+      - -c
+      - |
+        # ConfigMap mounts lack the execute bit, so run the script through bash.
+        exec /bin/bash /app/init-aws-access-retrieve.sh
+
       - /bin/sh
       - /app/init-azure-access-retrieve.sh
+
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
