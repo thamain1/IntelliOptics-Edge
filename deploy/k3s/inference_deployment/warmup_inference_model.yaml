@@ -16,6 +16,36 @@ spec:
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: PINAMOD_BLOB_URL
+
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-credentials
+              key: blob_url
+        - name: PINAMOD_SAS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-credentials
+              key: sas_token
+              optional: true
+        - name: AZCOPY_AUTO_LOGIN_TYPE
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-credentials
+              key: azcopy_auto_login_type
+              optional: true
+        - name: AZCOPY_MSI_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-credentials
+              key: azcopy_msi_client_id
+              optional: true
+        - name: AZCOPY_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-blob-credentials
+              key: azcopy_tenant_id
+              optional: true
+
           valueFrom:
             secretKeyRef:
               name: azure-blob-credentials

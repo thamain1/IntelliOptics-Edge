@@ -21,6 +21,9 @@ spec:
 
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
 
+
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
+
         command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: AZCOPY_ACCOUNT_NAME
@@ -117,6 +120,7 @@ spec:
 {{- end }}
 {{- end }}
 
+
         - name: PINAMOD_CONTAINER
           value: "{{ .Values.pinamodContainer }}"
         - name: AZURE_STORAGE_CONNECTION_STRING
@@ -133,6 +137,7 @@ spec:
         persistentVolumeClaim:
 
           claimName: edge-endpoint-pvc
+
 
 
 

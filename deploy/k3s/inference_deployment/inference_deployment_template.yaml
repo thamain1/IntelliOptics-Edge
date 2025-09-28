@@ -148,6 +148,7 @@ spec:
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
 
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         - name: PINAMOD_CONTAINER
