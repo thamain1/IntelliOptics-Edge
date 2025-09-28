@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 import os
 
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() in {"1", "true", "yes", "on"}
+
 class Settings(BaseModel):
     api_base_path: str = os.getenv("API_BASE_PATH", "/v1")
     allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "*")
@@ -15,6 +22,7 @@ class Settings(BaseModel):
     sb_image_queue: str = os.getenv("SB_QUEUE_LISTEN", "image-queries")
     sb_results_queue: str = os.getenv("SB_QUEUE_SEND", "inference-results")
     sb_feedback_queue: str = os.getenv("SB_QUEUE_FEEDBACK", "feedback")
+    sb_use_dev_send_override: bool = _env_flag("SB_USE_DEV_SEND_OVERRIDE")
 
     # Storage
     blob_account: str = os.getenv("AZ_BLOB_ACCOUNT", "")
