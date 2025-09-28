@@ -105,6 +105,7 @@ export INTELLIOPTICS_API_TOKEN="__INTELLIOPTICSAPITOKEN__"
 
 # Install the edge-endpoint using helm
 
+
 make helm-install HELM_ARGS="--set imageTag=${EE_IMAGE_TAG}"
 
 make helm-install HELM_ARGS="--set intelliopticsApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
