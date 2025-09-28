@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from sqlalchemy import text
 
-from .main import engine
+from .db import engine
 
 router = APIRouter()
 
