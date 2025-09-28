@@ -6,7 +6,7 @@
 
 # As a user-data script on ubuntu, this file probably lands at
 # /var/lib/cloud/instance/user-data.txt
-echo "Setting up Groundlight Edge Endpoint.  Follow along at /var/log/cloud-init-output.log" > /etc/motd
+echo "Setting up IntelliOptics Edge Endpoint.  Follow along at /var/log/cloud-init-output.log" > /etc/motd
 
 echo "Starting cloud init.  Uptime: $(uptime)"
 
@@ -18,10 +18,10 @@ record_result() {
     if [ "$SETUP_COMPLETE" -eq 0 ]; then
         echo "Setup failed at $(date)"
         touch /opt/intellioptics/ee-install-status/failed
-        echo "Groundlight Edge Endpoint setup FAILED.  See /var/log/cloud-init-output.log for details." > /etc/motd
+        echo "IntelliOptics Edge Endpoint setup FAILED.  See /var/log/cloud-init-output.log for details." > /etc/motd
     else
         echo "Setup complete at $(date)"
-        echo "Groundlight Edge Endpoint setup complete.  See /var/log/cloud-init-output.log for details." > /etc/motd
+        echo "IntelliOptics Edge Endpoint setup complete.  See /var/log/cloud-init-output.log for details." > /etc/motd
         touch /opt/intellioptics/ee-install-status/success
     fi
     # Remove "installing" at the end to avoid a race where there is no status
@@ -60,8 +60,8 @@ sudo apt install -y \
 CODE_BASE=/opt/intellioptics/src/
 mkdir -p ${CODE_BASE}
 cd ${CODE_BASE}
-git clone https://github.com/groundlight/edge-endpoint
-cd edge-endpoint/
+git clone https://github.com/IntelliOptics/IntelliOptics-Edge
+cd IntelliOptics-Edge/
 # The launching script should update this to a specific commit.
 SPECIFIC_COMMIT="__EE_COMMIT_HASH__"
 if [ -n "$SPECIFIC_COMMIT" ]; then
@@ -101,10 +101,10 @@ echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /home/${TARGET_USER}/.bash
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 # This should get substituted by the launching script
-export INTELLIOPTICS_API_TOKEN="__GROUNDLIGHTAPITOKEN__"
+export INTELLIOPTICS_API_TOKEN="__INTELLIOPTICSAPITOKEN__"
 
 # Install the edge-endpoint using helm
-make helm-install HELM_ARGS="--set groundlightApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
+make helm-install HELM_ARGS="--set intelliopticsApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
 
 # Configure kubectl to use the namespace where the EE is installed
 kubectl config set-context edge --namespace=edge --cluster=default --user=default
