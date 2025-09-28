@@ -132,7 +132,7 @@ jobs:
           sudo apt-get install docker-ce
 
       - name: Build Docker Image
-        run: docker build --tag groundlight-edge .
+        run: docker build --tag intellioptics-edge .
 
       - name: Start Docker Container
         id: start_container

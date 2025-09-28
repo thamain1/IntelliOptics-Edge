@@ -1,7 +1,11 @@
 #!/bin/bash
 
+
 # This script builds and pushes the edge-endpoint Docker image to a container
 # registry that is not Amazon ECR.
+
+# This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
 #
 # Usage:
 #   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
@@ -13,6 +17,22 @@
 # 2. Authenticates Docker with the target registry when credentials are provided.
 # 3. Builds a multi-platform Docker image.
 # 4. Pushes the image to the configured registry.
+
+# 2. Authenticates Docker with ACR.
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to ACR.
+#
+
+# Note: Ensure you have the necessary Azure credentials (e.g., via `az login`) and Docker installed.
+
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
+ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
+=======
+# Note: Ensure you have the necessary Azure credentials and Docker installed.
+
+ACR_NAME=${ACR_NAME:-intelliopticsedge}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+
 
 set -euo pipefail
 
@@ -26,6 +46,7 @@ REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
 REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
 REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
 
 if [[ -z "${REGISTRY_SERVER}" ]]; then
   echo "Error: REGISTRY_SERVER must be set (for example, ghcr.io)." >&2
@@ -45,6 +66,29 @@ else
   echo "Skipping registry login because REGISTRY_USERNAME or REGISTRY_PASSWORD is not set." >&2
   echo "Ensure you are already logged in via 'docker login ${REGISTRY_SERVER}'." >&2
 fi
+
+ACR_URL="${ACR_LOGIN_SERVER}"
+
+if ! command -v az >/dev/null 2>&1; then
+  echo "Error: Azure CLI (az) is required but not installed." >&2
+  exit 1
+fi
+
+echo "Logging into Azure Container Registry '${ACR_REGISTRY_NAME}' (${ACR_URL})"
+az acr login --name "${ACR_REGISTRY_NAME}"
+
+ACR_REGISTRY="${ACR_LOGIN_SERVER}"
+
+# Authenticate docker to ACR
+echo "Authenticating Docker with Azure Container Registry '${ACR_NAME}'"
+if ! az acr login --name "${ACR_NAME}"; then
+  echo "'az acr login' failed; attempting docker login using admin credentials"
+  ACR_USERNAME=${ACR_USERNAME:-$(az acr credential show --name "${ACR_NAME}" --query "username" -o tsv)}
+  ACR_PASSWORD=${ACR_PASSWORD:-$(az acr credential show --name "${ACR_NAME}" --query "passwords[0].value" -o tsv)}
+  echo "${ACR_PASSWORD}" | docker login "${ACR_REGISTRY}" --username "${ACR_USERNAME}" --password-stdin
+fi
+
+
 
 if [[ ${1:-} == "dev" ]]; then
   echo "'$0 dev' is no longer supported!!"
@@ -75,10 +119,26 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+
   --tag ${IMAGE_REPOSITORY}:${TAG} \
   ../.. --push
 
 echo "Successfully pushed image to ${IMAGE_REPOSITORY}"
 echo "${IMAGE_REPOSITORY}:${TAG}"
+
+
+  --tag ${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ACR_URL=${ACR_URL}"
+echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+=======
+  --tag ${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ACR_REGISTRY=${ACR_REGISTRY}"
+echo "${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+
+
 
 
