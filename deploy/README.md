@@ -122,7 +122,7 @@ This script will install the k3s Kubernetes distribution on your machine.  If yo
 ### Set the IntelliOptics API Token
 
 To enable the Edge Endpoint to communicate with the IntelliOptics service, you need to get a
-IntelliOptics API token. You can create one on [this page](https://dashboard.IntelliOptics.ai/reef/my-account/api-tokens) and set it as an environment variable.
+IntelliOptics API token. You can create one on [the Azure-hosted API token portal](https://intelliopticsweb37558.z13.web.core.windows.net/reef/my-account/api-tokens) and set it as an environment variable. The token management experience now lives on Azure, so update any saved bookmarks accordingly.
 
 ```shell
 export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
@@ -268,7 +268,7 @@ export DEPLOYMENT_NAMESPACE="your-namespace-name"
 ```
 
 Some other environment variables should also be set. You'll need to have created
-a IntelliOptics API token in the [IntelliOptics web app](https://app.IntelliOptics.ai/reef/my-account/api-tokens).
+a IntelliOptics API token in the [Azure-hosted IntelliOptics portal](https://intelliopticsweb37558.z13.web.core.windows.net/reef/my-account/api-tokens).
 ```bash
 # Set your API token
 export INTELLIOPTICS_API_TOKEN="api_xxxxxx"
