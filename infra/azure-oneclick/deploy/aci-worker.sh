@@ -10,6 +10,10 @@ REPO_ROOT=$(cd "$DIR/../../.." && pwd)
 IMG="$ACR_LOGIN_SERVER/${IMAGE_NAME}:${IMAGE_TAG}"
 
 az acr login --name "$ACR" >/dev/null
+
+WORKER_DIR=$(cd "$DIR/../../../backend/worker" && pwd)
+( cd "$WORKER_DIR" && docker build -t "$IMG" . && docker push "$IMG" )
+=======
 docker build \
   -t "$IMG" \
   -f "$REPO_ROOT/backend/worker/Dockerfile" \
