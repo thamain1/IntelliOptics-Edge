@@ -3,6 +3,8 @@
 
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
+# This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
 
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
@@ -26,7 +28,6 @@
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
 
-
 #
 # Usage:
 #   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
@@ -35,6 +36,20 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+
+# 2. Authenticates Docker with ACR (when credentials are provided).
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to ACR.
+#
+# Note: Ensure you have Docker installed and that you either provide the
+# required ACR credentials via environment variables or are already logged in.
+
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+ACR_REPOSITORY=${ACR_REPOSITORY:-intellioptics/${EDGE_ENDPOINT_IMAGE}}
+
+set -e
+set -o pipefail
 
 
 
@@ -123,6 +138,17 @@ cd "${SCRIPT_DIR}"
 
 TAG=$(./git-tag-name.sh)
 
+
+IMAGE_REPO="${ACR_LOGIN_SERVER}/${ACR_REPOSITORY}"
+
+# Authenticate docker to ACR if credentials are available
+if [[ -n "${ACR_USERNAME:-}" && -n "${ACR_PASSWORD:-}" ]]; then
+  echo "Logging into ${ACR_LOGIN_SERVER} with provided credentials"
+  printf '%s' "${ACR_PASSWORD}" | docker login "${ACR_LOGIN_SERVER}" \
+    --username "${ACR_USERNAME}" \
+    --password-stdin
+else
+  echo "ACR_USERNAME or ACR_PASSWORD not set; assuming existing Docker login for ${ACR_LOGIN_SERVER}."
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-${ACR_REPOSITORY}}  # Default to intellioptics/edge-endpoint images
 ACR_IMAGE_TAG="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
@@ -273,6 +299,11 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+
+  --tag ${IMAGE_REPO}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ${IMAGE_REPO}:${TAG}"
 
   --tag "${ACR_IMAGE_TAG}" \
   ../.. --push

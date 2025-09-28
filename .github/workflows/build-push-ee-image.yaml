@@ -24,6 +24,10 @@ on:
 
     secrets:
 
+      ACR_LOGIN_SERVER:
+        required: true
+
+
       REGISTRY_LOGIN_SERVER:
         required: true
       REGISTRY_USERNAME:
@@ -32,6 +36,7 @@ on:
 
       ACR_LOGIN_SERVER:
         required: true
+
       ACR_USERNAME:
         required: true
       ACR_PASSWORD:
@@ -45,6 +50,7 @@ jobs:
     # already done in the test-k3s-helm workflow.
     runs-on: ubuntu-latest
     steps:
+
 
       - name: Azure Login
         uses: azure/login@v2
@@ -70,11 +76,13 @@ jobs:
 
 
 
+
       - name: Check out code
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
+
 
 
       - name: Build and Push Multiplatform edge-endpoint Image
@@ -94,6 +102,9 @@ jobs:
         # This is actually only taking about 4 minutes right now.
         timeout-minutes: 45
         env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
 
           ACR_NAME: ${{ inputs.acr_name }}
           ACR_LOGIN_SERVER: ${{ inputs.acr_login_server }}

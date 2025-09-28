@@ -224,6 +224,11 @@ jobs:
       acr_login_server: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
     secrets:
 
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
+
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
       REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
@@ -232,6 +237,7 @@ jobs:
       ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
       ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
 
 
   validate-setup-ee:
@@ -545,6 +551,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -568,6 +575,11 @@ jobs:
 
       - name: Tag main images with the "pre-release" tag after all the tests pass
         env:
+
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+
 
           REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
@@ -610,10 +622,15 @@ jobs:
             --username "${{ secrets.ACR_USERNAME }}" \
             --password-stdin
 
+
       - name: Check out code
         uses: actions/checkout@v4
       - name: Tag main images with the "latest" and "release" tags
         env:
+
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
 
           REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
 
