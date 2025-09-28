@@ -59,9 +59,9 @@ def load_user_data_script() -> str:
     user_data_script2 = user_data_script1.replace("__EEIMAGETAG__", image_tag)
     
     # Apply API token replacement as the final async transformation
-    api_token = config.require_secret("groundlightApiToken")
+    api_token = config.require_secret("intelliopticsApiToken")
     final_script = api_token.apply(
-        lambda token: user_data_script2.replace("__GROUNDLIGHTAPITOKEN__", token)
+        lambda token: user_data_script2.replace("__INTELLIOPTICSAPITOKEN__", token)
     )
     
     return final_script
