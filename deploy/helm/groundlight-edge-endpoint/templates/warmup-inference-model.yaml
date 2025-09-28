@@ -19,6 +19,20 @@ spec:
       - name: sync-pinamod
 
 
+        command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
+        env:
+        - name: AZCOPY_ACCOUNT_NAME
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_name
+        - name: AZCOPY_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: azure-storage-credentials
+              key: account_key
+
+
         command: [
           "/bin/sh",
           "-c",
@@ -60,6 +74,7 @@ spec:
               name: pinamod-storage
               key: storage_prefix
               optional: true
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
         - name: PINAMOD_CONTAINER
@@ -77,6 +92,7 @@ spec:
         persistentVolumeClaim:
 
           claimName: edge-endpoint-pvc
+
 
 
           claimName: {{ .Values.storage.data.claimName }}
