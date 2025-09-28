@@ -10,6 +10,7 @@ APScheduler = "3.10.4"
 cachetools = "^5.3.1"
 fastapi = "^0.115.0"
 framegrab = "^0.5.0"
+
 intellioptics = "0.1.0"
 httpx = "^0.27.2"
 jinja2 = "^3.1.6"
@@ -24,6 +25,15 @@ SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
 
+intellioptics = {git = "https://github.com/thamain1/IntelliOptics.git", subdirectory = "python-sdk"}
+
+
+azure-identity = "^1.25.0"
+azure-servicebus = "^7.14.2"
+azure-storage-blob = "^12.26.0"
+
+
+intellioptics = { git = "https://github.com/thamain1/IntelliOptics-SDK.git" }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -76,5 +86,3 @@ testpaths = ["test"]
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-

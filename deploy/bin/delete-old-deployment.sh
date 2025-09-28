@@ -28,7 +28,7 @@ fi
 # Delete the deployments, jobs, and cronjob
 $K delete deployment edge-endpoint --ignore-not-found
 $K get deployment -o name | grep /inferencemodel- | xargs -I {} $K delete {}
-$K delete cronjob refresh-creds --ignore-not-found
+$K delete cronjob refresh-acr-creds --ignore-not-found
 $K delete job warmup-inference-model --ignore-not-found
 
 # Delete the services
@@ -36,7 +36,7 @@ $K delete service edge-endpoint-service --ignore-not-found
 $K get service -o name | grep /inference-service- | xargs -I {} $K delete {}
 
 # Delete secrets and configmaps
-$K delete secret aws-credentials --ignore-not-found
+$K delete secret azure-service-principal --ignore-not-found
 $K delete secret registry-credentials --ignore-not-found
 $K delete secret IntelliOptics-api-token --ignore-not-found
 

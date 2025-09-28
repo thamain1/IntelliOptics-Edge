@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
-from .main import engine
+from .db import engine
 
 router = APIRouter()
 
