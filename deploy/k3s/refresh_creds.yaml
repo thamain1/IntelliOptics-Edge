@@ -17,10 +17,10 @@ spec:
           imagePullSecrets:
             - name: registry-credentials
           containers:
+
           - name: ecr
             image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             imagePullPolicy: IfNotPresent
-
 
           - name: acr
 
@@ -31,6 +31,22 @@ spec:
             ]
             env:
             - name: AZURE_CLIENT_ID
+
+              valueFrom:
+                secretKeyRef:
+                  name: azure-credentials
+                  key: client_id
+            - name: AZURE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: azure-credentials
+                  key: client_secret
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-credentials
+                  key: tenant_id
+
               valueFrom:
                 secretKeyRef:
                   name: azure-service-principal
@@ -57,6 +73,7 @@ spec:
                   name: azure-service-principal
                   key: ACR_LOGIN_SERVER
                   optional: true
+
             
           restartPolicy: OnFailure
 

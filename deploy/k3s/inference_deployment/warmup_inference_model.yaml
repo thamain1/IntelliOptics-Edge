@@ -13,6 +13,45 @@ spec:
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
 
+
+        command: [
+          "/bin/sh",
+          "-c",
+          "/intellioptics-edge/deploy/bin/sync-pinamod.sh"
+        ]
+        env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant_id
+        - name: PINAMOD_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_account
+        - name: PINAMOD_STORAGE_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_container
+        - name: PINAMOD_STORAGE_PREFIX
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_prefix
+              optional: true
+
         command:
           [
             "sh",
@@ -28,6 +67,7 @@ spec:
         image: mcr.microsoft.com/azure-cli:2.57.0
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
+
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
         - name: PINAMOD_CONTAINER

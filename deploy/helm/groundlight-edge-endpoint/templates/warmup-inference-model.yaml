@@ -17,9 +17,49 @@ spec:
         image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
         command: ["echo", "Successfully pulled image to warm cache"]
       - name: sync-pinamod
+
+
+        command: [
+          "/bin/sh",
+          "-c",
+          "/intellioptics-edge/deploy/bin/sync-pinamod.sh"
+        ]
+
         image: {{ .Values.registryCredentials.azureCliImage }}
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
+
         env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-credentials
+              key: tenant_id
+        - name: PINAMOD_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_account
+        - name: PINAMOD_STORAGE_CONTAINER
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_container
+        - name: PINAMOD_STORAGE_PREFIX
+          valueFrom:
+            secretKeyRef:
+              name: pinamod-storage
+              key: storage_prefix
+              optional: true
         - name: PINAMOD_DIR
           value: /opt/models/pinamod-public/pinamod
         - name: PINAMOD_CONTAINER
@@ -36,12 +76,16 @@ spec:
       - name: pina-models
         persistentVolumeClaim:
 
+          claimName: edge-endpoint-pvc
+
+
           claimName: {{ .Values.storage.data.claimName }}
       - name: aws-credentials
         secret:
           secretName: aws-credentials-file
 
           claimName: edge-endpoint-pvc
+
 
   backoffLimit: 2
 

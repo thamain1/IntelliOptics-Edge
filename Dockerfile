@@ -72,11 +72,7 @@ RUN apt-get update && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
     rm kubectl
 
-RUN cd /tmp && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install --update && \
-    rm -rf awscliv2.zip aws
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
