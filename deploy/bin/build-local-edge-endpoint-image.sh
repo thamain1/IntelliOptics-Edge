@@ -4,7 +4,10 @@
 # for development and testing. If the image already exists in the k3s cluster, it will
 # skip the upload step.
 #
+
 # It creates a single-platform image with the full ACR-style name, but it always uses
+
+# It creates a single-platform image with the full registry-style name, but it always uses
 # the 'dev' tag. When deploying application to your local test k3s cluster, add the
 # following Helm value:
 # `--set edgeEndpointTag=dev (or add it to your values.yaml file)
@@ -23,12 +26,21 @@
 
 set -e
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 
 ACR_NAME=${ACR_NAME:-acrintellioptics}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
 TAG=dev # In local mode, we always use the 'dev' tag
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
+TAG=dev # In local mode, we always use the 'dev' tag
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+ACR_URL="${ACR_LOGIN_SERVER}"
+
 
 # The socket that's used by the k3s containerd
 SOCK=/run/k3s/containerd/containerd.sock
@@ -40,7 +52,11 @@ build_and_upload() {
     local path=. # Edge endpoint is built from the root directory
     echo "Building and uploading ${name}..."
     cd "${project_root}/${path}"
+
     local full_name=${ACR_LOGIN_SERVER}/${name}:${TAG}
+
+    local full_name=${ACR_URL}/${name}:${TAG}
+
     docker build -t ${full_name} .
     local id=$(docker image inspect ${full_name} | jq -r '.[0].Id')
     local on_server=$(sudo crictl images -q | grep $id)
