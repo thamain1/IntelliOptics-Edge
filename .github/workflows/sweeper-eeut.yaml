@@ -9,8 +9,12 @@ on:
 
     # Note cron workflows only run from the main branch.
 
+
+    # Note cron workflows only run from the main branch.
+
         # Note cron workflows only run from the main branch.
   # yamllint enable rule:comments-indentation
+
 
   push:
     branches:
@@ -33,10 +37,10 @@ jobs:
         working-directory: cicd/pulumi
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: us-west-2
           # TODO: move these back to GH-provided secrets
@@ -46,7 +50,7 @@ jobs:
           #aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 

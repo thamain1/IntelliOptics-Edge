@@ -12,10 +12,15 @@ on:
   # This allows it to be triggered manually in the github console
   # You could put inputs here, but we don't need them.
 
+
+  # This allows it to be triggered manually in the github console
+  # You could put inputs here, but we don't need them.
+
       # yamllint disable rule:comments-indentation
       # This allows it to be triggered manually in the github console
       # You could put inputs here, but we don't need them.
       # yamllint enable rule:comments-indentation
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -53,7 +58,7 @@ jobs:
 
       - name: Load Cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
@@ -163,7 +168,7 @@ jobs:
 
       - name: Load Cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
@@ -261,7 +266,7 @@ jobs:
     env:
       # associated with roxanne+test_edge account since for some reason it was failing with
       # prod biggies
-      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_ INTELLIOPTICS_API_TOKEN }}
+      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -564,7 +569,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
