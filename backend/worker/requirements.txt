@@ -4,4 +4,8 @@ httpx>=0.27
 python-dotenv>=1.0
 pillow>=10.4
 numpy>=2.0
-# The SDK is installed as a wheel or from the local python-sdk during image build
+
+# The IntelliOptics SDK is installed separately during the image build
+
+intellioptics @ git+https://github.com/thamain1/IntelliOptics.git#subdirectory=python-sdk
+

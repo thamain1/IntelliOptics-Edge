@@ -1,9 +1,21 @@
 from pydantic import BaseModel
 import os
 
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() in {"1", "true", "yes", "on"}
+
 class Settings(BaseModel):
     api_base_path: str = os.getenv("API_BASE_PATH", "/v1")
     allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "*")
+
+    # Azure AD auth
+    azure_tenant_id: str | None = os.getenv("AZURE_AD_TENANT_ID") or os.getenv("AZ_TENANT_ID")
+    azure_audience: str | None = os.getenv("AZURE_AD_AUDIENCE") or os.getenv("AZURE_AD_CLIENT_ID")
+    azure_openid_config: str | None = os.getenv("AZURE_AD_OPENID_CONFIG")
 
     # IntelliOptics
     io_token: str | None = os.getenv("INTELLIOPTICS_API_TOKEN") or os.getenv("INTELLOPTICS_API_TOKEN")
@@ -15,6 +27,7 @@ class Settings(BaseModel):
     sb_image_queue: str = os.getenv("SB_QUEUE_LISTEN", "image-queries")
     sb_results_queue: str = os.getenv("SB_QUEUE_SEND", "inference-results")
     sb_feedback_queue: str = os.getenv("SB_QUEUE_FEEDBACK", "feedback")
+    sb_use_dev_send_override: bool = _env_flag("SB_USE_DEV_SEND_OVERRIDE")
 
     # Storage
     blob_account: str = os.getenv("AZ_BLOB_ACCOUNT", "")
