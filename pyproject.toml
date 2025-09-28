@@ -25,7 +25,7 @@ svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
 
 
-intellioptics = { git = "https://github.com/thamain1/IntelliOptics.git", subdirectory = "python-sdk" }
+intellioptics = { git = "https://github.com/thamain1/IntelliOptics-SDK.git" }
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.1"
