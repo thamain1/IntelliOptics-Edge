@@ -50,6 +50,9 @@ spec:
       - name: sync-pinamod
 
 
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
+
+
         command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
         env:
         - name: AZCOPY_ACCOUNT_NAME
@@ -65,6 +68,7 @@ spec:
 
 
         command: ['sh', '-c', 'mkdir -p $PINAMOD_DIR && azcopy sync "https://$AZCOPY_ACCOUNT_NAME.blob.core.windows.net/pinamod" "$PINAMOD_DIR" --recursive --delete-destination=true']
+
         env:
         - name: AZCOPY_ACCOUNT_NAME
           valueFrom:
@@ -120,6 +124,29 @@ spec:
 
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+
+        - name: PINAMOD_BLOB_URL
+          value: {{ required "pinamodStorage.blobUrl must be provided" .Values.pinamodStorage.blobUrl | quote }}
+{{- if .Values.pinamodStorage.sasTokenSecretName }}
+        - name: PINAMOD_SAS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.pinamodStorage.sasTokenSecretName }}
+              key: {{ default "sasToken" .Values.pinamodStorage.sasTokenSecretKey }}
+{{- end }}
+{{- if .Values.pinamodStorage.useManagedIdentity }}
+        - name: AZCOPY_AUTO_LOGIN_TYPE
+          value: MSI
+{{- if .Values.pinamodStorage.managedIdentityClientId }}
+        - name: AZCOPY_MSI_CLIENT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityClientId | quote }}
+{{- end }}
+{{- if .Values.pinamodStorage.managedIdentityTenantId }}
+        - name: AZCOPY_TENANT_ID
+          value: {{ .Values.pinamodStorage.managedIdentityTenantId | quote }}
+{{- end }}
+{{- end }}
+
         - name: PINAMOD_CONTAINER
           value: "{{ .Values.pinamodContainer }}"
         - name: AZURE_STORAGE_CONNECTION_STRING
