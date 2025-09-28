@@ -107,8 +107,8 @@ export INTELLIOPTICS_API_TOKEN="__GROUNDLIGHTAPITOKEN__"
 make helm-install HELM_ARGS="--set groundlightApiToken=${INTELLIOPTICS_API_TOKEN} --set imageTag=${EE_IMAGE_TAG}"
 
 # Configure kubectl to use the namespace where the EE is installed
-kubectl config set-context edge --namespace=edge --cluster=default --user=default
-kubectl config use-context edge
+kubectl config set-context intellioptics-edge --namespace=intellioptics-edge --cluster=default --user=default
+kubectl config use-context intellioptics-edge
 
 # Indicate that setup is complete
 SETUP_COMPLETE=1
