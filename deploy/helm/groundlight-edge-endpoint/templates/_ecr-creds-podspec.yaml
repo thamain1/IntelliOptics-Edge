@@ -24,6 +24,8 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
+      - name: REGISTRY_PROVIDER
+        value: "azure"
       - name: ACR_NAME
         value: "{{ .Values.acrName }}"
       - name: ACR_LOGIN_SERVER
