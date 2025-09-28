@@ -16,6 +16,79 @@ These are the steps to set up a single-node Edge Endpoint:
 
 If you follow these instructions and something isn't working, please check the [troubleshooting section](#troubleshooting-deployments) for help.
 
+## Cloud and Container Registry Prerequisites
+
+The Edge Endpoint containers are published to both AWS Elastic Container Registry (ECR) and Azure Container Registry (ACR). You
+only need to configure the cloud provider that matches the infrastructure you are running on, but it is helpful to understand
+what each provider requires before you start the Helm install. This section collects the environment variables, CLI tooling, and
+registry authentication steps that are referenced throughout the rest of the document.
+
+### Azure requirements (ACR and AKS/AKS Edge Essentials)
+
+1. Install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) on the host where you will run the Helm
+   commands.
+2. Sign in and select the subscription that owns your container registry and cluster:
+
+   ```bash
+   az login
+   az account set --subscription "<AZURE_SUBSCRIPTION_ID>"
+   ```
+
+3. Define the basic Azure environment variables that will be reused later:
+
+   ```bash
+   export AZURE_SUBSCRIPTION_ID="<subscription-guid>"
+   export AZURE_RESOURCE_GROUP="<resource-group-for-aks>"
+   export ACR_NAME="<your-acr-name>"
+   export ACR_LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
+   export ACR_PULL_SECRET_NAME="registry-credentials"
+   ```
+
+4. Authenticate to your container registry. For long-lived clusters we recommend using the
+   [token-based login](https://learn.microsoft.com/azure/container-registry/container-registry-authentication) so that AKS can
+   refresh the credentials without storing your personal Azure password.
+
+   ```bash
+   # Option A: use an admin-enabled account (good for quick tests)
+   az acr login --name "$ACR_NAME"
+
+   # Option B: generate a token for kubernetes secrets (preferred for production)
+   export ACR_PULL_USERNAME="00000000-0000-0000-0000-000000000000"
+   export ACR_PULL_PASSWORD="$(az acr login --name "$ACR_NAME" --expose-token --output tsv --query accessToken)"
+   ```
+
+5. Make the credentials available to Kubernetes. You can create a pull secret directly or reference the rendered YAML that ships
+   with this repository.
+
+   ```bash
+   kubectl create secret docker-registry "$ACR_PULL_SECRET_NAME" \
+     --namespace edge \
+     --docker-server="$ACR_LOGIN_SERVER" \
+     --docker-username="$ACR_PULL_USERNAME" \
+     --docker-password="$ACR_PULL_PASSWORD"
+   ```
+
+   If you prefer to template the secret as part of a GitOps workflow, see the sample manifest in
+   [`deploy/aci/edge-endpoint.yaml`](aci/edge-endpoint.yaml) for how `imageRegistryCredentials` are provided to Azure Container
+   Instances and adapt it for your AKS cluster.
+
+6. (Optional) Connect kubectl to an AKS cluster or to an Azure Kubernetes Service Edge Essentials node:
+
+   ```bash
+   az aks get-credentials --resource-group "$AZURE_RESOURCE_GROUP" --name "<aks-cluster-name>"
+   ```
+
+With those steps complete, Helm will be able to pull images from ACR using the default repositories embedded in the chart
+templates at [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates). If you maintain your
+own ACR image tags, override the `edgeEndpointTag` and `inferenceTag` values in
+[`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) when you run Helm.
+
+### AWS requirements (ECR and EKS/other Kubernetes distributions)
+
+The legacy scripts and several troubleshooting steps still reference AWS because that was the first production environment.
+Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and configure credentials
+that can pull from ECR:
+
 ### TL;DR - No fluff, just bash commands
 
 This is the quick version of the instructions above.  On a fresh system with no other customization, you can run the following commands to set up the Edge Endpoint.
@@ -382,6 +455,9 @@ export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountNa
 ```
 
 
+You'll also need to configure your AWS credentials using `aws configure` to include credentials that have permissions to pull from the appropriate ECR location (if you don't already have the AWS CLI installed, refer to the instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)). For Azure-only installations, follow the authentication steps in [Azure requirements (ACR and AKS/AKS Edge Essentials)](#azure-requirements-acr-and-aksaks-edge-essentials) instead.
+
+
 To install the edge-endpoint, run:
 ```shell
 ./deploy/bin/setup-ee.sh
@@ -499,6 +575,12 @@ Check the `refresh_creds` cron job to see if it's running. If it's not, you may 
 Check the `refresh-acr-creds` cron job to see if it's running. If it's not, you may need to re-run [refresh-ecr-login.sh](/deploy/bin/refresh-ecr-login.sh) to update the credentials used by docker/k3s to pull images from the Azure Container Registry.  If the script is running but failing, this indicates that the stored Azure credentials (in secret `azure-service-principal`) are invalid or not authorized to pull algorithm images from ACR.
 
 
+
+For Azure-based clusters, an `ImagePullBackOff` usually means the service principal or token used for the pull secret expired. If
+you created the secret with a temporary token, re-run the `az acr login --expose-token` command and recreate the
+`registry-credentials` secret. When using AKS-managed identities, confirm that the node resource group has the `AcrPull` role
+assignment on the registry and that the secret referenced by `imagePullSecrets` in your manifests matches the secret name in
+your cluster.
 
 ```
 kubectl logs -n <YOUR-NAMESPACE> -l app=refresh-acr-creds
@@ -711,6 +793,44 @@ echo "Pushed ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:$(./deploy/bin/git-
 
 ```
 
+## Pushing/Pulling Images from Azure Container Registry (ACR)
+
+If you are running entirely on Azure infrastructure, you can follow similar steps using the `az` CLI and the environment
+variables set up in [Azure requirements (ACR and AKS/AKS Edge Essentials)](#azure-requirements-acr-and-aksaks-edge-essentials).
+The defaults in [`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) reference the
+`acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest` image, but you can publish your own builds with:
+
+```bash
+az login
+az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+az acr login --name "$ACR_NAME"
+
+export IMAGE_TAG="$(git rev-parse --short HEAD)"
+# Run from the repository root so Docker can locate the project files
+cd "$(git rev-parse --show-toplevel)"
+docker buildx build \
+  --platform linux/arm64,linux/amd64 \
+  --tag "${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:${IMAGE_TAG}" \
+  . --push
+```
+
+After the push completes, override the Helm values when you deploy:
+
+```bash
+helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
+  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set edgeEndpointTag="${IMAGE_TAG}" \
+  --set inferenceTag="${IMAGE_TAG}"
+```
+
+> [!TIP]
+> The Helm chart expects the registry pull secret to be named `registry-credentials`. If you use a different
+> name in your cluster, update the manifests under [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates)
+> or create a second secret with that name that reuses the same token.
+
+If you prefer declarative secret management, the sample manifest at [`aci/edge-endpoint.yaml`](aci/edge-endpoint.yaml)
+demonstrates how to embed `imageRegistryCredentials` in Azure-native YAML. You can convert it into a Kubernetes Secret using
+`kubectl create secret docker-registry` or your GitOps tool of choice.
 
 For Azure Container Registry builds, set the provider and registry name when invoking the
 script:
