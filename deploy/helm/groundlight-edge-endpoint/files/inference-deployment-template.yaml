@@ -48,20 +48,25 @@ spec:
       # NOTE: the sync-pinamod container is duplicated in the warmup_inference_model.yaml Job
       # TODO: refactor to share code between the Job and the initContainer in the Deployment
       - name: sync-pinamod
-
-        command: ['sh', '-c', 'aws s3 sync s3://pinamod-artifacts-public/pinamod $PINAMOD_DIR --delete']
+        image: {{ .Values.registryCredentials.azureCliImage }}
+        command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR" && az storage blob download-batch --connection-string "$AZURE_STORAGE_CONNECTION_STRING" --source "$PINAMOD_CONTAINER" --destination "$PINAMOD_DIR" --no-progress --overwrite true']
         env:
         - name: PINAMOD_DIR
           value: /opt/models/pinamod
+        - name: PINAMOD_CONTAINER
+          value: "{{ .Values.pinamodContainer }}"
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: azure-service-principal
+              key: AZURE_STORAGE_CONNECTION_STRING
         volumeMounts:
         - name: pina-models
           mountPath: /opt/models
-        - name: aws-credentials
-          mountPath: /root/.aws
 
       containers:
       - name: inference-server
-image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
+        image: {{ .Values.acrLoginServer }}/intellioptics/inference-server:{{ include "IntelliOptics-edge-endpoint.inferenceTag" . }}
         imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.inferencePullPolicy" . }}"
         env:
         - name: MODEL_REPOSITORY
@@ -123,9 +128,6 @@ image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
         hostPath:
           path: /opt/intellioptics/edge/pinamod-public
           type: Directory
-      - name: aws-credentials
-        secret:
-          secretName: aws-credentials-file
 
 
 

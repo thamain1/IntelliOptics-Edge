@@ -8,8 +8,13 @@
 set -e  # Exit immediately on error
 set -o pipefail
 
+
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
+=======
+ACR_NAME=${ACR_NAME:-intelliopticsedge}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
@@ -32,6 +37,7 @@ fi
 
 GIT_TAG=$(./git-tag-name.sh)
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
 ACR_URL="${ACR_LOGIN_SERVER}"
 ACR_REPO="${ACR_URL}/${EDGE_ENDPOINT_IMAGE}"
 
@@ -42,6 +48,19 @@ fi
 
 echo "Logging into Azure Container Registry '${ACR_REGISTRY_NAME}' (${ACR_URL})"
 az acr login --name "${ACR_REGISTRY_NAME}"
+=======
+ACR_REGISTRY="${ACR_LOGIN_SERVER}"
+ACR_REPO="${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker to ACR
+echo "Authenticating Docker with Azure Container Registry '${ACR_NAME}'"
+if ! az acr login --name "${ACR_NAME}"; then
+  echo "'az acr login' failed; attempting docker login using admin credentials"
+  ACR_USERNAME=${ACR_USERNAME:-$(az acr credential show --name "${ACR_NAME}" --query "username" -o tsv)}
+  ACR_PASSWORD=${ACR_PASSWORD:-$(az acr credential show --name "${ACR_NAME}" --query "passwords[0].value" -o tsv)}
+  echo "${ACR_PASSWORD}" | docker login "${ACR_REGISTRY}" --username "${ACR_USERNAME}" --password-stdin
+fi
+
 
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
