@@ -34,6 +34,7 @@ RUN apt-get update && \
     less \
     libglib2.0-0 \
     libgl1-mesa-glx \
+
     lsb-release \
     nginx \
     sqlite3 \
@@ -50,6 +51,23 @@ RUN apt-get update && \
     rm -f /usr/share/keyrings/microsoft.gpg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+    nginx \
+    sqlite3 \
+    unzip && \
+    mkdir -p /usr/share/keyrings && \
+    curl -sL https://packages.microsoft.com/keys/microsoft.asc | \
+    gpg --dearmor -o /usr/share/keyrings/azure-cli-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/azure-cli-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ bullseye main" > /etc/apt/sources.list.d/azure-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends azure-cli && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    POETRY_HOME=${POETRY_HOME} curl -sSL https://install.python-poetry.org | python - && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    rm kubectl
+
 
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \
