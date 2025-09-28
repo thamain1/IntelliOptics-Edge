@@ -11,8 +11,12 @@
 
 set -x
 
-if [ ! -f ~/.ssh/ghar2eeut.pem ]; then  
-  aws secretsmanager get-secret-value --secret-id "ghar2eeut-private-key" | jq .SecretString -r > ~/.ssh/ghar2eeut.pem
+if [ ! -f ~/.ssh/ghar2eeut.pem ]; then
+  if [ -z "$AZURE_KEY_VAULT_NAME" ]; then
+    echo "AZURE_KEY_VAULT_NAME must be set to retrieve the SSH key" >&2
+    exit 1
+  fi
+  az keyvault secret show --vault-name "$AZURE_KEY_VAULT_NAME" --name "ghar2eeut-private-key" --query value -o tsv > ~/.ssh/ghar2eeut.pem
   chmod 600 ~/.ssh/ghar2eeut.pem
 fi
 

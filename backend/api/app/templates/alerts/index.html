@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Detector Alerts Console</title>
+    <link rel="stylesheet" href="/static/alerts.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="brand">
+        <span class="logo">🔔</span>
+        <h1>Detector Alerts</h1>
+      </div>
+      <button id="create-alert" class="primary">New Alert</button>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>Alerts</h2>
+          <input
+            type="search"
+            id="alert-search"
+            placeholder="Search alerts"
+            aria-label="Search alerts"
+          />
+        </div>
+        <ul id="alert-list" class="alert-list" aria-live="polite"></ul>
+        <p id="empty-copy" class="empty-copy">
+          No alerts yet. Click <strong>New Alert</strong> to create one.
+        </p>
+      </aside>
+
+      <section class="editor" aria-live="polite">
+        <form id="alert-form" novalidate>
+          <div class="editor-header">
+            <button type="button" id="back-to-list" class="ghost">Back</button>
+            <div class="title-group">
+              <label for="alert-name">Alert name</label>
+              <input
+                id="alert-name"
+                name="name"
+                type="text"
+                placeholder="IntelliOptics Vehicle Alert"
+                required
+              />
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="alert-enabled" name="enabled" checked />
+              <span>Alert Enabled</span>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Alert when detector</h3>
+            <div class="field-grid">
+              <label for="detector-select">Select a detector</label>
+              <select id="detector-select" name="detector_id" required></select>
+              <input
+                id="custom-detector"
+                name="custom_detector"
+                type="text"
+                class="hidden"
+                placeholder="det_xxxxx"
+                aria-label="Custom detector id"
+              />
+
+              <label for="condition-answer">Gives answer</label>
+              <select id="condition-answer" name="condition_answer">
+                <option value="YES">Yes</option>
+                <option value="NO">No</option>
+                <option value="UNCLEAR">Unclear</option>
+              </select>
+
+              <label for="condition-comparator" class="sr-only">Comparator</label>
+              <select id="condition-comparator" name="condition_comparator">
+                <option value="equals">equals</option>
+                <option value="not_equals">does not equal</option>
+              </select>
+
+              <label for="condition-consecutive">For</label>
+              <input
+                id="condition-consecutive"
+                name="condition_consecutive"
+                type="number"
+                min="1"
+                max="10"
+                value="1"
+              />
+              <span class="inline-note">consecutive answer(s)</span>
+            </div>
+            <label class="checkbox">
+              <input
+                type="checkbox"
+                id="confirm-with-cloud"
+                name="confirm_with_cloud"
+              />
+              <span>Confirm with cloud labelers before triggering action</span>
+            </label>
+          </div>
+
+          <div class="card">
+            <h3>Send alert to</h3>
+            <div class="field-grid">
+              <label for="primary-channel">Send notification message</label>
+              <select id="primary-channel" name="primary_channel">
+                <option value="sms">SMS</option>
+                <option value="email">Email</option>
+                <option value="teams">Teams</option>
+                <option value="webhook">Webhook</option>
+              </select>
+
+              <label for="primary-target" class="sr-only">Primary destination</label>
+              <input
+                id="primary-target"
+                name="primary_target"
+                type="text"
+                placeholder="+1 206 555 1234"
+                required
+              />
+
+              <label for="notification-url">URL</label>
+              <input
+                id="notification-url"
+                name="notification_url"
+                type="url"
+                placeholder="https://..."
+              />
+            </div>
+
+            <div class="field-grid">
+              <label for="message-template">Template (typical)</label>
+              <textarea
+                id="message-template"
+                name="message_template"
+                rows="6"
+                placeholder="Detector {{detector_name}} answered {{answer}}"
+              ></textarea>
+
+              <label for="template-format">Template format</label>
+              <select id="template-format" name="template_format">
+                <option value="plain">Plain text</option>
+                <option value="markdown">Markdown</option>
+                <option value="json">JSON</option>
+                <option value="html">HTML</option>
+              </select>
+            </div>
+
+            <label class="checkbox">
+              <input type="checkbox" id="include-image" name="include_image" />
+              <span>Include image in message (Only for SMS + supported channels)</span>
+            </label>
+
+            <label for="headers-json">Headers / JSON (optional)</label>
+            <textarea
+              id="headers-json"
+              name="headers_json"
+              rows="4"
+              placeholder='{"Content-Type": "application/json"}'
+            ></textarea>
+
+            <div class="recipients">
+              <h4>Additional recipients</h4>
+              <div id="recipient-list" class="recipient-list"></div>
+              <button type="button" id="add-recipient" class="ghost">
+                Add another recipient
+              </button>
+            </div>
+
+            <div class="snooze">
+              <label class="checkbox">
+                <input type="checkbox" id="snooze-enabled" name="snooze_enabled" />
+                <span>After sent, snooze notifications for</span>
+              </label>
+              <input
+                id="snooze-minutes"
+                name="snooze_minutes"
+                type="number"
+                min="1"
+                max="1440"
+                value="15"
+                aria-label="Snooze minutes"
+              />
+              <span class="inline-note">minute(s)</span>
+            </div>
+          </div>
+
+          <footer class="form-actions">
+            <div class="left">
+              <button type="button" id="delete-alert" class="danger ghost">
+                Delete Alert
+              </button>
+            </div>
+            <div class="right">
+              <span id="form-status" role="status" aria-live="polite"></span>
+              <button type="submit" class="primary">Save Alert</button>
+            </div>
+          </footer>
+        </form>
+      </section>
+    </main>
+
+    <template id="recipient-row-template">
+      <div class="recipient-row">
+        <select class="recipient-channel">
+          <option value="sms">SMS</option>
+          <option value="email">Email</option>
+          <option value="teams">Teams</option>
+          <option value="webhook">Webhook</option>
+        </select>
+        <input type="text" class="recipient-address" placeholder="Destination" />
+        <input type="text" class="recipient-country" placeholder="+1" />
+        <button type="button" class="remove-recipient" aria-label="Remove">✕</button>
+      </div>
+    </template>
+
+    <script>
+      window.__ALERTS_CONFIG__ = {
+        apiBase: "{{ api_base }}",
+      };
+    </script>
+    <script src="/static/alerts.js" type="module"></script>
+  </body>
+</html>
