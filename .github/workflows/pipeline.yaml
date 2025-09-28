@@ -8,8 +8,10 @@ on:
       - main
     types: [opened, synchronize, reopened]
   workflow_dispatch:
-    # This allows it to be triggered manually in the github console
-    # You could put inputs here, but we don't need them.
+      # yamllint disable rule:comments-indentation
+      # This allows it to be triggered manually in the github console
+      # You could put inputs here, but we don't need them.
+      # yamllint enable rule:comments-indentation
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   # This causes it to cancel previous in-progress actions in the same PR
@@ -25,7 +27,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       # This is the NGINX proxy endpoint
-     INTELLIOPTICS_ENDPOINT: http://localhost:30101
+      INTELLIOPTICS_ENDPOINT: http://localhost:30101
     steps:
       - name: Check out code
         uses: actions/checkout@v4
