@@ -21,7 +21,7 @@ While not required, configuring detectors provides fine-grained control over the
 
 ### Using the Edge Endpoint with your IntelliOptics application.
 
-Any application written with the [IntelliOptics SDK]([https://pypi.org/project/groundlight/](https://intelliopticsweb37558.z13.web.core.windows.net/python-sdk/api-reference-docs/index.html)) can work with an Edge Endpoint without any code changes.  Simply set an environment variable with the URL of your Edge Endpoint like:
+Any application written with the [IntelliOptics SDK](https://intelliopticsweb37558.z13.web.core.windows.net/python-sdk/api-reference-docs/index.html) can work with an Edge Endpoint without any code changes.  Simply set an environment variable with the URL of your Edge Endpoint like:
 
 ```bash
 export INTELLIOPTICS_ENDPOINT=http://localhost:30101
