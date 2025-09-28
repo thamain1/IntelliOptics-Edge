@@ -40,7 +40,7 @@ COPY api/app /app/app
 =======
 # Your FastAPI package lives here in your repo:
 #   Azure/intellioptics-oneclick/backend/app  --> copied to /app/app
-COPY Azure/intellioptics-oneclick/backend/app /app/app
+COPY backend/api/app /app/app
 
 # --- IntelliOptics SDK ---
 # Mirror the worker image by copying in the vendored SDK sources
