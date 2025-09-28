@@ -1,10 +1,35 @@
 {{- define "edge-endpoint.registry-credentials.podSpec" -}}
+{{- $registry := .Values.registry | default dict -}}
+{{- $provider := default "aws" $registry.provider -}}
+{{- $server := $registry.server | default .Values.ecrRegistry -}}
+{{- $secretName := default "registry-credentials" $registry.secretName -}}
+{{- $username := default "" $registry.username -}}
+{{- if and (eq $provider "aws") (eq $username "") }}
+  {{- $username = "AWS" }}
+{{- end }}
+{{- if and (eq $provider "azure") (eq $username "") }}
+  {{- $username = "00000000-0000-0000-0000-000000000000" }}
+{{- end }}
+{{- $passwordCmd := default "" $registry.passwordCmd -}}
+{{- $awsRegion := .Values.awsRegion -}}
+{{- with $registry.aws }}
+  {{- $awsRegion = .region | default $awsRegion }}
+{{- end }}
+{{- $azure := $registry.azure | default dict -}}
+{{- $azureRegistryName := default "" $azure.registryName -}}
+{{- $azureLoginMode := default "servicePrincipal" $azure.loginMode -}}
+{{- $azureSecretName := default "" $azure.servicePrincipalSecretName -}}
+{{- $azureClientId := default "" $azure.clientId -}}
+{{- $azureTenantId := default "" $azure.tenantId -}}
+{{- $azureClientSecret := default "" $azure.clientSecret -}}
+{{- $azureClientIdKey := default "clientId" $azure.clientIdKey -}}
+{{- $azureTenantIdKey := default "tenantId" $azure.tenantIdKey -}}
+{{- $azureClientSecretKey := default "clientSecret" $azure.clientSecretKey -}}
 restartPolicy: Never
 serviceAccountName: edge-endpoint-service-account
 
 containers:
-  - name: aws-cli
-
+  - name: registry-fetch
     command:
       - /bin/sh
       - /app/init-aws-access-retrieve.sh
@@ -16,7 +41,54 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
-
+      - name: REGISTRY_PROVIDER
+        value: {{ $provider | quote }}
+      - name: REGISTRY_SERVER
+        value: {{ $server | quote }}
+      - name: REGISTRY_SECRET_NAME
+        value: {{ $secretName | quote }}
+      - name: AWS_REGION
+        value: {{ $awsRegion | quote }}
+      - name: REGISTRY_USERNAME
+        value: {{ $username | quote }}
+      - name: REGISTRY_PASSWORD_CMD
+        value: {{ $passwordCmd | quote }}
+      - name: AZURE_LOGIN_MODE
+        value: {{ $azureLoginMode | quote }}
+      {{- if $azureRegistryName }}
+      - name: AZURE_REGISTRY_NAME
+        value: {{ $azureRegistryName | quote }}
+      {{- end }}
+      {{- if $azureClientId }}
+      - name: AZURE_CLIENT_ID
+        value: {{ $azureClientId | quote }}
+      {{- else if $azureSecretName }}
+      - name: AZURE_CLIENT_ID
+        valueFrom:
+          secretKeyRef:
+            name: {{ $azureSecretName | quote }}
+            key: {{ $azureClientIdKey | quote }}
+      {{- end }}
+      {{- if $azureTenantId }}
+      - name: AZURE_TENANT_ID
+        value: {{ $azureTenantId | quote }}
+      {{- else if $azureSecretName }}
+      - name: AZURE_TENANT_ID
+        valueFrom:
+          secretKeyRef:
+            name: {{ $azureSecretName | quote }}
+            key: {{ $azureTenantIdKey | quote }}
+      {{- end }}
+      {{- if $azureClientSecret }}
+      - name: AZURE_CLIENT_SECRET
+        value: {{ $azureClientSecret | quote }}
+      {{- else if $azureSecretName }}
+      - name: AZURE_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: {{ $azureSecretName | quote }}
+            key: {{ $azureClientSecretKey | quote }}
+      {{- end }}
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
@@ -24,11 +96,19 @@ containers:
         mountPath: /app/init-aws-access-retrieve.sh
         subPath: init-aws-access-retrieve.sh
 
-  - name: kubectl
-
+  - name: registry-apply
     command:
       - /bin/sh
       - /app/init-aws-access-apply.sh
+    env:
+      - name: REGISTRY_PROVIDER
+        value: {{ $provider | quote }}
+      - name: REGISTRY_SERVER
+        value: {{ $server | quote }}
+      - name: REGISTRY_SECRET_NAME
+        value: {{ $secretName | quote }}
+      - name: REGISTRY_USERNAME
+        value: {{ $username | quote }}
     volumeMounts:
       - name: shared-volume
         mountPath: /shared

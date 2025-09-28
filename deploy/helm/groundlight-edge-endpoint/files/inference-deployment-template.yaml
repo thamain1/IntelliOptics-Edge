@@ -1,3 +1,4 @@
+{{- $registrySecret := default "registry-credentials" (dig "registry" "secretName" .Values) }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -37,7 +38,7 @@ spec:
       runtimeClassName: nvidia  # Required for GPU use in k3s
 {{- end }}
       imagePullSecrets:
-      - name: registry-credentials
+      - name: {{$registrySecret}}
       strategy:
         type: RollingUpdate
         rollingUpdate:

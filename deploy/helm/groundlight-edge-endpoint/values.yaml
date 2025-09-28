@@ -49,6 +49,37 @@ awsRegion: "us-west-2"
 
 ecrRegistry: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
 
+registry:
+  # Supported providers: aws, azure, generic
+  provider: aws
+  # Kubernetes secret name used for docker pull credentials
+  secretName: registry-credentials
+  # Container registry server hostname
+  server: "767397850842.dkr.ecr.us-west-2.amazonaws.com"
+  # Optional username override (defaults to provider-specific values)
+  username: ""
+  # Optional shell command to emit the registry password/token. When omitted the
+  # scripts will use provider-specific defaults.
+  passwordCmd: ""
+  aws:
+    region: "us-west-2"
+  azure:
+    # When empty, the registry name is derived from the server hostname
+    registryName: ""
+    # Login mode: servicePrincipal | workloadIdentity | none | any other az login args
+    loginMode: servicePrincipal
+    # Optional static values for service principal authentication. It is
+    # recommended to source these from a Kubernetes Secret instead of inline
+    # values when deploying to a cluster.
+    clientId: ""
+    tenantId: ""
+    clientSecret: ""
+    # Reference to an existing secret that stores service principal credentials.
+    servicePrincipalSecretName: ""
+    clientIdKey: clientId
+    tenantIdKey: tenantId
+    clientSecretKey: clientSecret
+
 # This sets the log level for all the containers, both edge endpoint and inference.
 logLevel: "INFO"
 

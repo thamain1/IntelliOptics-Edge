@@ -1,23 +1,28 @@
 #!/bin/sh
+set -euo pipefail
 
-# Part two of getting AWS credentials set up. 
+# Part two of getting registry credentials set up.
 # This script runs in a minimal container with just kubectl, and applies the credentials to the cluster.
-
+#
 # We do two things:
 # 1. Create a secret with an AWS credentials file. We use a file instead of environment variables
 #    so that we can change it without restarting the pod.
-# 2. Create a secret with a Docker registry credentials. This is used to pull images from ECR.
-
+# 2. Create (or update) a generic Docker registry credentials secret.
+#
 # We wait for the credentials to be written to the shared volume by the previous script.
 TIMEOUT=60  # Maximum time to wait in seconds
 FILE="/shared/done"
 
-echo "Waiting up to $TIMEOUT seconds for $FILE to exist..."
+log() {
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] $*"
+}
+
+log "Waiting up to $TIMEOUT seconds for $FILE to exist..."
 
 i=0
 while [ $i -lt $TIMEOUT ]; do
     if [ -f "$FILE" ]; then
-        echo "✅ File $FILE found! Continuing..."
+        log "✅ File $FILE found! Continuing..."
         break
     fi
     sleep 1
@@ -30,15 +35,31 @@ if [ ! -f "$FILE" ]; then
     exit 1
 fi
 
+REGISTRY_SECRET_NAME=${REGISTRY_SECRET_NAME:-registry-credentials}
+REGISTRY_SERVER=${REGISTRY_SERVER:-${ECR_REGISTRY:-}}
+CONFIG_JSON_PATH=/shared/config.json
+TOKEN_PATH=/shared/token.txt
 
-echo "Creating Kubernetes secrets..."
+log "Creating Kubernetes secrets..."
 
-kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
-    --dry-run=client -o yaml | kubectl apply -f -
+if [ -s /shared/credentials ]; then
+    kubectl create secret generic aws-credentials-file --from-file /shared/credentials \
+        --dry-run=client -o yaml | kubectl apply -f -
+fi
 
-kubectl create secret docker-registry registry-credentials \
-    --docker-server={{ .Values.ecrRegistry }} \
-    --docker-username=AWS \
-    --docker-password="$(cat /shared/token.txt)" \
-    --dry-run=client -o yaml | kubectl apply -f -
-
+if [ -s "$CONFIG_JSON_PATH" ]; then
+    kubectl create secret generic "$REGISTRY_SECRET_NAME" \
+        --type=kubernetes.io/dockerconfigjson \
+        --from-file=.dockerconfigjson="$CONFIG_JSON_PATH" \
+        --dry-run=client -o yaml | kubectl apply -f -
+elif [ -s "$TOKEN_PATH" ]; then
+    # Fallback to docker-registry type if config.json is missing
+    kubectl create secret docker-registry "$REGISTRY_SECRET_NAME" \
+        --docker-server="$REGISTRY_SERVER" \
+        --docker-username="${REGISTRY_USERNAME:-AWS}" \
+        --docker-password="$(cat "$TOKEN_PATH")" \
+        --dry-run=client -o yaml | kubectl apply -f -
+else
+    echo "❌ Neither Docker config JSON nor token file was produced. Nothing to apply." >&2
+    exit 1
+fi

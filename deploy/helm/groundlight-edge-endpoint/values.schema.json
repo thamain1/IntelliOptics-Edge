@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "registry": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["aws", "azure", "generic"]
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "passwordCmd": {
+          "type": "string"
+        },
+        "aws": {
+          "type": "object",
+          "properties": {
+            "region": {
+              "type": "string"
+            }
+          }
+        },
+        "azure": {
+          "type": "object",
+          "properties": {
+            "registryName": { "type": "string" },
+            "loginMode": {
+              "type": "string",
+              "default": "servicePrincipal"
+            },
+            "clientId": { "type": "string" },
+            "tenantId": { "type": "string" },
+            "clientSecret": { "type": "string" },
+            "servicePrincipalSecretName": { "type": "string" },
+            "clientIdKey": { "type": "string" },
+            "tenantIdKey": { "type": "string" },
+            "clientSecretKey": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

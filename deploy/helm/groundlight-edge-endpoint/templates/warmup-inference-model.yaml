@@ -1,3 +1,4 @@
+{{- $registrySecret := default "registry-credentials" (dig "registry" "secretName" .Values) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,7 +12,7 @@ spec:
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:
-      - name: registry-credentials
+      - name: {{$registrySecret}}
       containers:
       - name: image-puller
 image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
