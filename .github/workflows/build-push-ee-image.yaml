@@ -10,6 +10,18 @@ on:
       ref:
         required: true
         type: string
+
+      acr_name:
+        description: Azure Container Registry name (e.g. acrintellioptics)
+        required: true
+        type: string
+      acr_login_server:
+        description: Azure Container Registry login server (e.g. acrintellioptics.azurecr.io)
+        required: true
+        type: string
+    secrets:
+      AZURE_CREDENTIALS:
+
     secrets:
 
       REGISTRY_LOGIN_SERVER:
@@ -34,6 +46,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ inputs.acr_name }}
+
       - name: Log in to container registry
         uses: docker/login-action@v3
         with:
@@ -50,11 +69,13 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
 
+
       - name: Check out code
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
+
 
       - name: Build and Push Multiplatform edge-endpoint Image
         # This is actually only taking about 4 minutes right now.
@@ -73,6 +94,10 @@ jobs:
         # This is actually only taking about 4 minutes right now.
         timeout-minutes: 45
         env:
+
+          ACR_NAME: ${{ inputs.acr_name }}
+          ACR_LOGIN_SERVER: ${{ inputs.acr_login_server }}
+
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}

@@ -4,6 +4,9 @@
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
 
+# This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
+
 # This script builds and pushes the edge-endpoint Docker image to a container registry.
 
 # This script builds and pushes the edge-endpoint Docker image to Azure
@@ -24,8 +27,6 @@
 
 
 
-
-
 #
 # Usage:
 #   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
@@ -34,6 +35,7 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+
 
 
 # 2. Builds a multi-platform Docker image.
@@ -93,7 +95,15 @@ source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
 # 4. Pushes the image to ACR.
 #
 
+# Note: Ensure you have authenticated to Azure and have Docker installed.
+
+ACR_NAME=${ACR_NAME:-acrintellioptics}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+ACR_REPOSITORY=${ACR_REPOSITORY:-intellioptics/edge-endpoint}
+
+
 # Note: Ensure you have the necessary Azure credentials (e.g., via `az login`) and Docker installed.
+
 
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
@@ -113,6 +123,20 @@ cd "${SCRIPT_DIR}"
 
 TAG=$(./git-tag-name.sh)
 
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-${ACR_REPOSITORY}}  # Default to intellioptics/edge-endpoint images
+ACR_IMAGE_TAG="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+
+# Authenticate docker to ACR. Prefer Azure CLI when available and logged in.
+if command -v az >/dev/null 2>&1; then
+  if [ -n "${ACR_NAME}" ]; then
+    echo "Logging into Azure Container Registry '${ACR_NAME}' via Azure CLI"
+    az acr login --name "${ACR_NAME}"
+  else
+    echo "ACR_NAME must be set when using az acr login" >&2
+    exit 1
+  fi
+elif [ -n "${ACR_USERNAME:-}" ] && [ -n "${ACR_PASSWORD:-}" ]; then
+  echo "Logging into Azure Container Registry '${ACR_LOGIN_SERVER}' via docker login"
 
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-intellioptics/edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 ACR_REPOSITORY="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
@@ -126,6 +150,10 @@ if [[ -n "${ACR_USERNAME:-}" && -n "${ACR_PASSWORD:-}" ]]; then
     --username "${ACR_USERNAME}" \
     --password-stdin "${ACR_LOGIN_SERVER}"
 else
+
+  echo "Unable to authenticate to Azure Container Registry. Install Azure CLI or provide ACR_USERNAME/ACR_PASSWORD." >&2
+  exit 1
+fi
   echo "ACR credentials not provided; assuming docker is already logged in to ${ACR_LOGIN_SERVER}."
 fi
 
@@ -246,6 +274,12 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
 
+  --tag "${ACR_IMAGE_TAG}" \
+  ../.. --push
+
+echo "Successfully pushed image to ACR ${ACR_LOGIN_SERVER}"
+echo "${ACR_IMAGE_TAG}"
+
   --tag ${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
   ../.. --push
 
@@ -290,7 +324,6 @@ echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
 echo "Successfully pushed image to ACR_REGISTRY=${ACR_REGISTRY}"
 echo "${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
-
 
 
 

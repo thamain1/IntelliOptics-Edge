@@ -33,6 +33,8 @@ env:
   PYTHON_VERSION: "3.11"
   POETRY_VERSION: "2.1.3"
   INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+  ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
 
 jobs:
   test-general-edge-endpoint:
@@ -215,7 +217,11 @@ jobs:
     with:
       repo: ${{ github.repository }}
       ref: ${{ github.ref }}
+      acr_name: ${{ vars.AZURE_ACR_NAME }}
+      acr_login_server: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
     secrets:
+
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
       REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
       REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
@@ -240,6 +246,14 @@ jobs:
           ./deploy/bin/install-k3s.sh cpu
 
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
+
       - name: Log in to container registry
         uses: docker/login-action@v3
         with:
@@ -255,6 +269,7 @@ jobs:
             --password-stdin
         env:
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+
 
       - name: Install poetry
         uses: snok/install-poetry@v1
@@ -323,12 +338,26 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
+
+      - name: Install k3s
+        run: |
+          ./deploy/bin/install-k3s.sh cpu
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
+
       - name: Log in to container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+
 
       - name: Install poetry
         uses: snok/install-poetry@v1
@@ -513,6 +542,13 @@ jobs:
       - main-tests-pass
     runs-on: ubuntu-latest
     steps:
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
       - name: Log in to container registry
         uses: docker/login-action@v3
         with:
@@ -550,6 +586,13 @@ jobs:
       - tag-pre-release
     runs-on: ubuntu-22.04
     steps:
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Log in to container registry
         uses: docker/login-action@v3

@@ -5,6 +5,10 @@
 # Assumptions:
 # - The image is already built and pushed to ACR
 
+# Put a specific tag on an existing image in Azure Container Registry (ACR)
+# Assumptions:
+# - The image is already built and pushed to ACR
+
 
 # Put a specific tag on an existing image in a container registry
 # Assumptions:
@@ -29,11 +33,15 @@ set -euo pipefail
 # Assumptions:
 # - The image is already built and pushed to ACR
 
+
 # - The image is tagged with the git commit hash
 
 set -e  # Exit immediately on error
 set -o pipefail
 
+ACR_NAME=${ACR_NAME:-acrintellioptics}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+ACR_REPOSITORY=${ACR_REPOSITORY:-intellioptics/edge-endpoint}
 
 ACR_NAME=${ACR_NAME:-acrintellioptics}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
@@ -54,7 +62,7 @@ source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
 
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
-=======
+
 ACR_NAME=${ACR_NAME:-intelliopticsedge}
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
 
@@ -80,6 +88,28 @@ if [[ "$NEW_TAG" == "pre-release" || "$NEW_TAG" == "release" || "$NEW_TAG" == "l
 fi
 
 GIT_TAG=$(./git-tag-name.sh)
+
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-${ACR_REPOSITORY}}  # Default to intellioptics/edge-endpoint images
+ACR_REPO="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker to ACR
+if command -v az >/dev/null 2>&1; then
+    if [ -n "${ACR_NAME}" ]; then
+        echo "Logging into Azure Container Registry '${ACR_NAME}' via Azure CLI"
+        az acr login --name "${ACR_NAME}"
+    else
+        echo "ACR_NAME must be set when using az acr login" >&2
+        exit 1
+    fi
+elif [ -n "${ACR_USERNAME:-}" ] && [ -n "${ACR_PASSWORD:-}" ]; then
+    echo "Logging into Azure Container Registry '${ACR_LOGIN_SERVER}' via docker login"
+    echo "${ACR_PASSWORD}" | docker login \
+        --username "${ACR_USERNAME}" \
+        --password-stdin "${ACR_LOGIN_SERVER}"
+else
+    echo "Unable to authenticate to Azure Container Registry. Install Azure CLI or provide ACR_USERNAME/ACR_PASSWORD." >&2
+    exit 1
+fi
 
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-intellioptics/edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 ACR_REPO="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
@@ -182,6 +212,12 @@ fi
 # To do this, we need to pull the digest SHA of the existing multiplatform image
 # and then create the tag on that SHA. Otherwise imagetools will create a tag for
 # just the platform where the command is run.
+
+echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
+digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
+docker buildx imagetools create --tag $ACR_REPO:$NEW_TAG $ACR_REPO@${digest}
+
+echo "✅ Image successfully tagged: $ACR_REPO:$NEW_TAG"
 
 echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
 digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
