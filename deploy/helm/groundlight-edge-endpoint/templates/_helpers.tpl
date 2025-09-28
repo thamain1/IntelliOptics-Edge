@@ -124,4 +124,8 @@ Never
 {{- end }}
 {{- end }}
 
+{{- define "IntelliOptics-edge-endpoint.edgeConfigSyncScript" -}}
+{{- .Files.Get "files/edge-config-sync.py" -}}
+{{- end }}
+
 

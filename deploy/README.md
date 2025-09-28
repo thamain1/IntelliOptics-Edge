@@ -240,6 +240,16 @@ The edge endpoint now supports continuously sampling RTSP or GStreamer camera fe
 
 If RTSP ingest is not required, omit the `streams` section—the worker is idle by default. Multiple streams can be defined, and each one runs in its own asyncio task so a slow or disconnected camera does not block the others.
 
+### Managing streams from the cloud console
+
+The edge endpoint can now source its RTSP configuration from the cloud backend. The FastAPI service exposes authenticated endpoints at `/v1/config/...` that allow operators to list detectors, add or update stream definitions, and export an updated `edge-config.yaml`. A lightweight web console is available at `/config/streams` that layers validation on top of the `StreamConfig` model—use it to enter stream URLs, credentials, cadence, and detector bindings without editing YAML by hand.
+
+1. Sign in to the cloud API and open `/config/streams`. Use the “Add Stream” form to create or edit stream definitions. All changes are persisted in the backend database.
+2. Deploy the optional `configSync` CronJob (see [Helm values](#helm-chart) below) so that cloud updates are written back into the edge cluster’s `edge-config` ConfigMap. The job runs the `edge_config_sync.py` client, which calls `/v1/config/export` to obtain the current YAML, patches the ConfigMap, and optionally restarts the edge deployment so the new settings take effect.
+3. When `AppState.load_edge_config` notices the ConfigMap change, the ingest worker will hot-reload the new stream definitions (or restart if required by your deployment strategy).
+
+This workflow keeps the canonical configuration in the cloud service while ensuring that edge pods stay in sync.
+
 ### Setting up Single-Node Kubernetes with k3s
 
 If you don't have [k3s](https://docs.k3s.io/) installed, there is a script which can install it depending on whether you have a NVidia GPU or not.  If you don't set up a GPU, the models will run on the CPU, but be somewhat slower.
@@ -347,6 +357,25 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
   --set inferenceFlavor=cpu
 ```
+
+#### Variation: Synchronize streams from the cloud API
+
+Enable the `configSync` CronJob to keep the edge ConfigMap aligned with the stream definitions managed in the cloud console. The job mounts the `edge_config_sync.py` client and requires a service account with permission to patch ConfigMaps and (optionally) restart the edge deployment.
+
+```shell
+helm upgrade -i -n intellioptics-edge edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
+  --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" \
+  --set configSync.enabled=true \
+  --set configSync.apiBase="https://your-cloud-api.example.com/v1" \
+  --set configSync.apiKeySecretName="cloud-api-key" \
+  --set configSync.configMapName="edge-config" \
+  --set configSync.restartAfterSync=true
+```
+
+* `configSync.apiBase` must point to the `/v1` base path exposed by the cloud FastAPI deployment.
+* `configSync.apiKeySecretName` and `configSync.apiKeySecretKey` identify the secret that stores the API key required by the `/v1/config` endpoints. If the cloud API is unsecured in your environment, omit these values.
+* Use `configSync.deploymentName` when the edge deployment uses a non-default name.
+* Additional environment variables can be passed to the job with `configSync.extraEnv`.
 
 #### Variation: Further Customization
 

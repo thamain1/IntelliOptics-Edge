@@ -14,7 +14,10 @@ Configuring detectors for the edge endpoint allows you to provide fine-grained c
 
 ## How do I configure a detector?
 
-Detector configurations are specified in [edge-config.yaml](configs/edge-config.yaml). The file has three sections: `global_config`, `edge_inference_configs`, and `detectors`. 
+Detector configurations are specified in [edge-config.yaml](configs/edge-config.yaml). The file has three sections: `global_config`, `edge_inference_configs`, and `detectors`.
+
+> [!TIP]
+> When running the cloud backend, detector and stream assignments can also be managed with the `/config/streams` console or the `/v1/config` API. The UI mirrors the schema in `edge-config.yaml` and persists updates to the configuration store that feeds the edge ConfigMap. Use the UI for day-to-day edits and export the YAML when you need to bootstrap a new cluster.
 
 NOTE: After modifying the config file, you'll have to re-run helm to change the configuration:
 ```shell

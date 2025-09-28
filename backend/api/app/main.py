@@ -172,6 +172,8 @@ _mount_router(
     {"dependencies": _alerts_dependencies()},
 )
 _mount_router("reviews", "app.reviews")
+_mount_router("config", "app.configuration")
+_mount_router("stream_ui", "app.stream_ui")
 
 # 4) iq_* last (these have historically caused circular-import warnings)
 _mount_router("iq_read", "app.iq_read")

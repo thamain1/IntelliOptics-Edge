@@ -108,4 +108,21 @@ streaming:
   extraVolumeMounts: []
   extraVolumes: {}
 
+configSync:
+  enabled: false
+  schedule: "*/10 * * * *"
+  image: "python:3.11-slim"
+  imagePullPolicy: "IfNotPresent"
+  apiBase: ""
+  apiKeySecretName: ""
+  apiKeySecretKey: "apiKey"
+  configMapName: "edge-config"
+  restartAfterSync: true
+  deploymentName: "edge-endpoint"
+  serviceAccountName: ""
+  extraEnv: []
+  podAnnotations: {}
+  resources: {}
+  ttlSecondsAfterFinished: 300
+
 

@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
-from .models import ensure_alert_events_table
+from .models import ensure_alert_events_table, ensure_edge_config_document_table
 
 logger = logging.getLogger("intellioptics.api")
 
@@ -65,6 +65,24 @@ DDL = [
     """ALTER TABLE alert_rules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();""",
     """CREATE INDEX IF NOT EXISTS ix_alert_rules_detector_id ON alert_rules(detector_id);""",
     """CREATE INDEX IF NOT EXISTS ix_alert_rules_enabled ON alert_rules(enabled);""",
+    """
+    CREATE TABLE IF NOT EXISTS edge_config_documents (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        global_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+        edge_inference_configs JSONB NOT NULL DEFAULT '{}'::jsonb,
+        detectors JSONB NOT NULL DEFAULT '{}'::jsonb,
+        streams JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    """,
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS global_config JSONB DEFAULT '{}'::jsonb;""",
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS edge_inference_configs JSONB DEFAULT '{}'::jsonb;""",
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS detectors JSONB DEFAULT '{}'::jsonb;""",
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS streams JSONB DEFAULT '{}'::jsonb;""",
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();""",
+    """ALTER TABLE edge_config_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();""",
 ]
 
 
@@ -86,6 +104,9 @@ def migrate() -> List[str]:
             "[migrations] skipping legacy DDL for dialect %s", engine.dialect.name
         )
 
-    created = ensure_alert_events_table(engine)
-    applied.append("alert_events.create" if created else "alert_events.exists")
+    created_alerts = ensure_alert_events_table(engine)
+    applied.append("alert_events.create" if created_alerts else "alert_events.exists")
+
+    created_configs = ensure_edge_config_document_table(engine)
+    applied.append("edge_config_documents.create" if created_configs else "edge_config_documents.exists")
     return applied

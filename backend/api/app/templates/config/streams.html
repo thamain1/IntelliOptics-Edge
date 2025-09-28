@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Edge Stream Configuration</title>
+    <link rel="stylesheet" href="/static/config.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <h1>Edge Stream Configuration</h1>
+      <div class="status-chip" id="sync-status">Loading…</div>
+    </header>
+
+    <main>
+      <section class="panel" id="streams-panel">
+        <div class="panel-header">
+          <h2>Configured Streams</h2>
+          <button type="button" id="refresh-streams">Refresh</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Detector</th>
+                <th>URL</th>
+                <th>Sampling (s)</th>
+                <th>Backend</th>
+                <th>Submission</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="streams-table-body">
+              <tr><td colspan="7" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="form-panel">
+        <h2 id="form-title">Add Stream</h2>
+        <form id="stream-form" autocomplete="off">
+          <div class="form-grid">
+            <label>
+              Stream name
+              <input type="text" id="stream-name" name="name" required />
+            </label>
+            <label>
+              Detector
+              <select id="stream-detector" name="detector_id" required></select>
+            </label>
+            <label class="full-width">
+              Stream URL
+              <input type="url" id="stream-url" name="url" placeholder="rtsp://" required />
+            </label>
+            <label>
+              Sampling interval (seconds)
+              <input type="number" step="0.01" min="0.05" id="sampling-interval" name="sampling_interval_seconds" value="1" required />
+            </label>
+            <label>
+              Reconnect delay (seconds)
+              <input type="number" step="0.1" min="0.5" id="reconnect-delay" name="reconnect_delay_seconds" value="5" required />
+            </label>
+            <label>
+              Backend
+              <select id="stream-backend" name="backend">
+                <option value="auto">Auto</option>
+                <option value="ffmpeg">FFmpeg</option>
+                <option value="gstreamer">GStreamer</option>
+              </select>
+            </label>
+            <label>
+              Encoding
+              <select id="stream-encoding" name="encoding">
+                <option value="jpeg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </label>
+            <label>
+              Submission method
+              <select id="submission-method" name="submission_method">
+                <option value="edge">Edge</option>
+                <option value="api">API</option>
+              </select>
+            </label>
+            <label>
+              API base URL
+              <input type="url" id="api-base-url" name="api_base_url" value="http://127.0.0.1:30101" />
+            </label>
+            <label>
+              API timeout (seconds)
+              <input type="number" step="1" min="1" id="api-timeout" name="api_timeout_seconds" value="10" />
+            </label>
+            <label>
+              API token env var
+              <input type="text" id="api-token-env" name="api_token_env" />
+            </label>
+            <fieldset class="credentials">
+              <legend>Credentials</legend>
+              <div class="credentials-grid">
+                <label>
+                  Username
+                  <input type="text" id="cred-username" name="credentials.username" />
+                </label>
+                <label>
+                  Password
+                  <input type="password" id="cred-password" name="credentials.password" autocomplete="new-password" />
+                </label>
+                <label>
+                  Username env var
+                  <input type="text" id="cred-username-env" name="credentials.username_env" />
+                </label>
+                <label>
+                  Password env var
+                  <input type="text" id="cred-password-env" name="credentials.password_env" />
+                </label>
+              </div>
+            </fieldset>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="save-stream">Save stream</button>
+            <button type="button" id="reset-form">Clear</button>
+            <button type="button" id="delete-stream" class="danger" hidden>Delete</button>
+          </div>
+          <div id="form-status" role="status"></div>
+        </form>
+      </section>
+    </main>
+
+    <template id="stream-row-template">
+      <tr>
+        <td class="mono name"></td>
+        <td class="detector"></td>
+        <td class="url"></td>
+        <td class="sampling"></td>
+        <td class="backend"></td>
+        <td class="submission"></td>
+        <td class="actions"><button type="button" class="edit">Edit</button></td>
+      </tr>
+    </template>
+
+    <script>
+      window.STREAM_CONFIG = {
+        apiBase: "{{ api_base }}"
+      };
+    </script>
+    <script src="/static/streams.js" defer></script>
+  </body>
+</html>
