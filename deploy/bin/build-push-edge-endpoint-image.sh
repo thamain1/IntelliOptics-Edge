@@ -1,6 +1,9 @@
 #!/bin/bash
 
 
+# This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
+
 # This script builds and pushes the edge-endpoint Docker image to a container registry.
 
 # This script builds and pushes the edge-endpoint Docker image to Azure
@@ -32,6 +35,7 @@
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
 
+
 # 2. Builds a multi-platform Docker image.
 # 3. Pushes the image to the configured registry.
 #
@@ -57,10 +61,18 @@ fi
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 
 
+
 # 2. Authenticates Docker with ACR.
 # 3. Builds a multi-platform Docker image.
 # 4. Pushes the image to ACR.
 #
+
+# Note: Ensure you have the Azure CLI and Docker installed and that the
+# service principal or CLI session has access to the target registry.
+
+ACR_NAME=${ACR_NAME:-acrintellioptics}
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
+
 # Note: Ensure you have the necessary Azure credentials and Docker installed.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -85,6 +97,7 @@ source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
 
 ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 ACR_REGISTRY_NAME=${ACR_REGISTRY_NAME:-${ACR_LOGIN_SERVER%%.*}}
+
 
 
 # Note: Ensure you have the necessary Azure credentials and Docker installed.
@@ -122,6 +135,14 @@ REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
 REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 
+if ! command -v az >/dev/null 2>&1; then
+  echo "The Azure CLI (az) is required to push to ACR." >&2
+  exit 1
+fi
+
+echo "Authenticating Docker with Azure Container Registry ${ACR_NAME}."
+az acr login --name "${ACR_NAME}" >/dev/null
+
 REGISTRY_IMAGE="${REGISTRY_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
 
 
@@ -129,6 +150,7 @@ ACR_URL="${ACR_LOGIN_SERVER}"
 
 # Authenticate docker to ACR
 azure_acr_login "$ACR_URL" "$ACR_REGISTRY_NAME"
+
 
 
 if [[ -z "${REGISTRY_SERVER}" ]]; then
@@ -224,6 +246,13 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
 
+  --tag ${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ${ACR_LOGIN_SERVER}"
+echo "${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
+
+
   --tag ${REGISTRY_IMAGE}:${TAG} \
   ../.. --push
 
@@ -261,7 +290,6 @@ echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
 echo "Successfully pushed image to ACR_REGISTRY=${ACR_REGISTRY}"
 echo "${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
-
 
 
 

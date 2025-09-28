@@ -11,6 +11,7 @@ spec:
       containers:
       - name: image-puller
         command: ["echo", "Successfully pulled image to warm cache"]
+
       - name: sync-pinamod
 
         command: ['sh', '-c', 'set -euo pipefail; mkdir -p "$PINAMOD_DIR"; SOURCE="$PINAMOD_BLOB_URL"; if [ -n "${PINAMOD_SAS_TOKEN:-}" ]; then SOURCE="${SOURCE}${PINAMOD_SAS_TOKEN}"; fi; azcopy sync "$SOURCE" "$PINAMOD_DIR" --recursive --delete-destination=true']
@@ -178,6 +179,7 @@ spec:
       - name: pina-models-source
         persistentVolumeClaim:
           claimName: pinamod-artifacts-pvc
+
   backoffLimit: 2
 
 

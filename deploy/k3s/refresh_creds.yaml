@@ -18,6 +18,7 @@ spec:
             - name: registry-credentials
           containers:
 
+
           - name: ecr
             image: acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest
             imagePullPolicy: IfNotPresent
@@ -31,6 +32,17 @@ spec:
             ]
             env:
             - name: AZURE_CLIENT_ID
+
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: clientId
+            - name: AZURE_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: azure-service-principal
+                  key: tenantId
+
 
               valueFrom:
                 secretKeyRef:
@@ -51,10 +63,19 @@ spec:
                 secretKeyRef:
                   name: azure-service-principal
                   key: AZURE_CLIENT_ID
+
             - name: AZURE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: azure-service-principal
+
+                  key: clientSecret
+            - name: ACR_NAME
+              value: acrintellioptics
+            - name: ACR_LOGIN_SERVER
+              value: acrintellioptics.azurecr.io
+
+
                   key: AZURE_CLIENT_SECRET
             - name: AZURE_TENANT_ID
               valueFrom:
