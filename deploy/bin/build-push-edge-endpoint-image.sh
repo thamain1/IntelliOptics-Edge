@@ -1,6 +1,8 @@
 #!/bin/bash
 
 
+# This script builds and pushes the edge-endpoint Docker image to a container registry.
+
 # This script builds and pushes the edge-endpoint Docker image to Azure
 # Container Registry (ACR).
 
@@ -20,6 +22,7 @@
 
 
 
+
 #
 # Usage:
 #   REGISTRY_SERVER=ghcr.io REGISTRY_NAMESPACE=intellioptics \
@@ -28,6 +31,20 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+
+# 2. Builds a multi-platform Docker image.
+# 3. Pushes the image to the configured registry.
+#
+# Note: Ensure you have Docker installed and are logged in to the target
+# container registry before running this script.
+
+REGISTRY_LOGIN_SERVER=${REGISTRY_LOGIN_SERVER:-${CONTAINER_REGISTRY:-}}
+
+if [ -z "$REGISTRY_LOGIN_SERVER" ]; then
+  echo "REGISTRY_LOGIN_SERVER (or CONTAINER_REGISTRY) must be provided"
+  exit 1
+fi
+
 
 # 2. Authenticates Docker with ACR (when credentials are provided).
 # 3. Builds a multi-platform Docker image.
@@ -104,6 +121,9 @@ REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
 REGISTRY_USERNAME=${REGISTRY_USERNAME:-}
 REGISTRY_PASSWORD=${REGISTRY_PASSWORD:-}
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+
+REGISTRY_IMAGE="${REGISTRY_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
+
 
 ACR_URL="${ACR_LOGIN_SERVER}"
 
@@ -203,6 +223,13 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+
+  --tag ${REGISTRY_IMAGE}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to ${REGISTRY_IMAGE}"
+echo "${REGISTRY_IMAGE}:${TAG}"
+
   --tag ${ACR_REPOSITORY}:${TAG} \
   --tag ${ACR_REPOSITORY}:latest \
   ../.. --push
@@ -228,7 +255,7 @@ echo "${IMAGE_REPOSITORY}:${TAG}"
 
 echo "Successfully pushed image to ACR_URL=${ACR_URL}"
 echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
-=======
+
   --tag ${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
   ../.. --push
 
