@@ -687,12 +687,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+
+    { name = "azure-identity", specifier = ">=1.17.0" },
+    { name = "azure-keyvault-secrets", specifier = ">=4.9.0" },
+    { name = "fabric", specifier = ">=3.2.2" },
+    { name = "groundlight", specifier = ">=0.22.6,<0.23.0" },
+    { name = "pulumi", specifier = ">=3" },
+    { name = "pulumi-azure-native", specifier = ">=2.8.0" },
+
     { name = "azure-identity", specifier = ">=1.17.1" },
     { name = "azure-keyvault-secrets", specifier = ">=4.8.0" },
     { name = "fabric", specifier = ">=3.2.2" },
     { name = "groundlight", specifier = ">=0.22.6,<0.23.0" },
     { name = "pulumi", specifier = ">=3" },
     { name = "pulumi-azure-native", specifier = ">=2.65.0" },
+
 ]
 
 [[package]]
