@@ -364,17 +364,38 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Pushing/Pulling Images from Container Registries
 
 We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
 If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
+by first creating a docker image locally, pushing it to your container registry, retrieving the image ID and
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
-Follow the following steps:
+The build/push scripts default to AWS Elastic Container Registry (ECR):
 
 ```shell
 # Build and push image to ECR
-> ./deploy/bin/build-push-edge-endpoint-image.sh
+./deploy/bin/build-push-edge-endpoint-image.sh
 ```
+
+To target Azure Container Registry (ACR), provide the registry configuration before running the scripts:
+
+```shell
+export REGISTRY_PROVIDER=azure
+export ACR_NAME=<your-acr-name>
+export ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
+export ACR_RESOURCE_GROUP=<resource-group-containing-acr>
+
+# Requires Azure CLI login (interactive or via `az login`/`azure/login` in CI)
+./deploy/bin/build-push-edge-endpoint-image.sh --registry-provider azure
+```
+
+When tagging existing images, the same flag/environment variables apply:
+
+```shell
+./deploy/bin/tag-edge-endpoint-image.sh --registry-provider azure latest
+```
+
+Both `build-push` and `tag` scripts share registry authentication helpers (`deploy/bin/registry.sh`) which
+normalize login and manifest resolution for AWS (`aws ecr get-login-password`) and Azure (`az acr login`, `az acr repository show-manifests`).
 

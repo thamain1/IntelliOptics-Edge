@@ -1,40 +1,46 @@
 #!/bin/bash
 
-# This script builds and pushes the edge-endpoint Docker image to ECR.
+# This script builds and pushes the edge-endpoint Docker image to a container registry.
 #
 # Usage:
-#   ./build-push-edge-endpoint-image.sh
+#   ./build-push-edge-endpoint-image.sh [--registry-provider aws|azure]
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
-# 2. Authenticates Docker with ECR.
+# 2. Authenticates Docker with the registry provider.
 # 3. Builds a multi-platform Docker image.
-# 4. Pushes the image to ECR.
+# 4. Pushes the image to the registry.
 #
-# Note: Ensure you have the necessary AWS credentials and Docker installed.
+# Note: Ensure you have the necessary credentials and Docker installed.
 
-ECR_ACCOUNT=${ECR_ACCOUNT:-767397850842}
-ECR_REGION=${ECR_REGION:-us-west-2}
+set -euo pipefail
 
-set -e
+REGISTRY_PROVIDER=${REGISTRY_PROVIDER:-aws}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --registry-provider)
+      REGISTRY_PROVIDER=$(echo "$2" | tr '[:upper:]' '[:lower:]')
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 # Ensure that you're in the same directory as this script before running it
 cd "$(dirname "$0")"
 
+source ./registry.sh
+
 TAG=$(./git-tag-name.sh)
-
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ECR_URL="${ECR_ACCOUNT}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+REGISTRY_URL=$(registry_get_url)
+REPOSITORY_REF=$(registry_repository_ref "${EDGE_ENDPOINT_IMAGE}")
 
-# Authenticate docker to ECR
-aws ecr get-login-password --region ${ECR_REGION} | docker login \
-                  --username AWS \
-                  --password-stdin  ${ECR_URL}
-
-if [ "$1" == "dev" ]; then
-  echo "'$0 dev' is no longer supported!!"
-  exit 1
-fi
+registry_login
 
 # We use docker buildx to build the image for multiple platforms. buildx comes
 # installed with Docker Engine when installed via Docker Desktop. If you're
@@ -60,10 +66,8 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
-  --tag ${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
+  --tag ${REPOSITORY_REF}:${TAG} \
   ../.. --push
 
-echo "Successfully pushed image to ECR_URL=${ECR_URL}"
-echo "${ECR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
-
-
+echo "Successfully pushed image to REGISTRY_URL=${REGISTRY_URL} (provider=${REGISTRY_PROVIDER})"
+echo "${REPOSITORY_REF}:${TAG}"

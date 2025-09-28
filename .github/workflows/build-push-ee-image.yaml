@@ -23,18 +23,30 @@ jobs:
     # unwanted software that's installed by default on the github runners to free up space. This is
     # already done in the test-k3s-helm workflow.
     runs-on: ubuntu-latest
+    env:
+      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'aws' }}
+      ACR_NAME: ${{ vars.ACR_NAME || '' }}
+      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
+      ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
     steps:
       - name: Configure AWS credentials
+        if: env.REGISTRY_PROVIDER == 'aws'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - name: Login to Amazon ECR
+        if: env.REGISTRY_PROVIDER == 'aws'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
         with:
           mask-password: "true"
+      - name: Azure login
+        if: env.REGISTRY_PROVIDER == 'azure'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Check out code
         uses: actions/checkout@v4
         with:
