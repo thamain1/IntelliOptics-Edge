@@ -7,6 +7,8 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
 
+from .config import settings
+
 # --- DEV ONLY: hard-wired SAS for sending to image-queries ---
 # Using your provided key and scoping to EntityPath=image-queries.
 # This bypasses env so the API always uses this during dev.
@@ -64,10 +66,21 @@ def upload_bytes(container: str, blob_name: str, data: bytes, content_type: str 
 
 # ---------------- Service Bus (SEND) ----------------
 def _sb_client_for_send() -> ServiceBusClient:
-    """
-    DEV: Force the known-good SAS, ignoring env to avoid accidental overrides.
-    """
-    return ServiceBusClient.from_connection_string(_DEV_SB_CONN_SEND_IQ)
+    """Create a ServiceBusClient for sending messages using configured credentials."""
+    if settings.sb_conn_str:
+        return ServiceBusClient.from_connection_string(settings.sb_conn_str)
+
+    if settings.sb_namespace:
+        fqdn = _ensure_fqdn(settings.sb_namespace)
+        credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+        return ServiceBusClient(fully_qualified_namespace=fqdn, credential=credential)
+
+    if settings.sb_use_dev_send_override:
+        return ServiceBusClient.from_connection_string(_DEV_SB_CONN_SEND_IQ)
+
+    raise RuntimeError(
+        "Provide AZ_SB_CONN_STR/SERVICE_BUS_CONN or AZ_SB_NAMESPACE (or enable SB_USE_DEV_SEND_OVERRIDE)"
+    )
 
 
 def send_sb_message(
