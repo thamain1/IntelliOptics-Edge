@@ -364,17 +364,72 @@ to resolve this, simply run the script `deploy/bin/fix-g4-routing.sh`.
 
 The issue should be permanently resolved at this point. You shouldn't need to run the script again on that node, 
 even after rebooting.
-## Pushing/Pulling Images from Elastic Container Registry (ECR)
+## Container registry configuration
 
-We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
-If you're testing things locally and want to use a different docker image, you can do so
-by first creating a docker image locally, pushing it to ECR, retrieving the image ID and
-then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+The Edge Endpoint images must live in a container registry that your Kubernetes
+cluster can reach. When running the official Helm chart, you can override the
+image location through the `image.registry`, `image.repository`, and
+`image.tag` values, and reference a Kubernetes image pull secret via the
+`imagePullSecrets` list. The instructions below focus on registries that are
+currently supported and tested.
 
-Follow the following steps:
+| Registry provider | Notes |
+| --- | --- |
+| Azure Container Registry (ACR) | Recommended for Azure-based deployments. Supports admin accounts and service principals for authentication. |
+| Any OCI-compatible registry | Works as long as it issues Docker-compatible credentials that can be stored in a Kubernetes secret. |
 
-```shell
-# Build and push image to ECR
-> ./deploy/bin/build-push-edge-endpoint-image.sh
-```
+### Azure Container Registry example
+
+1. Sign in with the Azure CLI:
+   ```bash
+   az login
+   ```
+2. Create a registry (skip if you already have one):
+   ```bash
+   az acr create --name <REGISTRY_NAME> --resource-group <RESOURCE_GROUP> --sku Standard
+   ```
+3. Authenticate Docker with ACR. You can use the admin account or a service
+   principal. For admin authentication:
+   ```bash
+   az acr login --name <REGISTRY_NAME>
+   ```
+   To use a service principal, first create credentials and then log in with
+   the returned `appId` (username) and `password`:
+   ```bash
+   az ad sp create-for-rbac --name <SP_NAME> \
+     --scopes $(az acr show --name <REGISTRY_NAME> --query id --output tsv) \
+     --role acrpush
+   docker login <REGISTRY_NAME>.azurecr.io --username <APP_ID> --password <PASSWORD>
+   ```
+4. Build and tag the image:
+   ```bash
+   docker build -t <REGISTRY_NAME>.azurecr.io/<REPOSITORY_NAME>:<TAG> .
+   ```
+5. Push the image:
+   ```bash
+   docker push <REGISTRY_NAME>.azurecr.io/<REPOSITORY_NAME>:<TAG>
+   ```
+6. Create or update the Kubernetes image pull secret so the cluster can pull
+   from ACR. Replace the username and password with either the admin account
+   credentials or the service principal ID and password:
+   ```bash
+   kubectl create secret docker-registry acr-credentials \
+     --namespace edge \
+     --docker-server=<REGISTRY_NAME>.azurecr.io \
+     --docker-username=<USERNAME> \
+     --docker-password='<PASSWORD>' \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+7. Reference the registry and secret when installing or upgrading the chart:
+   ```bash
+   helm upgrade -i -n edge edge-endpoint edge-endpoint/IntelliOptics-edge-endpoint \
+     --set image.registry=<REGISTRY_NAME>.azurecr.io \
+     --set image.repository=<REPOSITORY_NAME> \
+     --set image.tag=<TAG> \
+     --set imagePullSecrets[0].name=acr-credentials
+   ```
+
+For other OCI-compatible registries, follow the same pattern: build and push
+the image, create a Docker registry secret with appropriate credentials, and
+configure Helm to use that registry and secret.
 
