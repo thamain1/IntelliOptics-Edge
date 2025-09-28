@@ -6,7 +6,7 @@ DIR=$(cd "$(dirname "$0")" && pwd)
 IMG="$ACR_LOGIN_SERVER/intellioptics-api:latest"
 
 az acr login --name "$ACR" >/dev/null
-( cd backend && docker build -t "$IMG" . && docker push "$IMG" )
+( cd backend/api && docker build -t "$IMG" . && docker push "$IMG" )
 
 API_PLAN=${API_PLAN:-io-api-plan}
 WEBAPP=${WEBAPP:-io-api}
