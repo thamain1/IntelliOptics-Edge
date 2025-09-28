@@ -34,6 +34,10 @@ RUN apt-get update && \
     less \
     libglib2.0-0 \
     libgl1-mesa-glx \
+    sqlite3 \
+    ca-certificates \
+    gnupg \
+    lsb-release && \
 
     lsb-release \
     nginx \
@@ -67,6 +71,14 @@ RUN apt-get update && \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
     rm kubectl
+
+RUN cd /tmp && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install --update && \
+    rm -rf awscliv2.zip aws
+
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \
