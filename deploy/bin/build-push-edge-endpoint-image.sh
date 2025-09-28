@@ -1,6 +1,34 @@
 #!/bin/bash
 
 # This script builds and pushes the edge-endpoint Docker image to a container registry.
+#
+# Usage:
+#   ./build-push-edge-endpoint-image.sh [--registry-provider aws|azure]
+#
+# The script does the following:
+# 1. Sets the image tag based on the current git commit.
+# 2. Authenticates Docker with the registry provider.
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to the registry.
+#
+# Note: Ensure you have the necessary credentials and Docker installed.
+
+set -euo pipefail
+
+REGISTRY_PROVIDER=${REGISTRY_PROVIDER:-aws}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --registry-provider)
+      REGISTRY_PROVIDER=$(echo "$2" | tr '[:upper:]' '[:lower:]')
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 # Supported registries:
 #   * AWS Elastic Container Registry (default)
 #   * Azure Container Registry (`REGISTRY_PROVIDER=azure` with `ACR_NAME` or `ACR_LOGIN_SERVER`)
@@ -145,8 +173,14 @@ cd "${SCRIPT_DIR}"
 
 source ./registry.sh
 
-TAG=$(./git-tag-name.sh)
+source ./registry.sh
 
+TAG=$(./git-tag-name.sh)
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+REGISTRY_URL=$(registry_get_url)
+REPOSITORY_REF=$(registry_repository_ref "${EDGE_ENDPOINT_IMAGE}")
+
+registry_login
 
 IMAGE_REPO="${ACR_LOGIN_SERVER}/${ACR_REPOSITORY}"
 
@@ -313,6 +347,11 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+  --tag ${REPOSITORY_REF}:${TAG} \
+  ../.. --push
+
+echo "Successfully pushed image to REGISTRY_URL=${REGISTRY_URL} (provider=${REGISTRY_PROVIDER})"
+echo "${REPOSITORY_REF}:${TAG}"
   --tag ${IMAGE_REF}:${TAG} \
   ../.. --push
 
@@ -374,6 +413,5 @@ echo "${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
 
 echo "Successfully pushed image to ACR_REGISTRY=${ACR_REGISTRY}"
 echo "${ACR_REGISTRY}/${EDGE_ENDPOINT_IMAGE}:${TAG}"
-
 
 
