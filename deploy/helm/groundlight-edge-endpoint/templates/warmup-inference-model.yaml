@@ -35,7 +35,14 @@ spec:
       volumes:
       - name: pina-models
         persistentVolumeClaim:
+
+          claimName: {{ .Values.storage.data.claimName }}
+      - name: aws-credentials
+        secret:
+          secretName: aws-credentials-file
+
           claimName: edge-endpoint-pvc
+
   backoffLimit: 2
 
 

@@ -224,7 +224,7 @@ spec:
           name: inference-deployment-template
       - name: edge-endpoint-persistent-volume
         persistentVolumeClaim:
-          claimName: edge-endpoint-pvc
+          claimName: {{ .Values.storage.data.claimName }}
       - name: device-info-volume
         hostPath:
           path: /opt/intellioptics/device

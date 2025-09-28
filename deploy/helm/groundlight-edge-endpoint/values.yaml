@@ -25,11 +25,16 @@ imagePullPolicy: "Always"
 # namespace if you've overriden the default value).
 edgeEndpointPort: 30101
 
-# This is used as the base of the name for the PersistentVolume. The full name of the volume is 
-# created by appending the namespace to this value. Generally, this should not be overridden.
-# The PersistentVolume is used to store the model files and other data that the Edge Endpoint wants
-# to persist between restarts. It is mapped to `/opt/intellioptics/edge` on the host.
-persistentVolumeNameBase: "edge-endpoint-pv"
+# Persistent storage configuration for the edge endpoint. The PersistentVolume is used to store the
+# model files and other data that the Edge Endpoint wants to persist between restarts. It is mapped
+# to `/opt/intellioptics/edge` on the host.
+storage:
+  data:
+    persistentVolumeNameBase: "edge-endpoint-pv"
+    claimName: "edge-endpoint-pvc"
+    size: 2Gi
+    # Set to "" to use the default storage class for the cluster.
+    storageClassName: ""
 
 # Edge Endpoint will default to using the GPU for inference. If you want to use the CPU instead,
 # set this value to "cpu".
