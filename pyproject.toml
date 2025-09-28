@@ -22,6 +22,9 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
+
+intellioptics = {git = "https://github.com/thamain1/IntelliOptics.git", subdirectory = "python-sdk"}
+
 azure-identity = "^1.25.0"
 azure-servicebus = "^7.14.2"
 azure-storage-blob = "^12.26.0"
@@ -79,5 +82,3 @@ testpaths = ["test"]
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-
