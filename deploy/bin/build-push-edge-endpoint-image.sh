@@ -1,6 +1,10 @@
 #!/bin/bash
 
 
+# This script builds and pushes the edge-endpoint Docker image to Azure
+# Container Registry (ACR).
+
+
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
 
 
@@ -12,6 +16,7 @@
 # registry that is not Amazon ECR.
 
 # This script builds and pushes the edge-endpoint Docker image to Azure Container Registry (ACR).
+
 
 
 
@@ -23,6 +28,17 @@
 #
 # The script does the following:
 # 1. Sets the image tag based on the current git commit.
+
+# 2. Authenticates Docker with ACR (when credentials are provided).
+# 3. Builds a multi-platform Docker image.
+# 4. Pushes the image to ACR.
+#
+# Note: Ensure you have Docker installed. Provide ACR credentials via the
+# environment variables `ACR_LOGIN_SERVER`, `ACR_USERNAME`, and
+# `ACR_PASSWORD`, or log in to the registry before running the script.
+
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
+
 
 # 2. Authenticates Docker with ACR.
 # 3. Builds a multi-platform Docker image.
@@ -66,6 +82,22 @@ set -euo pipefail
 cd "${SCRIPT_DIR}"
 
 TAG=$(./git-tag-name.sh)
+
+
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-intellioptics/edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+ACR_REPOSITORY="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker to ACR when credentials are available. If credentials are
+# not supplied we assume the user has already logged in (for example via
+# `docker login`).
+if [[ -n "${ACR_USERNAME:-}" && -n "${ACR_PASSWORD:-}" ]]; then
+  echo "Logging in to ${ACR_LOGIN_SERVER}"
+  echo "${ACR_PASSWORD}" | docker login \
+    --username "${ACR_USERNAME}" \
+    --password-stdin "${ACR_LOGIN_SERVER}"
+else
+  echo "ACR credentials not provided; assuming docker is already logged in to ${ACR_LOGIN_SERVER}."
+fi
 
 REGISTRY_SERVER=${REGISTRY_SERVER:-}
 REGISTRY_NAMESPACE=${REGISTRY_NAMESPACE:-}
@@ -171,6 +203,12 @@ docker buildx inspect tempgroundlightedgebuilder --bootstrap
 # Build image for amd64 and arm64
 docker buildx build \
   --platform linux/arm64,linux/amd64 \
+  --tag ${ACR_REPOSITORY}:${TAG} \
+  --tag ${ACR_REPOSITORY}:latest \
+  ../.. --push
+
+echo "Successfully pushed image to ${ACR_REPOSITORY}"
+echo "${ACR_REPOSITORY}:${TAG}"
 
   --tag ${ACR_URL}/${EDGE_ENDPOINT_IMAGE}:${TAG} \
   ../.. --push

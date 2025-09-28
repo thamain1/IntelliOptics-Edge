@@ -2,6 +2,7 @@
 
 
 
+
 # Put a specific tag on an existing image in the configured container
 # registry. This script no longer depends on AWS ECR tooling.
 
@@ -21,6 +22,9 @@ set -euo pipefail
 
 set -e  # Exit immediately on error
 set -o pipefail
+
+
+ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
 
 
 # shellcheck disable=SC1091
@@ -56,6 +60,20 @@ if [[ "$NEW_TAG" == "pre-release" || "$NEW_TAG" == "release" || "$NEW_TAG" == "l
 fi
 
 GIT_TAG=$(./git-tag-name.sh)
+
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-intellioptics/edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+ACR_REPO="${ACR_LOGIN_SERVER}/${EDGE_ENDPOINT_IMAGE}"
+
+# Authenticate docker to ACR when credentials are available. If credentials are
+# not supplied we assume the user has already logged in.
+if [[ -n "${ACR_USERNAME:-}" && -n "${ACR_PASSWORD:-}" ]]; then
+    echo "Logging in to ${ACR_LOGIN_SERVER}"
+    echo "${ACR_PASSWORD}" | docker login \
+        --username "${ACR_USERNAME}" \
+        --password-stdin "${ACR_LOGIN_SERVER}"
+else
+    echo "ACR credentials not provided; assuming docker is already logged in to ${ACR_LOGIN_SERVER}."
+fi
 EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
 ACR_URL="${ACR_LOGIN_SERVER}"
 ACR_REPO="${ACR_URL}/${EDGE_ENDPOINT_IMAGE}"
@@ -127,11 +145,16 @@ fi
 
 
 
-
 # Tag the image with the new tag
 # To do this, we need to pull the digest SHA of the existing multiplatform image
 # and then create the tag on that SHA. Otherwise imagetools will create a tag for
 # just the platform where the command is run.
+
+echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
+digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
+docker buildx imagetools create --tag $ACR_REPO:$NEW_TAG $ACR_REPO@${digest}
+
+echo "✅ Image successfully tagged: $ACR_REPO:$NEW_TAG"
 
 echo "🏷️ Tagging image $ACR_REPO:$GIT_TAG with tag $NEW_TAG"
 digest=$(docker buildx imagetools inspect $ACR_REPO:$GIT_TAG --format '{{json .}}' | jq -r .manifest.digest)
