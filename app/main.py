@@ -14,9 +14,10 @@ from fastapi import FastAPI
 from app.api.api import api_router, health_router, ping_router
 from app.api.naming import API_BASE_PATH
 from app.core.app_state import AppState
+from app.streaming.rtsp_ingest import StreamIngestManager
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
-DEPLOY_DETECTOR_LEVEL_INFERENCE = bool(int(os.environ.get("DEPLOY_DETECTOR_LEVEL_INFERENCE", 0)))
+DEPLOY_DETECTOR_LEVEL_INFERENCE = bool(int(os.environ.get("DEPLOY_DETECTOR_LEVEL_INFERENCE", "0")))
 
 logging.basicConfig(
     level=LOG_LEVEL, format="%(asctime)s.%(msecs)03d %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
@@ -52,6 +53,8 @@ async def startup_event():
     app.state.app_state = AppState()
     app.state.app_state.db_manager.reset_database()
 
+    app.state.stream_manager = StreamIngestManager(app.state.app_state)
+
     logging.info(f"edge_config={app.state.app_state.edge_config}")
 
     if DEPLOY_DETECTOR_LEVEL_INFERENCE:
@@ -59,6 +62,7 @@ async def startup_event():
         scheduler.add_job(update_inference_config, "interval", seconds=30, args=[app.state.app_state])
         scheduler.start()
 
+    await app.state.stream_manager.start()
     app.state.app_state.is_ready = True
     logging.info("Application is ready to serve requests.")
 
@@ -68,5 +72,8 @@ async def shutdown_event():
     """Lifecycle event that is triggered when the application is shutting down."""
     app.state.app_state.is_ready = False
     app.state.app_state.db_manager.shutdown()
+    stream_manager: StreamIngestManager | None = getattr(app.state, "stream_manager", None)
+    if stream_manager is not None:
+        await stream_manager.stop()
     if DEPLOY_DETECTOR_LEVEL_INFERENCE:
         scheduler.shutdown()

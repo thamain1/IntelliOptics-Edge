@@ -29,3 +29,20 @@ detectors: # Each entry here defines the edge configuration for a detector.
   # you want to use. You can use or modify one of the existing edge inference configs listed above, or define your own.
     - detector_id: ""
       edge_inference_config: "default"
+
+streams: # Optional RTSP/GStreamer ingest configuration.
+  # Each entry defines how to subscribe to a camera feed and which detector should receive frames.
+  # Credentials can be supplied inline or via environment variables so they can be sourced from secrets.
+  # - name: packaging_line_cam
+  #   detector_id: "det_123456"
+  #   url: "rtsp://192.0.2.10/stream1"
+  #   sampling_interval_seconds: 2.0
+  #   reconnect_delay_seconds: 5.0
+  #   backend: "auto"  # also supports "ffmpeg" or "gstreamer"
+  #   encoding: "jpeg"  # or "png"
+  #   submission_method: "edge"  # or "api"
+  #   api_base_url: "http://127.0.0.1:30101"
+  #   api_token_env: "INTELLIOPTICS_API_TOKEN"
+  #   credentials:
+  #     username_env: "CAM1_USERNAME"
+  #     password_env: "CAM1_PASSWORD"

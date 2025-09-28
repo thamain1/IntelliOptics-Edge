@@ -48,6 +48,7 @@ def _load_config_from_yaml(yaml_config) -> RootEdgeConfig:
     config = yaml.safe_load(yaml_config)
 
     detectors = config.get("detectors", [])
+    streams = config.get("streams", [])
     detector_ids = [det["detector_id"] for det in detectors]
 
     # Check for duplicate detector IDs
@@ -55,6 +56,7 @@ def _load_config_from_yaml(yaml_config) -> RootEdgeConfig:
         raise ValueError("Duplicate detector IDs found in the configuration. Each detector should only have one entry.")
 
     config["detectors"] = {det["detector_id"]: det for det in detectors}
+    config["streams"] = {stream["name"]: stream for stream in streams}
 
     return RootEdgeConfig(**config)
 
@@ -147,6 +149,7 @@ class AppState:
         detector_inference_configs = get_detector_inference_configs(root_edge_config=self.edge_config)
         self.edge_inference_manager = EdgeInferenceManager(detector_inference_configs=detector_inference_configs)
         self.db_manager = DatabaseManager()
+        self.stream_configs = self.edge_config.streams
         self.is_ready = False
 
 

@@ -188,6 +188,58 @@ If the server is not your Azure registry or the username is missing, rerun the c
 
 After these prerequisites are in place you can follow the Helm instructions below without needing any AWS credentials. If your cluster also needs to pull from AWS Elastic Container Registry (ECR), continue to manage those credentials alongside the Azure secret.
 
+## Configuring RTSP streaming ingest
+
+The edge endpoint now supports continuously sampling RTSP or GStreamer camera feeds and piping those frames through the existing `/device-api/v1/image-queries` pipeline. The ingest workers run inside the main `edge-endpoint` container so that the same detector configuration, escalation rules, and metrics tracking are reused.
+
+1. **Describe streams in `edge-config.yaml`.** Add a `streams` section that identifies the detector, RTSP URL, sampling cadence, and any credentials. The example below demonstrates capturing a frame every two seconds and submitting it directly to the edge inference stack.
+
+   ```yaml
+   streams:
+     - name: packaging_line_cam
+       detector_id: "det_123456"
+       url: "rtsp://192.0.2.10/stream1"
+       sampling_interval_seconds: 2.0
+       reconnect_delay_seconds: 5.0
+       backend: "auto"          # or "gstreamer" when providing a pipeline string
+       encoding: "jpeg"         # or "png" when lossless captures are required
+       submission_method: "edge"  # use "api" to POST through /device-api/v1/image-queries
+       api_token_env: "INTELLIOPTICS_API_TOKEN"  # only needed when submission_method=api
+       credentials:
+         username_env: "CAM1_USERNAME"
+         password_env: "CAM1_PASSWORD"
+   ```
+
+   Credentials can be provided inline for quick tests, but we recommend referencing environment variables so Kubernetes secrets can be injected without editing the config file.
+
+2. **Expose credentials and multimedia libraries via Helm values.** Enable the helper stanza in `values.yaml` so that the deployment renders the required environment variables or host-mounted libraries. The following snippet injects RTSP credentials from a secret and mounts a host path that contains GStreamer plugins:
+
+   ```yaml
+   streaming:
+     enabled: true
+     secretEnvs:
+       - name: CAM1_USERNAME
+         secretName: camera1-rtsp
+         secretKey: username
+       - name: CAM1_PASSWORD
+         secretName: camera1-rtsp
+         secretKey: password
+         optional: false
+     extraVolumes:
+       gstreamer-libs:
+         hostPath:
+           path: /usr/lib/aarch64-linux-gnu/gstreamer-1.0
+     extraVolumeMounts:
+       - name: gstreamer-libs
+         mountPath: /usr/lib/aarch64-linux-gnu/gstreamer-1.0
+   ```
+
+   When the `streaming.enabled` flag is set, the chart automatically expands the environment variables and volume mounts for the main container so OpenCV can authenticate to cameras and locate the required multimedia codecs. Additional variables can be surfaced through `streaming.extraEnv` for non-secret configuration (for example, custom RTSP options or alternate `/image-queries` endpoints).
+
+3. **Verify ingest at runtime.** Once the pod restarts, the application log should include messages such as `Starting RTSP ingest for stream 'packaging_line_cam' targeting detector 'det_123456'`. Any reconnect attempts or inference failures are logged with the stream name, making it easier to monitor camera health alongside the existing detector metrics.
+
+If RTSP ingest is not required, omit the `streams` section—the worker is idle by default. Multiple streams can be defined, and each one runs in its own asyncio task so a slow or disconnected camera does not block the others.
+
 ### Setting up Single-Node Kubernetes with k3s
 
 If you don't have [k3s](https://docs.k3s.io/) installed, there is a script which can install it depending on whether you have a NVidia GPU or not.  If you don't set up a GPU, the models will run on the CPU, but be somewhat slower.
