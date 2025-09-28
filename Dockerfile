@@ -98,9 +98,17 @@ RUN set -eux; \
 
     rm kubectl
 
+
+RUN cd /tmp && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip -q awscliv2.zip && \
+    ./aws/install --update && \
+    rm -rf awscliv2.zip aws
+
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
 
 # Set Python and Poetry ENV vars
 ENV PYTHONUNBUFFERED=1 \
