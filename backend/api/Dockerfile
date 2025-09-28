@@ -44,6 +44,7 @@ COPY api/app /app/app
 # --- Python requirements ---
 COPY backend/api/requirements.txt /app/
 
+
 # --- IntelliOptics SDK (wheel) ---
 # Keep this line only if that wheel exists in your build context
 COPY intellioptics-python-sdk/dist/intellioptics-0.1.0-py3-none-any.whl /tmp/
@@ -51,6 +52,7 @@ RUN ls -l /tmp || true
 
 #   backend/api/app  --> copied to /app/app
 COPY backend/api/app /app/app
+
 
 # --- Python deps ---
 # Install the published IntelliOptics SDK from your package registry (e.g. PyPI).
@@ -83,6 +85,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
       fastapi "uvicorn[standard]" pydantic sqlalchemy python-multipart \
 
       azure-identity azure-servicebus azure-storage-blob httpx \
+
+      intellioptics==0.1.0
 
       intellioptics-sdk
 

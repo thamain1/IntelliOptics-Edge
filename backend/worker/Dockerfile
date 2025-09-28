@@ -1,6 +1,10 @@
 FROM python:3.11-slim
 
 
+
+# Install SDK and then worker reqs
+RUN pip install --no-cache-dir intellioptics==0.1.0 && \
+
 # Copy worker code from the repo
 COPY backend/worker/ /app/worker/
 

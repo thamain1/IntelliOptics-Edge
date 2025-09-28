@@ -680,7 +680,7 @@ dependencies = [
     { name = "azure-identity" },
     { name = "azure-keyvault-secrets" },
     { name = "fabric" },
-    { name = "groundlight" },
+    { name = "intellioptics" },
     { name = "pulumi" },
     { name = "pulumi-azure-native" },
 ]
@@ -691,7 +691,7 @@ requires-dist = [
     { name = "azure-identity", specifier = ">=1.17.0" },
     { name = "azure-keyvault-secrets", specifier = ">=4.9.0" },
     { name = "fabric", specifier = ">=3.2.2" },
-    { name = "groundlight", specifier = ">=0.22.6,<0.23.0" },
+    { name = "intellioptics", specifier = "==0.1.0" },
     { name = "pulumi", specifier = ">=3" },
     { name = "pulumi-azure-native", specifier = ">=2.8.0" },
 
