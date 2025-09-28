@@ -1,6 +1,4 @@
 
-from typing import Any
-
 from __future__ import annotations
 
 import datetime as dt
@@ -9,7 +7,7 @@ from typing import Any, Dict
 
 
 from sqlalchemy.orm import Mapped, mapped_column, declarative_base
-from sqlalchemy import String, Float, Boolean, JSON, TIMESTAMP, func, inspect
+from sqlalchemy import Integer, String, Float, Boolean, JSON, TIMESTAMP, func, inspect
 from sqlalchemy.engine import Engine
 
 Base = declarative_base()
@@ -101,4 +99,35 @@ def ensure_alert_events_table(engine: Engine) -> bool:
     inspector = inspect(engine)
     existing = inspector.has_table(AlertEvent.__tablename__)
     AlertEvent.__table__.create(bind=engine, checkfirst=True)
+    return not existing
+
+
+class EdgeConfigDocument(Base):
+    __tablename__ = "edge_config_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    global_config: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    edge_inference_configs: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    detectors: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    streams: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at = mapped_column(
+        TIMESTAMP(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+def ensure_edge_config_document_table(engine: Engine) -> bool:
+    """Ensure the edge_config_documents table exists."""
+
+    inspector = inspect(engine)
+    existing = inspector.has_table(EdgeConfigDocument.__tablename__)
+    EdgeConfigDocument.__table__.create(bind=engine, checkfirst=True)
     return not existing

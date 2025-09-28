@@ -1,0 +1,78 @@
+{{- if .Values.configSync.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edge-config-sync-script
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
+data:
+  edge_config_sync.py: |
+{{ include "IntelliOptics-edge-endpoint.edgeConfigSyncScript" . | indent 4 }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: edge-config-sync
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
+spec:
+  schedule: {{ quote .Values.configSync.schedule }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.configSync.ttlSecondsAfterFinished }}
+      template:
+        metadata:
+          labels:
+            {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 12 }}
+          annotations:
+{{- range $key, $value := .Values.configSync.podAnnotations }}
+            {{ $key }}: {{ $value | quote }}
+{{- end }}
+        spec:
+          serviceAccountName: {{ if .Values.configSync.serviceAccountName }}{{ .Values.configSync.serviceAccountName }}{{ else }}{{ include "IntelliOptics-edge-endpoint.serviceAccountName" . }}{{ end }}
+          restartPolicy: OnFailure
+          containers:
+            - name: edge-config-sync
+              image: {{ .Values.configSync.image | quote }}
+              imagePullPolicy: {{ .Values.configSync.imagePullPolicy | quote }}
+              command:
+                - python
+                - /opt/sync/edge_config_sync.py
+              args:
+                - --api-base
+                - {{ required "configSync.apiBase must be set to the cloud API base (e.g. https://api/v1)" .Values.configSync.apiBase | quote }}
+                - --namespace
+                - {{ .Values.namespace | quote }}
+                - --configmap
+                - {{ .Values.configSync.configMapName | quote }}
+{{- if .Values.configSync.restartAfterSync }}
+                - --restart
+                - --deployment
+                - {{ .Values.configSync.deploymentName | quote }}
+{{- end }}
+              env:
+{{- if .Values.configSync.apiKeySecretName }}
+                - name: INTELLIOPTICS_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.configSync.apiKeySecretName }}
+                      key: {{ .Values.configSync.apiKeySecretKey }}
+{{- end }}
+{{- range .Values.configSync.extraEnv }}
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+{{- end }}
+              resources:
+{{ toYaml .Values.configSync.resources | indent 16 }}
+              volumeMounts:
+                - name: edge-config-sync-script
+                  mountPath: /opt/sync
+                  readOnly: true
+          volumes:
+            - name: edge-config-sync-script
+              configMap:
+                name: edge-config-sync-script
+                defaultMode: 0555
+{{- end }}
