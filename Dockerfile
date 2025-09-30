@@ -16,16 +16,22 @@ ARG APP_ROOT
 ARG POETRY_HOME
 ARG POETRY_VERSION
 
-# System deps + Azure CLI (keyring) + Poetry (pip)
+# System deps + Azure CLI (keyring) + Poetry (pip) + kubectl
 RUN set -eux; \
     apt-get update; \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash ca-certificates curl gnupg less lsb-release libgl1-mesa-glx libglib2.0-0 nginx sqlite3 unzip; \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      bash ca-certificates curl gnupg less lsb-release libgl1-mesa-glx libglib2.0-0 nginx sqlite3 unzip; \
     mkdir -p /usr/share/keyrings; \
-    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/azure-cli-archive-keyring.gpg; \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/azure-cli-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ bullseye main" > /etc/apt/sources.list.d/azure-cli.list; \
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | gpg --dearmor -o /usr/share/keyrings/azure-cli-archive-keyring.gpg; \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/azure-cli-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ bullseye main" \
+      > /etc/apt/sources.list.d/azure-cli.list; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends azure-cli; \
     python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}"; \
+    curl -fsSL https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl \
+      -o /usr/local/bin/kubectl; \
+    chmod 0755 /usr/local/bin/kubectl; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
@@ -34,6 +40,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     POETRY_HOME=${POETRY_HOME} \
     POETRY_VERSION=${POETRY_VERSION} \
+    POETRY_VIRTUALENVS_CREATE=false \
     PATH=${POETRY_HOME}/bin:$PATH \
     PYTHONPATH=${APP_ROOT}:${APP_ROOT}/app
 
@@ -44,7 +51,6 @@ COPY ./pyproject.toml ./poetry.lock ${APP_ROOT}/
 # Install prod dependencies into the system env (no venv)
 RUN set -eux; \
     poetry --version; \
-    poetry config virtualenvs.create false; \
     poetry check --lock; \
     poetry install --no-interaction --no-root --without dev --without lint; \
     poetry cache clear --all pypi || true
@@ -67,6 +73,7 @@ ARG POETRY_HOME
 
 ENV PATH=${POETRY_HOME}/bin:$PATH \
     APP_PORT=${UVICORN_PORT} \
+    POETRY_VIRTUALENVS_CREATE=false \
     PYTHONPATH=${APP_ROOT}:${APP_ROOT}/app
 
 WORKDIR ${APP_ROOT}
