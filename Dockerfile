@@ -16,7 +16,7 @@ ARG APP_ROOT
 ARG POETRY_HOME
 ARG POETRY_VERSION
 
-# System deps, Azure CLI (signed keyring), Poetry, kubectl, AWS CLI v2
+# System deps, Azure CLI (signed keyring), Poetry, kubectl
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -47,13 +47,6 @@ RUN set -eux; \
     # kubectl (latest stable)
     curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
     chmod 0755 /usr/local/bin/kubectl; \
-    \
-    # AWS CLI v2
-    cd /tmp; \
-    curl -fsSLo awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"; \
-    unzip -q awscliv2.zip; \
-    ./aws/install --update; \
-    rm -rf aws awscliv2.zip; \
     \
     # Clean
     apt-get clean; \
