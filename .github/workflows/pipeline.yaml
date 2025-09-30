@@ -67,6 +67,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "poetry==${{ env.POETRY_VERSION }}"
 
+      - name: Regenerate lock (no updates)
+        run: |
+          # Keep lock file consistent with pyproject modifications
+          poetry lock --no-update
+
       - name: Install project (no dev if Makefile not present)
         run: |
           if [ -f Makefile ]; then
