@@ -157,4 +157,3 @@ def get_app_state(request: Request) -> AppState:
     if not hasattr(request.app.state, "app_state"):
         raise RuntimeError("App state is not initialized.")
     return request.app.state.app_state
-

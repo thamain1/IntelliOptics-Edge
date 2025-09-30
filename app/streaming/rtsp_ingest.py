@@ -100,9 +100,7 @@ class RTSPStreamWorker:
             StreamBackend.GSTREAMER: getattr(cv2, "CAP_GSTREAMER", 0),
         }[self.config.backend]
 
-        LOGGER.debug(
-            "Opening stream '%s' with backend '%s'", self.name, self.config.backend.value
-        )
+        LOGGER.debug("Opening stream '%s' with backend '%s'", self.name, self.config.backend.value)
         capture = cv2.VideoCapture(url, backend_flag) if backend_flag else cv2.VideoCapture(url)
         if not capture.isOpened():
             LOGGER.warning(

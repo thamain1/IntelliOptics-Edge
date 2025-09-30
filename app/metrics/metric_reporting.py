@@ -122,4 +122,3 @@ if __name__ == "__main__":
     reporter = MetricsReporter()
     reporter.collect_metrics_for_cloud()
     reporter.report_metrics_to_cloud()
-
