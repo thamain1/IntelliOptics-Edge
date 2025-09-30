@@ -1,59 +1,63 @@
-name: auto-format
-on: pull_request
+name: Auto Format
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: write
-
-env:
-  PYTHON_VERSION: "3.11"
+  pull-requests: write
 
 jobs:
   format:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    name: Auto format on PR
     runs-on: ubuntu-latest
     steps:
-      - name: Get code
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Install Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.11"
+          cache: "pip"
 
-      - name: Install Poetry via pipx (1.8.3)
+      - name: Install Poetry 1.8.3 (via pip)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pipx
-          python -m pipx ensurepath
-          ~/.local/bin/pipx install "poetry==1.8.3"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "PATH=$HOME/.local/bin:$PATH" >> "$GITHUB_ENV"
-
-      - name: Install lint deps
-        run: |
+          python -m pip install "poetry==1.8.3"
           poetry --version
-          make install-lint
 
-      - name: Run formatter
-        run: make format
-
-      - name: Check for modified files
-        id: git-check
+      - name: Install formatting deps
         run: |
-          git status
-          if git diff-index --quiet HEAD --; then
-            echo "modified=false" >> "$GITHUB_OUTPUT"
+          if [ -f Makefile ]; then
+            make install-lint || true
+          fi
+          # Fallback to ensure tools exist even if Makefile no-ops
+          python -m pip install black ruff isort yamllint || true
+
+      - name: Run formatters
+        run: |
+          set -e
+          if [ -f Makefile ]; then
+            make format || true
           else
-            echo "modified=true" >> "$GITHUB_OUTPUT"
+            black .
+            ruff check . --fix || true
+            isort . || true
           fi
 
-      - name: Push changes
-        if: steps.git-check.outputs.modified == 'true'
-        run: |
-          git config --global user.name "Auto-format Bot"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git commit -am "Automatically reformatting code with black and isort"
-          git push
+      - name: Commit changes back to PR
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format via CI"
+          branch: ${{ github.head_ref }}
+          file_pattern: |
+            **/*.py
+            **/*.yaml
+            **/*.yml
+            **/*.toml
+            **/*.md
