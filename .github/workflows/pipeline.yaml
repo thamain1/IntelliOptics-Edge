@@ -1,708 +1,153 @@
-name: cicd
+name: CI Pipeline
+
 on:
   push:
-    branches:
-      - main
+    branches: ["**"]
+    tags: ["v*.*.*"]
   pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened]
-  # This allows it to be triggered manually in the github console
-  # You could put inputs here, but we don't need them.
-  workflow_dispatch:
+    branches: ["**"]
 
-
-  # This allows it to be triggered manually in the github console
-  # You could put inputs here, but we don't need them.
-
-  # This allows it to be triggered manually in the github console
-  # You could put inputs here, but we don't need them.
-
-
-  # This allows it to be triggered manually in the github console
-  # You could put inputs here, but we don't need them.
-
-      # yamllint disable rule:comments-indentation
-      # This allows it to be triggered manually in the github console
-      # You could put inputs here, but we don't need them.
-      # yamllint enable rule:comments-indentation
-
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  # This causes it to cancel previous in-progress actions in the same PR
-  cancel-in-progress: true
 env:
   PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "2.1.3"
-  INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
-  ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
-  ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
+  POETRY_VERSION: "1.8.3"
+  IMAGE_NAME: "intellioptics/edge"
 
 jobs:
-  test-general-edge-endpoint:
-    runs-on: ubuntu-22.04
-    env:
-      # This is the NGINX proxy endpoint
-      INTELLIOPTICS_ENDPOINT: http://localhost:30101
+  lint:
+    name: Lint & Validate
+    runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up python
-        id: setup_python
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-      - name: Install poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load Cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install edge-endpoint's python dependencies
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
         run: |
-          poetry install --no-interaction --no-root
+          python -m pip install --upgrade pip
+          python -m pip install "poetry==${{ env.POETRY_VERSION }}"
 
-      - name: Run Unit Tests (that dont require docker)
+      - name: Show Poetry & Python
         run: |
-          # Point these tests to the cloud endpoint, because to test the edge-endpoint, they
-          # dont actually issue requests. They interally setup a test client and server.
-          # The cloud endpoint is needed so that the /me endpoint succeeds and we can actually
-          # use the IO client.
-          INTELLIOPTICS_ENDPOINT="intellioptics-api-37558.azurewebsites.net"
-          source test/setup_plain_test_env.sh
-          poetry run pytest -vs -k "not _live"
+          python --version
+          poetry --version
 
-      - name: Install Docker
+      - name: Install lint deps (Makefile target if available)
         run: |
-          sudo apt-get update
-          sudo apt-get remove moby-runc
-          sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-          sudo apt-get update
-          sudo apt-get install docker-ce
+          if [ -f Makefile ]; then
+            make install-lint || true
+          fi
+          python -m pip install yamllint
 
-      - name: Build Docker Image
-        run: docker build --tag intellioptics-edge .
-
-      - name: Start Docker Container
-        id: start_container
+      - name: Validate workflow YAML
+        working-directory: .github/workflows
         run: |
-          source test/setup_plain_test_env.sh
-          echo "EDGE_CONFIG=$EDGE_CONFIG"
-          container_id=$(docker run \
-            -e LOG_LEVEL=DEBUG \
-            -e EDGE_CONFIG \
-            -d -p 30101:30101 \
-            intellioptics-edge)
-          echo "container_id=$container_id" >> $GITHUB_OUTPUT
+          yamllint -c ../.yamllint.yaml pipeline.yaml auto-format.yaml
 
-      - name: Run Unit Tests (that do require docker)
-        run: |
-          INTELLIOPTICS_ENDPOINT=http://localhost:30101
-          source test/setup_plain_test_env.sh
-          poetry run pytest -k "_live"
-
-      - name: Dump Logs from Docker Container
-        if: always()
-        run: docker logs ${{ steps.start_container.outputs.container_id }}
-
-      - name: Stop Docker Container
-        # This ensures that we always stop the container regardless of the outcomes of
-        # the previous steps
-        if: always()
-        run: docker stop ${{ steps.start_container.outputs.container_id }}
-
-  # Run IntelliOptics SDK tests against the edge proxy endpoint
-  test-sdk:
-    runs-on: ubuntu-22.04
-    env:
-      # This is the NGINX proxy endpoint
-      INTELLIOPTICS_ENDPOINT: http://localhost:30101
+  test:
+    name: Unit & Integration Tests
+    needs: [lint]
+    runs-on: ubuntu-latest
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up python
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-      - name: Install Docker
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
         run: |
-          sudo apt-get update
-          sudo apt-get remove moby-runc
-          sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-          sudo apt-get update
-          sudo apt-get install docker-ce
-      - name: Build Docker Image
-        run: docker build --tag intellioptics-edge .
+          python -m pip install --upgrade pip
+          python -m pip install "poetry==${{ env.POETRY_VERSION }}"
 
-      - name: Start Docker Container
-        id: start_container
+      - name: Configure Poetry to avoid virtualenv in project
         run: |
-          source test/setup_plain_test_env.sh
-          echo "EDGE_CONFIG=$EDGE_CONFIG"
-          container_id=$(docker run \
-            -e LOG_LEVEL=DEBUG \
-            -e EDGE_CONFIG \
-            -d -p 30101:30101 \
-            intellioptics-edge)
-          echo "container_id=$container_id" >> $GITHUB_OUTPUT
-      - name: Install poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
+          poetry config virtualenvs.in-project false
 
-      - name: Load Cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
-
-      # Note that we're pulling the latest main from the SDK repo
-      # This might be ahead of what's published to pypi, but it's useful to test things before they're released.
-      - name: Checkout IntelliOptics SDK
-        uses: actions/checkout@v4
-        with:
-          repository: intellioptics/python-sdk
-          path: intellioptics-sdk
-
-      - name: Install IntelliOptics SDK dependencies
+      - name: Install project (no dev if Makefile not present)
         run: |
-          cd intellioptics-sdk
-          make install
-      - name: Run IntelliOptics SDK tests against Prod API via Edge Proxy Endpoint
-        run: |
-          cd intellioptics-sdk
-          make test-4edge
-          cd ..
-      - name: Dump Logs from Docker Container
-        if: always()
-        run: docker logs ${{ steps.start_container.outputs.container_id }}
+          if [ -f Makefile ]; then
+            make install || poetry install
+          else
+            poetry install
+          fi
 
-      - name: Stop Docker Container
-        # This ensures that we always stop the container regardless of the outcomes of
-        # the previous steps
-        if: always()
-        run: docker stop ${{ steps.start_container.outputs.container_id }}
-
-
-  main-tests-pass:
-    runs-on: ubuntu-latest
-    # This is a dummy step to avoid repeating the list of tests
-    needs:
-      - test-general-edge-endpoint
-      - test-sdk
-
-  call-build-push-ee-image:
-    # We run this at the beginning of every PR so that the various full k3s tests
-    # can use this image
-    uses: ./.github/workflows/build-push-ee-image.yaml
-    with:
-      repo: ${{ github.repository }}
-      ref: ${{ github.ref }}
-      acr_name: ${{ vars.AZURE_ACR_NAME }}
-      acr_login_server: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
-    secrets:
-
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-
-      REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-
-
-  validate-setup-ee:
-    runs-on: ubuntu-latest-4-cores
-    # We need more disk space than the default (2 core) runners have.
-    # They have 73GB total, 21GB available.  4-cores has 145GB raw, 93 GB available.
-    needs:
-      - call-build-push-ee-image
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install k3s
-        run: |
-          ./deploy/bin/install-k3s.sh cpu
-
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login to Azure Container Registry
-        run: az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Log in to container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Log in to Azure Container Registry
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
+      - name: Run tests
         env:
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-
-
-      - name: Install poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Install edge-endpoint's python dependencies
+          PYTHONUNBUFFERED: "1"
         run: |
-          poetry install --no-interaction --no-root
+          if [ -f Makefile ]; then
+            make test || poetry run pytest -q
+          else
+            poetry run pytest -q
+          fi
 
-      - name: Validate setup edge endpoint
-        run: |
-          export IMAGE_TAG=$(./deploy/bin/git-tag-name.sh)
-          make validate-setup-ee
-
-      - name: Diagnose failure
-        if: failure()
-        run: |
-          NAMESPACE=validate-setup-ee ./deploy/bin/diagnose-k8-failure.sh
-
-  validate-setup-helm:
-    runs-on: ubuntu-latest-4-cores
-    needs:
-      - call-build-push-ee-image
-    env:
-      # associated with roxanne+test_edge account since for some reason it was failing with
-      # prod biggies
-      INTELLIOPTICS_API_TOKEN: ${{ secrets.K3S_TEST_INTELLIOPTICS_API_TOKEN }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install k3s
-        run: |
-          ./deploy/bin/install-k3s.sh cpu
-
-      - name: Validate setup edge endpoint
-        run: |
-          make validate-setup-helm
-
-
-    steps:
-      - name: declare success
-        run: echo "Main suite of tests all pass."
-
-  build-azure-image:
-    name: Build edge image for Azure
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - main-tests-pass
+  docker_build:
+    name: Build & (optionally) Push Docker image
+    if: github.event_name != 'pull_request'
+    needs: [test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
-      IMAGE_NAME: intellioptics/edge-endpoint
       ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
       ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
       ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-    outputs:
-      image-tag: ${{ steps.compute-tag.outputs.image_tag }}
-      image-repository: ${{ steps.compute-tag.outputs.image_repository }}
-      acr-name: ${{ steps.compute-tag.outputs.acr_name }}
     steps:
-      - name: Check out code
+      - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Install k3s
-        run: |
-          ./deploy/bin/install-k3s.sh cpu
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login to Azure Container Registry
-        run: az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Log in to container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-
-      - name: Install poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Install k3s
-        run: |
-          ./deploy/bin/install-k3s.sh cpu
-
-      - name: Log in to Azure Container Registry
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
-        env:
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-
-      - name: Log in to Azure Container Registry
+      - name: Log in to container registry (if secrets provided)
+        if: env.ACR_LOGIN_SERVER != '' && env.ACR_USERNAME != '' && env.ACR_PASSWORD != ''
         uses: docker/login-action@v3
         with:
           registry: ${{ env.ACR_LOGIN_SERVER }}
           username: ${{ env.ACR_USERNAME }}
           password: ${{ env.ACR_PASSWORD }}
 
-      - name: Compute image tag
-        id: compute-tag
+      - name: Derive tags
+        id: meta
         run: |
-          set -euo pipefail
-          sha_tag="${GITHUB_SHA::7}"
-          echo "image_tag=$sha_tag" >> "$GITHUB_OUTPUT"
-          echo "image_repository=${ACR_LOGIN_SERVER}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
-          echo "acr_name=${ACR_LOGIN_SERVER%%.*}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push image
-        env:
-          IMAGE_TAG: ${{ steps.compute-tag.outputs.image_tag }}
-        run: |
-          set -euo pipefail
-          REG="$ACR_LOGIN_SERVER"
-          IMG="$REG/${IMAGE_NAME}"
-          docker build -t "$IMG:$IMAGE_TAG" -t "$IMG:latest" .
-          docker push "$IMG:$IMAGE_TAG"
-          docker push "$IMG:latest"
-          
-  main-tests-pass:
-    runs-on: ubuntu-latest
-    # This is a dummy step to avoid repeating the list of tests
-    needs:
-      - test-general-edge-endpoint
-      - test-sdk
-      - test-with-k3s-setup-ee
-      - call-test-with-k3s-helm
-      - validate-setup-ee
-      - validate-setup-helm
-    steps:
-      - name: declare success
-        run: echo "Main suite of tests all pass."
-  
-  update-glhub:
-  deploy-azure-staging:
-    name: Deploy edge endpoint to Azure staging
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - build-azure-image
-    runs-on: ubuntu-latest
-    env:
-      IMAGE_NAME: intellioptics/edge-endpoint
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-      AZ_RESOURCE_GROUP: ${{ secrets.AZ_RESOURCE_GROUP }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Select subscription (optional)
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
-            az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          TAG="ci-${GITHUB_SHA::7}"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "tag_latest=true" >> $GITHUB_OUTPUT
           fi
-
-      - name: Install template tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gettext-base
-
-      - name: Render staging container group manifest
-        env:
-          AZ_LOCATION: ${{ secrets.AZ_LOCATION }}
-          ACI_NAME: ${{ secrets.AZURE_STAGING_CONTAINER_GROUP }}
-          ACI_CONTAINER_NAME: edge-endpoint
-          EDGE_IMAGE_TAG: ${{ needs.build-azure-image.outputs.image-tag }}
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-          INTELLIOPTICS_ENDPOINT: ${{ secrets.STAGING_INTELLIOPTICS_ENDPOINT }}
-          INTELLIOPTICS_API_TOKEN: ${{ secrets.STAGING_INTELLIOPTICS_API_TOKEN }}
-          FALLBACK_INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
-          SERVICE_BUS_CONN: ${{ secrets.STAGING_SERVICE_BUS_CONN }}
-          FALLBACK_SERVICE_BUS_CONN: ${{ secrets.SERVICE_BUS_CONN }}
-          SB_IMAGE_QUEUE: ${{ secrets.STAGING_SB_IMAGE_QUEUE }}
-          SB_RESULTS_QUEUE: ${{ secrets.STAGING_SB_RESULTS_QUEUE }}
-          SB_FEEDBACK_QUEUE: ${{ secrets.STAGING_SB_FEEDBACK_QUEUE }}
-        run: |
-          set -euo pipefail
-          : "${ACI_NAME:?AZURE_STAGING_CONTAINER_GROUP secret is required}"
-          : "${AZ_RESOURCE_GROUP:?AZ_RESOURCE_GROUP secret is required}"
-          INTELLIOPTICS_API_TOKEN="${INTELLIOPTICS_API_TOKEN:-$FALLBACK_INTELLIOPTICS_API_TOKEN}"
-          SERVICE_BUS_CONN="${SERVICE_BUS_CONN:-$FALLBACK_SERVICE_BUS_CONN}"
-          export AZ_LOCATION ACI_NAME ACI_CONTAINER_NAME EDGE_IMAGE_TAG
-          export ACR_LOGIN_SERVER ACR_USERNAME ACR_PASSWORD
-          export INTELLIOPTICS_ENDPOINT INTELLIOPTICS_API_TOKEN SERVICE_BUS_CONN
-          export SB_IMAGE_QUEUE SB_RESULTS_QUEUE SB_FEEDBACK_QUEUE
-          envsubst < deploy/aci/edge-endpoint.yaml > edge-endpoint.staging.yaml
-
-      - name: Deploy staging container group
-        env:
-          ACI_NAME: ${{ secrets.AZURE_STAGING_CONTAINER_GROUP }}
-        run: |
-          set -euo pipefail
-          az container delete --resource-group "${AZ_RESOURCE_GROUP}" --name "${ACI_NAME}" --yes || true
-          az container create --resource-group "${AZ_RESOURCE_GROUP}" --file edge-endpoint.staging.yaml
-
-  release-azure:
-    name: Promote Azure release
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - build-azure-image
-      - deploy-azure-staging
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      IMAGE_NAME: intellioptics/edge-endpoint
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-      AZ_RESOURCE_GROUP: ${{ secrets.AZ_RESOURCE_GROUP }}
-    steps:
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Log in to Azure Container Registry
-        run: |
-          cd glhub
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git submodule update --init --recursive
-          git submodule update --remote edge-endpoint
-          git add .
-          git commit -m "Update edge endpoint submodule"
-          git push https://edge-glhub-bot:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/groundlight/glhub.git main
-        env:
-          GIT_AUTHOR_NAME: "github-actions[bot]"
-          GIT_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
-
-  tag-pre-release:
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - main-tests-pass
-    runs-on: ubuntu-latest
-    env:
-      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'azure' }}
-      ACR_NAME: ${{ vars.ACR_NAME || '' }}
-      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
-      ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
-    steps:
-      - name: Azure login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login to Azure Container Registry (CLI)
-        if: ${{ env.ACR_NAME != '' }}
-        run: az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Log in to Azure Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Tag main images with the "pre-release" tag after all the tests pass
-        env:
-          REGISTRY_PROVIDER: ${{ env.REGISTRY_PROVIDER }}
-          REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-        run: ./deploy/bin/tag-edge-endpoint-image.sh pre-release
-
-  tag-release:
-    # The environment rules are not defined in code -- instead, they are defined in the Github UI:
-    #   https://github.com/groundlight/edge-endpoint/settings/environments/5838966020/edit
-    # As of this time of writing, the environment rules require manual approval for tagging a release.
-    environment: live
-    # This will run (after manual approval) if a commit is pushed to the `main` branch
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - main-tests-pass
-      - tag-pre-release
-    runs-on: ubuntu-22.04
-    env:
-      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'azure' }}
-      ACR_NAME: ${{ vars.ACR_NAME || '' }}
-      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
-      ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
-    steps:
-      - name: Azure login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login to Azure Container Registry (CLI)
-        if: ${{ env.ACR_NAME != '' }}
-        run: az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Log in to Azure Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Tag main images with the "latest" and "release" tags
-        env:
-          REGISTRY_PROVIDER: ${{ env.REGISTRY_PROVIDER }}
-          REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-        run: |
-          ./deploy/bin/tag-edge-endpoint-image.sh latest
-          ./deploy/bin/tag-edge-endpoint-image.sh release
-
-  publish-chart:
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - tag-release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout source code
-
-
-      - name: Select subscription (optional)
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          set -euo pipefail
-          if [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
-            az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          if [[ "${GITHUB_REF_TYPE}" = "tag" && "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag_release=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           fi
+          echo "tag_sha=${TAG}" >> $GITHUB_OUTPUT
 
-      - name: Promote container image tags
-        env:
-          SOURCE_TAG: ${{ needs.build-azure-image.outputs.image-tag }}
-        run: |
-          set -euo pipefail
-          : "${ACR_LOGIN_SERVER:?ACR_LOGIN_SERVER secret is required}"
-          : "${SOURCE_TAG:?Missing image tag from build stage}"
-          ACR_NAME="${ACR_LOGIN_SERVER%%.*}"
-          SOURCE_IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${SOURCE_TAG}"
-          az acr import --name "$ACR_NAME" --source "$SOURCE_IMAGE" --image "${IMAGE_NAME}:release" --force
-          az acr import --name "$ACR_NAME" --source "$SOURCE_IMAGE" --image "${IMAGE_NAME}:production" --force
+      - name: Build image (no push)
+        if: env.ACR_LOGIN_SERVER == '' || env.ACR_USERNAME == '' || env.ACR_PASSWORD == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag_sha }}
 
-      - name: Install template tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gettext-base
-
-      - name: Render production container group manifest
-        env:
-          AZ_LOCATION: ${{ secrets.AZ_LOCATION }}
-          ACI_NAME: ${{ secrets.AZURE_PROD_CONTAINER_GROUP }}
-          ACI_CONTAINER_NAME: edge-endpoint
-          EDGE_IMAGE_TAG: release
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-          INTELLIOPTICS_ENDPOINT: ${{ secrets.PROD_INTELLIOPTICS_ENDPOINT }}
-          INTELLIOPTICS_API_TOKEN: ${{ secrets.PROD_INTELLIOPTICS_API_TOKEN }}
-          FALLBACK_INTELLIOPTICS_API_TOKEN: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
-          SERVICE_BUS_CONN: ${{ secrets.PROD_SERVICE_BUS_CONN }}
-          FALLBACK_SERVICE_BUS_CONN: ${{ secrets.SERVICE_BUS_CONN }}
-          SB_IMAGE_QUEUE: ${{ secrets.PROD_SB_IMAGE_QUEUE }}
-          SB_RESULTS_QUEUE: ${{ secrets.PROD_SB_RESULTS_QUEUE }}
-          SB_FEEDBACK_QUEUE: ${{ secrets.PROD_SB_FEEDBACK_QUEUE }}
-        run: |
-          set -euo pipefail
-          : "${ACI_NAME:?AZURE_PROD_CONTAINER_GROUP secret is required}"
-          : "${AZ_RESOURCE_GROUP:?AZ_RESOURCE_GROUP secret is required}"
-          INTELLIOPTICS_API_TOKEN="${INTELLIOPTICS_API_TOKEN:-$FALLBACK_INTELLIOPTICS_API_TOKEN}"
-          SERVICE_BUS_CONN="${SERVICE_BUS_CONN:-$FALLBACK_SERVICE_BUS_CONN}"
-          export AZ_LOCATION ACI_NAME ACI_CONTAINER_NAME EDGE_IMAGE_TAG
-          export ACR_LOGIN_SERVER ACR_USERNAME ACR_PASSWORD
-          export INTELLIOPTICS_ENDPOINT INTELLIOPTICS_API_TOKEN SERVICE_BUS_CONN
-          export SB_IMAGE_QUEUE SB_RESULTS_QUEUE SB_FEEDBACK_QUEUE
-          envsubst < deploy/aci/edge-endpoint.yaml > edge-endpoint.production.yaml
-
-      - name: Deploy production container group
-        env:
-          ACI_NAME: ${{ secrets.AZURE_PROD_CONTAINER_GROUP }}
-        run: |
-          set -euo pipefail
-          az container delete --resource-group "${AZ_RESOURCE_GROUP}" --name "${ACI_NAME}" --yes || true
-          az container create --resource-group "${AZ_RESOURCE_GROUP}" --file edge-endpoint.production.yaml
+      - name: Build & Push image (registry configured)
+        if: env.ACR_LOGIN_SERVER != '' && env.ACR_USERNAME != '' && env.ACR_PASSWORD != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag_sha }}
+            ${{ (steps.meta.outputs.tag_latest && format('{0}/{1}:latest', env.ACR_LOGIN_SERVER, env.IMAGE_NAME)) || '' }}
+            ${{ steps.meta.outputs.tag_release && format('{0}/{1}:{2}', env.ACR_LOGIN_SERVER, env.IMAGE_NAME, steps.meta.outputs.tag_release) || '' }}
