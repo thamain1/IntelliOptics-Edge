@@ -49,7 +49,6 @@ jobs:
           if [ -f Makefile ]; then
             make install-lint || true
           fi
-          # Fallback to ensure tools exist even if Makefile no-ops
           python -m pip install black ruff isort yamllint || true
 
       - name: Run formatters
