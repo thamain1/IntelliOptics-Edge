@@ -221,4 +221,3 @@ def clear_old_activity_files():
         logger.info(f"Clearing {len(old_files)} old activity files: {old_files}")
         for f in old_files:
             f.unlink()
-

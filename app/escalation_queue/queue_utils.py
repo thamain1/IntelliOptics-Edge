@@ -1,4 +1,5 @@
 """Utility helpers for working with the escalation queue."""
+
 from __future__ import annotations
 
 import logging

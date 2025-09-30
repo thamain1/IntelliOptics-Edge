@@ -282,4 +282,3 @@ async def post_image_query(  # noqa: PLR0913, PLR0915, PLR0912
         human_review=human_review,
         metadata=generate_metadata_dict(results=results, is_edge_audit=False),
     )
-

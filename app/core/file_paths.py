@@ -15,4 +15,3 @@ MODEL_REPOSITORY_PATH = "/opt/intellioptics/edge/serving/model-repo"
 # Path to the database log file. This will contain all SQL queries executed by the ORM.
 DATABASE_ORM_LOG_FILE = "sqlalchemy.log"
 DATABASE_ORM_LOG_FILE_SIZE = 10_000_000  # 10 MB
-

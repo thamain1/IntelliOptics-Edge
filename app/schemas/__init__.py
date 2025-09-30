@@ -212,4 +212,3 @@ if __name__ == "__main__":
         db_manager=db_manager,
         refresh_rate=refresh_rate,
     )
-

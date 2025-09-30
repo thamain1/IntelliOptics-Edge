@@ -16,7 +16,14 @@ ARG APP_ROOT
 ARG POETRY_HOME
 ARG POETRY_VERSION
 
+
 # System deps + Azure CLI (keyring) + Poetry (pip)
+
+
+# System deps + Azure CLI (keyring) + Poetry (pip)
+
+# System deps, Azure CLI (signed keyring), Poetry, kubectl
+
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash ca-certificates curl gnupg less lsb-release libgl1-mesa-glx libglib2.0-0 nginx sqlite3 unzip; \
@@ -25,7 +32,23 @@ RUN set -eux; \
     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/azure-cli-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ bullseye main" > /etc/apt/sources.list.d/azure-cli.list; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends azure-cli; \
+
     python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}"; \
+
+
+    python -m pip install --no-cache-dir "poetry==${POETRY_VERSION}"; \
+
+    \
+    # Poetry (pin via POETRY_VERSION)
+    curl -fsSL https://install.python-poetry.org | POETRY_HOME=${POETRY_HOME} python -; \
+    \
+    # kubectl (latest stable)
+    curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
+    chmod 0755 /usr/local/bin/kubectl; \
+    \
+    # Clean
+
+
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
