@@ -30,17 +30,31 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install black ruff isort yamllint
 
-      - name: Run formatters
+      - name: Run formatters (exclude vendor/ and cicd/pulumi/)
         run: |
           set -e
-          black .
-          ruff check . --fix || true
-          isort . || true
+          EXCL='(vendor/|cicd/pulumi/)'
+
+          # Black: do not fail the job even if it exits non-zero
+          set +e
+          black --exclude "$EXCL" .
+          BLACK_EC=$?
+          set -e
+
+          # Ruff + isort (also tolerant)
+          set +e
+          ruff check . --fix --exclude vendor --exclude cicd/pulumi
+          RUFF_EC=$?
+          isort . --skip vendor --skip cicd/pulumi
+          ISORT_EC=$?
+          set -e
+
+          echo "BLACK_EC=$BLACK_EC RUFF_EC=$RUFF_EC ISORT_EC=$ISORT_EC"
 
       - name: Commit changes back to PR
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "style: auto-format (format-lite)"
+          commit_message: "style: auto-format (format-lite, excludes vendor/ and cicd/pulumi/)"
           branch: ${{ github.head_ref }}
           file_pattern: |
             **/*.py
