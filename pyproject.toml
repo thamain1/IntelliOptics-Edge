@@ -5,13 +5,22 @@ description = "Run intellioptics on the edge!"
 authors = ["IntelliOptics AI <admin@4wardmotions.com>"]
 license = "MIT"
 
+# ---- Package Indexes ----
+# Make PyPI explicit (default) to avoid the future auto-disable warning,
+# and keep your private simple index as supplemental.
+[[tool.poetry.source]]
+name = "pypi"
+priority = "default"
+
 [[tool.poetry.source]]
 name = "intellioptics"
 url = "https://intelliopticsweb37558.z13.web.core.windows.net/python-sdk/simple/"
 priority = "supplemental"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+# Align with Docker base image (python:3.11-slim-bullseye)
+python = "^3.11"
+
 APScheduler = "3.10.4"
 azure-identity = "^1.25.0"
 azure-servicebus = "^7.14.2"
@@ -21,7 +30,11 @@ cryptography = "^43.0.1"
 fastapi = "^0.115.0"
 framegrab = "^0.5.0"
 httpx = "^0.27.2"
-intellioptics = {path = "vendor/intellioptics-sdk", develop = false}
+
+# Pull 'intellioptics' from your private simple index instead of a local path.
+# Pin this once a version is published (e.g., "^0.3.2").
+intellioptics = "*"
+
 jinja2 = "^3.1.6"
 kubernetes = "^27.2.0"
 opencv-python = "^4.10.0.84"
@@ -32,7 +45,6 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
-
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.1"
@@ -58,19 +70,19 @@ toml-sort = "^0.23.0"
 [tool.black]
 line-length = 120
 preview = true
-target-version = ["py310"]
+target-version = ["py310", "py311"]
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
 ignore_missing_imports = true
-python_version = "3.10"
+python_version = "3.11"
 
 # https://beta.ruff.rs/docs/configuration/#using-pyprojecttoml
 [tool.ruff]
 exclude = ["__init__.py"]
 line-length = 120
-select = ["E", "F", "I", "N", "PL"] # shorthand names for plugins
-target-version = "py310"
+select = ["E", "F", "I", "N", "PL"]
+target-version = "py311"
 
 # https://toml-sort.readthedocs.io/en/latest/#configuration-file
 [tool.tomlsort]
