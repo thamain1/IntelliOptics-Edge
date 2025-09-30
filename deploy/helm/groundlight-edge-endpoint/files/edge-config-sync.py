@@ -29,7 +29,15 @@ class SyncError(RuntimeError):
     pass
 
 
-def _http_request(method: str, url: str, *, headers: Optional[dict] = None, data: Optional[bytes] = None, context: Optional[ssl.SSLContext] = None, timeout: float = 10.0) -> HTTPResult:
+def _http_request(
+    method: str,
+    url: str,
+    *,
+    headers: Optional[dict] = None,
+    data: Optional[bytes] = None,
+    context: Optional[ssl.SSLContext] = None,
+    timeout: float = 10.0,
+) -> HTTPResult:
     req = Request(url, data=data, headers=headers or {}, method=method)
     try:
         with urlopen(req, context=context, timeout=timeout) as resp:
@@ -64,7 +72,17 @@ def _kube_base_url(host: str, port: str) -> str:
     return f"https://{host}:{port}/api/v1"
 
 
-def update_configmap(*, namespace: str, name: str, yaml_text: str, token: str, host: str, port: str, context: ssl.SSLContext, timeout: float = 10.0) -> None:
+def update_configmap(
+    *,
+    namespace: str,
+    name: str,
+    yaml_text: str,
+    token: str,
+    host: str,
+    port: str,
+    context: ssl.SSLContext,
+    timeout: float = 10.0,
+) -> None:
     base = _kube_base_url(host, port)
     patch_url = f"{base}/namespaces/{namespace}/configmaps/{name}"
     headers = _service_account_headers(token)
@@ -98,20 +116,16 @@ def update_configmap(*, namespace: str, name: str, yaml_text: str, token: str, h
         raise SyncError(f"Failed to patch ConfigMap {name}: {result.status} {result.body!r}")
 
 
-def restart_deployment(*, namespace: str, name: str, token: str, host: str, port: str, context: ssl.SSLContext, timeout: float = 10.0) -> None:
+def restart_deployment(
+    *, namespace: str, name: str, token: str, host: str, port: str, context: ssl.SSLContext, timeout: float = 10.0
+) -> None:
     base = f"https://{host}:{port}/apis/apps/v1"
     url = f"{base}/namespaces/{namespace}/deployments/{name}"
     headers = _service_account_headers(token)
     headers["Content-Type"] = "application/merge-patch+json"
     payload = {
         "spec": {
-            "template": {
-                "metadata": {
-                    "annotations": {
-                        "intellioptics.com/edge-config-sync": str(int(time.time()))
-                    }
-                }
-            }
+            "template": {"metadata": {"annotations": {"intellioptics.com/edge-config-sync": str(int(time.time()))}}}
         }
     }
     result = _http_request(
@@ -143,17 +157,55 @@ def build_ssl_context(ca_path: str | None, insecure: bool) -> ssl.SSLContext:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Synchronize edge stream configuration into Kubernetes")
-    parser.add_argument("--api-base", required=True, help="Base URL for the config API, e.g. https://api.example.com/v1")
-    parser.add_argument("--api-key", default=os.getenv("INTELLIOPTICS_API_KEY"), help="API key used to authenticate with the cloud backend")
-    parser.add_argument("--namespace", default=os.getenv("KUBE_NAMESPACE", "intellioptics-edge"), help="Kubernetes namespace for the edge deployment")
-    parser.add_argument("--configmap", default=os.getenv("EDGE_CONFIG_CONFIGMAP", "edge-config"), help="Name of the ConfigMap to update")
-    parser.add_argument("--deployment", default=os.getenv("EDGE_DEPLOYMENT_NAME", "edge-endpoint"), help="Deployment to restart after syncing")
-    parser.add_argument("--restart", action="store_true", help="Trigger a rolling restart of the edge deployment after updating the ConfigMap")
-    parser.add_argument("--service-host", default=os.getenv("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc"), help="Kubernetes API host")
-    parser.add_argument("--service-port", default=os.getenv("KUBERNETES_SERVICE_PORT", "443"), help="Kubernetes API port")
-    parser.add_argument("--token-path", default=os.getenv("KUBE_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"), help="Path to the service account token")
-    parser.add_argument("--ca-path", default=os.getenv("KUBE_CA_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"), help="Path to the Kubernetes CA certificate")
-    parser.add_argument("--insecure-skip-tls-verify", action="store_true", help="Disable TLS verification when talking to the Kubernetes API (not recommended)")
+    parser.add_argument(
+        "--api-base", required=True, help="Base URL for the config API, e.g. https://api.example.com/v1"
+    )
+    parser.add_argument(
+        "--api-key",
+        default=os.getenv("INTELLIOPTICS_API_KEY"),
+        help="API key used to authenticate with the cloud backend",
+    )
+    parser.add_argument(
+        "--namespace",
+        default=os.getenv("KUBE_NAMESPACE", "intellioptics-edge"),
+        help="Kubernetes namespace for the edge deployment",
+    )
+    parser.add_argument(
+        "--configmap", default=os.getenv("EDGE_CONFIG_CONFIGMAP", "edge-config"), help="Name of the ConfigMap to update"
+    )
+    parser.add_argument(
+        "--deployment",
+        default=os.getenv("EDGE_DEPLOYMENT_NAME", "edge-endpoint"),
+        help="Deployment to restart after syncing",
+    )
+    parser.add_argument(
+        "--restart",
+        action="store_true",
+        help="Trigger a rolling restart of the edge deployment after updating the ConfigMap",
+    )
+    parser.add_argument(
+        "--service-host",
+        default=os.getenv("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc"),
+        help="Kubernetes API host",
+    )
+    parser.add_argument(
+        "--service-port", default=os.getenv("KUBERNETES_SERVICE_PORT", "443"), help="Kubernetes API port"
+    )
+    parser.add_argument(
+        "--token-path",
+        default=os.getenv("KUBE_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"),
+        help="Path to the service account token",
+    )
+    parser.add_argument(
+        "--ca-path",
+        default=os.getenv("KUBE_CA_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"),
+        help="Path to the Kubernetes CA certificate",
+    )
+    parser.add_argument(
+        "--insecure-skip-tls-verify",
+        action="store_true",
+        help="Disable TLS verification when talking to the Kubernetes API (not recommended)",
+    )
     parser.add_argument("--timeout", type=float, default=10.0, help="HTTP timeout in seconds")
     return parser.parse_args(argv)
 
@@ -191,7 +243,9 @@ def main(argv: list[str] | None = None) -> int:
             timeout=args.timeout,
         )
 
-    print(f"Synced {config.get('stream_count', 0)} stream(s) to ConfigMap '{args.configmap}' in namespace '{args.namespace}'.")
+    print(
+        f"Synced {config.get('stream_count', 0)} stream(s) to ConfigMap '{args.configmap}' in namespace '{args.namespace}'."
+    )
     if args.restart:
         print(f"Triggered rollout restart for deployment '{args.deployment}'.")
     return 0

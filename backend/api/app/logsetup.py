@@ -9,11 +9,29 @@ from datetime import datetime, timezone
 
 # Fields Python logging sticks on every record (we won't duplicate these)
 _STD_FIELDS = {
-    "name", "msg", "args", "levelname", "levelno", "pathname", "filename",
-    "module", "exc_info", "exc_text", "stack_info", "lineno", "funcName",
-    "created", "msecs", "relativeCreated", "thread", "threadName", "processName",
-    "process", "message"
+    "name",
+    "msg",
+    "args",
+    "levelname",
+    "levelno",
+    "pathname",
+    "filename",
+    "module",
+    "exc_info",
+    "exc_text",
+    "stack_info",
+    "lineno",
+    "funcName",
+    "created",
+    "msecs",
+    "relativeCreated",
+    "thread",
+    "threadName",
+    "processName",
+    "process",
+    "message",
 }
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -40,6 +58,7 @@ class JsonFormatter(logging.Formatter):
 
         return json.dumps(out, separators=(",", ":"))
 
+
 def setup_logging(level: str | None = None) -> None:
     level = (level or os.getenv("LOG_LEVEL") or "INFO").upper()
 
@@ -52,10 +71,7 @@ def setup_logging(level: str | None = None) -> None:
     root.addHandler(h)
 
     # Quiet noisy libs unless debugging
-    for name in (
-        "azure", "azure.core.pipeline.policies.http_logging_policy",
-        "azure.identity", "urllib3"
-    ):
+    for name in ("azure", "azure.core.pipeline.policies.http_logging_policy", "azure.identity", "urllib3"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
     # Let uvicorn loggers bubble up to root so we get JSON too

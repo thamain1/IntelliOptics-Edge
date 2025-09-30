@@ -1,16 +1,16 @@
-
 from __future__ import annotations
 
 import datetime as dt
 import uuid
 from typing import Any, Dict
 
-
-from sqlalchemy.orm import Mapped, mapped_column, declarative_base
-from sqlalchemy import Integer, String, Float, Boolean, JSON, TIMESTAMP, func, inspect
+from sqlalchemy import (JSON, TIMESTAMP, Boolean, Float, Integer, String, func,
+                        inspect)
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
 Base = declarative_base()
+
 
 class ImageQueryRow(Base):
     __tablename__ = "image_queries"
@@ -62,6 +62,8 @@ class AlertRuleRow(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
 class AlertEvent(Base):
     __tablename__ = "alert_events"
 

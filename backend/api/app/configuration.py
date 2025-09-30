@@ -12,15 +12,9 @@ from sqlalchemy.orm import Session
 
 from app.core.configs import StreamConfig
 
-from .config_store import (
-    create_stream,
-    delete_stream,
-    export_yaml_payload,
-    get_stream,
-    list_detectors,
-    list_streams,
-    update_stream,
-)
+from .config_store import (create_stream, delete_stream, export_yaml_payload,
+                           get_stream, list_detectors, list_streams,
+                           update_stream)
 from .db import SessionLocal
 
 try:  # Optional dependency during tests/local dev

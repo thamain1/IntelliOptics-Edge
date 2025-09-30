@@ -7,7 +7,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
-from .models import ensure_alert_events_table, ensure_edge_config_document_table
+from .models import (ensure_alert_events_table,
+                     ensure_edge_config_document_table)
 
 logger = logging.getLogger("intellioptics.api")
 
@@ -100,9 +101,7 @@ def migrate() -> List[str]:
             logger.exception("[migrations] failed to apply legacy DDL")
             raise
     else:
-        logger.info(
-            "[migrations] skipping legacy DDL for dialect %s", engine.dialect.name
-        )
+        logger.info("[migrations] skipping legacy DDL for dialect %s", engine.dialect.name)
 
     created_alerts = ensure_alert_events_table(engine)
     applied.append("alert_events.create" if created_alerts else "alert_events.exists")

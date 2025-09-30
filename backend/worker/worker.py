@@ -1,11 +1,15 @@
-import json, os, time, logging, sys
+import json
+import logging
+import os
+import sys
+import time
 from typing import Any, Dict
+
 from azure.identity import DefaultAzureCredential
 from azure.servicebus import ServiceBusClient, ServiceBusMessage
-from sqlalchemy.orm import Session
-from models import ImageQueryRow, Base
-from db import engine, SessionLocal
+from db import SessionLocal, engine
 from intellioptics import IntelliOptics
+from models import Base, ImageQueryRow
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("worker-shim")
@@ -76,8 +80,8 @@ def process_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "image_query_id": iq.id,
         "status": "DONE" if getattr(iq, "done_processing", False) else "PROCESSING",
-        "label": (r.label if r else None),
-        "confidence": (r.confidence if r else None),
+        "label": r.label if r else None,
+        "confidence": r.confidence if r else None,
         "result_type": getattr(iq, "result_type", None),
         "count": count_val,
         "extra": extra,
@@ -90,7 +94,9 @@ def process_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def write_result_db(res: Dict[str, Any]):
     with SessionLocal() as db:  # type: Session
-        row = db.get(ImageQueryRow, res["image_query_id"]) or ImageQueryRow(id=res["image_query_id"], detector_id=res["detector_id"], blob_url=res["blob_url"]) 
+        row = db.get(ImageQueryRow, res["image_query_id"]) or ImageQueryRow(
+            id=res["image_query_id"], detector_id=res["detector_id"], blob_url=res["blob_url"]
+        )
         row.status = res["status"]
         row.label = res.get("label")
         row.confidence = res.get("confidence")
@@ -98,7 +104,8 @@ def write_result_db(res: Dict[str, Any]):
         row.count = res.get("count")
         row.extra = res.get("extra")
         row.done_processing = res.get("done_processing", False)
-        db.add(row); db.commit()
+        db.add(row)
+        db.commit()
 
 
 def send_result_queue(res: Dict[str, Any]):
@@ -114,7 +121,7 @@ def run():
                 payload = _ensure_dict(msg.body)
                 res = process_payload(payload)
                 if res.get("skipped"):
-                    log.info("Skipping: %s", res["reason"]) 
+                    log.info("Skipping: %s", res["reason"])
                 else:
                     try:
                         write_result_db(res)
@@ -126,6 +133,7 @@ def run():
                 log.exception("Processing failed: %s", e)
                 receiver.abandon_message(msg)
                 time.sleep(1)
+
 
 if __name__ == "__main__":
     run()

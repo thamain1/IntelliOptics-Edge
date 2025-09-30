@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 router = APIRouter()
+
 
 def _ann_dir() -> Path:
     """
@@ -24,6 +26,7 @@ def _ann_dir() -> Path:
     here = Path(__file__).resolve()
     repo_root = here.parents[3]
     return repo_root / "artifacts" / "ann"
+
 
 @router.get("/v1/image-queries/{iq_id}/annotated", response_class=FileResponse)
 def get_annotated_snapshot(

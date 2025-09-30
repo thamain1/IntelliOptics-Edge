@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 import os
+
+from pydantic import BaseModel
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -7,6 +8,7 @@ def _env_flag(name: str, default: bool = False) -> bool:
     if val is None:
         return default
     return val.strip().lower() in {"1", "true", "yes", "on"}
+
 
 class Settings(BaseModel):
     api_base_path: str = os.getenv("API_BASE_PATH", "/v1")
@@ -41,5 +43,6 @@ class Settings(BaseModel):
     pg_user: str = os.getenv("PG_USER", "postgres")
     pg_password: str = os.getenv("PG_PASSWORD", "")
     pg_sslmode: str = os.getenv("PG_SSLMODE", "require")
+
 
 settings = Settings()

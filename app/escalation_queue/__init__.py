@@ -17,20 +17,10 @@ from pydantic import BaseModel, ValidationError
 from app.core import constants
 
 if TYPE_CHECKING:
-    from model import (
-        ROI,
-        BinaryClassificationResult,
-        CountingResult,
-        CountModeConfiguration,
-        ImageQuery,
-        ImageQueryTypeEnum,
-        Label,
-        ModeEnum,
-        MultiClassificationResult,
-        MultiClassModeConfiguration,
-        ResultTypeEnum,
-        Source,
-    )
+    from model import (ROI, BinaryClassificationResult, CountingResult,
+                       CountModeConfiguration, ImageQuery, ImageQueryTypeEnum,
+                       Label, ModeEnum, MultiClassificationResult,
+                       MultiClassModeConfiguration, ResultTypeEnum, Source)
 
 logger = logging.getLogger(__name__)
 

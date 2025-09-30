@@ -187,8 +187,6 @@ async def submit_human_label(
                 }
             )
         except Exception:  # pragma: no cover - feedback queuing is best-effort
-            log.exception(
-                "failed to enqueue human feedback", extra={"image_query_id": image_query_id}
-            )
+            log.exception("failed to enqueue human feedback", extra={"image_query_id": image_query_id})
 
     return _row_to_dict(row)

@@ -74,11 +74,7 @@ def _load_default_config() -> dict:
 
 
 def ensure_document(session: Session) -> EdgeConfigDocument:
-    doc = (
-        session.query(EdgeConfigDocument)
-        .filter(EdgeConfigDocument.name == _DEFAULT_DOCUMENT_NAME)
-        .one_or_none()
-    )
+    doc = session.query(EdgeConfigDocument).filter(EdgeConfigDocument.name == _DEFAULT_DOCUMENT_NAME).one_or_none()
     if doc is None:
         payload = _load_default_config()
         doc = EdgeConfigDocument(
@@ -195,8 +191,7 @@ def export_yaml_payload(session: Session) -> tuple[str, EdgeConfigDocument]:
         for det_id, det in config.detectors.items()
     ]
     streams_list = [
-        {"name": name, **stream.model_dump(mode="json", exclude={"name"})}
-        for name, stream in config.streams.items()
+        {"name": name, **stream.model_dump(mode="json", exclude={"name"})} for name, stream in config.streams.items()
     ]
     payload = {
         "global_config": config.global_config.model_dump(mode="json"),

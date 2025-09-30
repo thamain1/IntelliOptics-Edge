@@ -8,20 +8,10 @@ from typing import Any, Callable
 import cachetools
 import ksuid
 from fastapi import HTTPException
-from model import (
-    ROI,
-    BinaryClassificationResult,
-    CountingResult,
-    CountModeConfiguration,
-    ImageQuery,
-    ImageQueryTypeEnum,
-    Label,
-    ModeEnum,
-    MultiClassificationResult,
-    MultiClassModeConfiguration,
-    ResultTypeEnum,
-    Source,
-)
+from model import (ROI, BinaryClassificationResult, CountingResult,
+                   CountModeConfiguration, ImageQuery, ImageQueryTypeEnum,
+                   Label, ModeEnum, MultiClassificationResult,
+                   MultiClassModeConfiguration, ResultTypeEnum, Source)
 from PIL import Image
 from pydantic import BaseModel, ValidationError
 

@@ -7,7 +7,8 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from app.core.file_paths import DATABASE_FILEPATH, DATABASE_ORM_LOG_FILE, DATABASE_ORM_LOG_FILE_SIZE
+from app.core.file_paths import (DATABASE_FILEPATH, DATABASE_ORM_LOG_FILE,
+                                 DATABASE_ORM_LOG_FILE_SIZE)
 from app.core.models import Base, InferenceDeployment
 
 logger = logging.getLogger(__name__)
