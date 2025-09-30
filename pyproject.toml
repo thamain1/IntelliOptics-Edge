@@ -42,8 +42,7 @@ pyyaml = "^6.0.2"
 SQLAlchemy = "2.0.35"
 svix-ksuid = "^0.6.2"
 uvicorn = {version = "^0.31.0", extras = ["standard"]}
-intellioptics = {git = "https://github.com/thamain1/IntelliOptics-SDK.git", rev = "main"}
-
+intellioptics = { path = "vendor/intellioptics-sdk", develop = false }
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.1"
 pre-commit = "^3.8.0"
