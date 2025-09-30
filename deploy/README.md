@@ -23,7 +23,9 @@ Azure as the default environment. This section collects the environment variable
 steps that are referenced throughout the rest of the document so you can prepare the Azure resources before running the install
 commands.
 
+
 The Edge Endpoint containers are published to Azure Container Registry (ACR). Configure the Azure environment and registry credentials before you start the Helm install. This section collects the environment variables, CLI tooling, and registry authentication steps that are referenced throughout the rest of the document.
+
 
 
 ### Azure requirements (ACR and AKS/AKS Edge Essentials)
@@ -85,6 +87,9 @@ With those steps complete, Helm will be able to pull images from ACR using the d
 templates at [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates). If you maintain your
 own ACR image tags, override the `edgeEndpointTag` and `inferenceTag` values in
 [`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) when you run Helm.
+
+
+### Azure deployment requirements (ACR and AKS/other Kubernetes distributions)
 
 
 ### Azure deployment requirements (ACR and AKS/other Kubernetes distributions)
@@ -200,6 +205,9 @@ If the server is not your Azure registry or the username is missing, rerun the c
    docker push "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:local"
    ```
    The Azure one-click provisioning scripts in [infra/azure-oneclick/deploy](../infra/azure-oneclick/deploy) show complete examples of using `az acr login` before pushing and of injecting the resulting tag into downstream workloads.
+
+
+After these prerequisites are in place you can follow the Helm instructions below. All registry pulls will use the Azure credentials you created earlier.
 
 
 After these prerequisites are in place you can follow the Helm instructions below. All registry pulls will use the Azure credentials you created earlier.
@@ -569,7 +577,6 @@ export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountNa
 ```
 
 
-
 If you are running the bootstrap script from an automation host (for example, CI/CD), configure a service principal with access
 to the registry and export the standard Azure environment variables before invoking the script:
 
@@ -775,6 +782,14 @@ The build/push scripts default to Azure Container Registry (ACR):
 
 Ensure the Azure environment variables from the earlier sections are exported so the script can log into your registry. When
 tagging existing images, the same variables apply:
+
+
+```shell
+./deploy/bin/tag-edge-endpoint-image.sh latest
+```
+
+Both `build-push` and `tag` scripts share registry authentication helpers (`deploy/bin/registry.sh`) which standardize the `az
+acr login` and `az acr repository show-manifests` commands used during deployment.
 
 ```shell
 ./deploy/bin/tag-edge-endpoint-image.sh latest
