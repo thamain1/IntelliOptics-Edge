@@ -79,4 +79,3 @@ def get_deviceid_metadata_dict() -> dict:
 def get_deviceid_str() -> str:
     """Get the unique device ID string."""
     return get_deviceid_metadata_dict()["uuid"]
-

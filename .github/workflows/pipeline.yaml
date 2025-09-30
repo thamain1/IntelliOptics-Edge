@@ -550,65 +550,39 @@ jobs:
       - main-tests-pass
     runs-on: ubuntu-latest
     env:
-      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'aws' }}
+      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'azure' }}
       ACR_NAME: ${{ vars.ACR_NAME || '' }}
       ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
       ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
     steps:
-      - name: Configure AWS credentials
-        if: env.REGISTRY_PROVIDER == 'aws'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        if: env.REGISTRY_PROVIDER == 'aws'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
       - name: Azure login
-        if: env.REGISTRY_PROVIDER == 'azure'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Login to Azure Container Registry
+      - name: Login to Azure Container Registry (CLI)
+        if: ${{ env.ACR_NAME != '' }}
         run: az acr login --name ${{ env.ACR_NAME }}
-      - name: Log in to container registry
+
+      - name: Log in to Azure Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
-
       - name: Check out code
         uses: actions/checkout@v4
 
       - name: Tag main images with the "pre-release" tag after all the tests pass
         env:
-
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-
+          REGISTRY_PROVIDER: ${{ env.REGISTRY_PROVIDER }}
           REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
         run: ./deploy/bin/tag-edge-endpoint-image.sh pre-release
 
   tag-release:
@@ -623,67 +597,40 @@ jobs:
       - tag-pre-release
     runs-on: ubuntu-22.04
     env:
-      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'aws' }}
+      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'azure' }}
       ACR_NAME: ${{ vars.ACR_NAME || '' }}
       ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
       ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
     steps:
-      - name: Configure AWS credentials
-        if: env.REGISTRY_PROVIDER == 'aws'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        if: env.REGISTRY_PROVIDER == 'aws'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
       - name: Azure login
-        if: env.REGISTRY_PROVIDER == 'azure'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Login to Azure Container Registry
+      - name: Login to Azure Container Registry (CLI)
+        if: ${{ env.ACR_NAME != '' }}
         run: az acr login --name ${{ env.ACR_NAME }}
 
-      - name: Log in to container registry
+      - name: Log in to Azure Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Log in to Azure Container Registry
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
-
       - name: Check out code
         uses: actions/checkout@v4
+
       - name: Tag main images with the "latest" and "release" tags
         env:
-
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
+          REGISTRY_PROVIDER: ${{ env.REGISTRY_PROVIDER }}
           REGISTRY_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-
+          REGISTRY_USERNAME: ${{ secrets.ACR_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.ACR_PASSWORD }}
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-        run: |-
+        run: |
           ./deploy/bin/tag-edge-endpoint-image.sh latest
           ./deploy/bin/tag-edge-endpoint-image.sh release
 

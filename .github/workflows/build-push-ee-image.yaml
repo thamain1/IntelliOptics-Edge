@@ -1,6 +1,6 @@
 name: build-push-ee-image
 # This workflow is split into a separate file and called via workflow_call to enable triggering it
-# from other repositories, to test new inference images. 
+# from other repositories, to test new inference images.
 on:
   workflow_call:
     inputs:
@@ -10,7 +10,6 @@ on:
       ref:
         required: true
         type: string
-
       acr_name:
         description: Azure Container Registry name (e.g. acrintellioptics)
         required: true
@@ -21,66 +20,39 @@ on:
         type: string
     secrets:
       AZURE_CREDENTIALS:
-
-    secrets:
-
-      ACR_LOGIN_SERVER:
         required: true
-
-
       REGISTRY_LOGIN_SERVER:
         required: true
       REGISTRY_USERNAME:
         required: true
       REGISTRY_PASSWORD:
-
+        required: true
       ACR_LOGIN_SERVER:
         required: true
-
       ACR_USERNAME:
         required: true
       ACR_PASSWORD:
         required: true
+
 jobs:
   build-push-edge-endpoint-multiplatform:
     # This used to run on a larger runner, but to use it as a reusable workflow outside of this
-    # orgnaization we need it to run on a default github runner. 
-    # If we start seeing issues with the default runner again, there are some hacks to delete
-    # unwanted software that's installed by default on the github runners to free up space. This is
-    # already done in the test-k3s-helm workflow.
+    # organization we need it to run on a default GitHub runner.
     runs-on: ubuntu-latest
     env:
-      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'aws' }}
-      ACR_NAME: ${{ vars.ACR_NAME || '' }}
-      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER || '' }}
+      REGISTRY_PROVIDER: ${{ vars.REGISTRY_PROVIDER || 'azure' }}
+      ACR_NAME: ${{ inputs.acr_name }}
+      ACR_LOGIN_SERVER: ${{ inputs.acr_login_server }}
       ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP || '' }}
     steps:
-      - name: Configure AWS credentials
-        if: env.REGISTRY_PROVIDER == 'aws'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_GL_PUBLIC_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_GL_PUBLIC_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Login to Amazon ECR
-        if: env.REGISTRY_PROVIDER == 'aws'
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: "true"
       - name: Azure login
-        if: env.REGISTRY_PROVIDER == 'azure'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Login to Azure Container Registry
-        run: az acr login --name ${{ inputs.acr_name }}
+      - name: Login to Azure Container Registry (CLI)
+        if: ${{ env.ACR_NAME != '' }}
+        run: az acr login --name ${{ env.ACR_NAME }}
 
       - name: Log in to container registry
         uses: docker/login-action@v3
@@ -89,16 +61,12 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-
-      - name: Log in to ACR
+      - name: Log in to Azure Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-
-
-
 
       - name: Check out code
         uses: actions/checkout@v4
@@ -106,34 +74,14 @@ jobs:
           repository: ${{ inputs.repo }}
           ref: ${{ inputs.ref }}
 
-
-
       - name: Build and Push Multiplatform edge-endpoint Image
-        # This is actually only taking about 4 minutes right now.
-        timeout-minutes: 45
         env:
+          REGISTRY_PROVIDER: ${{ env.REGISTRY_PROVIDER }}
           REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-
-
-      - name: Log in to Azure Container Registry
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login \
-            "${{ secrets.ACR_LOGIN_SERVER }}" \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
-      - name: Build and Push Multiplatform edge-endpoint Image to ACR
-        # This is actually only taking about 4 minutes right now.
-        timeout-minutes: 45
-        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          ACR_NAME: ${{ env.ACR_NAME }}
           ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
           ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
           ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-          ACR_NAME: ${{ inputs.acr_name }}
-          ACR_LOGIN_SERVER: ${{ inputs.acr_login_server }}
-
-          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-
-        run: ./deploy/bin/build-push-edge-endpoint-image.sh
+        run: ./deploy/bin/build-push-edge-endpoint-image.sh --registry-provider ${{ env.REGISTRY_PROVIDER }}

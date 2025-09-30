@@ -16,7 +16,13 @@ ARG APP_ROOT
 ARG POETRY_HOME
 ARG POETRY_VERSION
 
+
 # System deps + Azure CLI (keyring) + Poetry (pip) + kubectl
+
+# System deps + Azure CLI (keyring) + Poetry (pip)
+
+# System deps, Azure CLI (signed keyring), Poetry, kubectl
+
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -32,9 +38,17 @@ RUN set -eux; \
     curl -fsSL https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl \
       -o /usr/local/bin/kubectl; \
     chmod 0755 /usr/local/bin/kubectl; \
+    \
+    # Poetry (pin via POETRY_VERSION)
+    curl -fsSL https://install.python-poetry.org | POETRY_HOME=${POETRY_HOME} python -; \
+    \
+    # kubectl (latest stable)
+    curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
+    chmod 0755 /usr/local/bin/kubectl; \
+    \
+    # Clean
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
-
 # Global env (shared by both stages)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
