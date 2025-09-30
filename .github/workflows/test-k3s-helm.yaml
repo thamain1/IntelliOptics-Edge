@@ -1,4 +1,4 @@
-name: Test K3s & Helm
+name: Test K3s & Helm (manual)
 
 on:
   workflow_dispatch:
@@ -70,8 +70,5 @@ jobs:
           else
             helm template edge "$CHART" -n "$NS" > rendered.yaml
           fi
-          echo "Rendered manifest size:"
-          wc -c rendered.yaml
-          echo "::group::Preview (first 400 lines)"
-          head -n 400 rendered.yaml
-          echo "::endgroup::"
+          echo "Rendered manifest size:"; wc -c rendered.yaml
+          echo "::group::Preview (first 400 lines)"; head -n 400 rendered.yaml; echo "::endgroup::"
