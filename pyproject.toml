@@ -64,24 +64,11 @@ ruff = "^0.0.291"
 toml-sort = "^0.23.0"
 
 # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
-[tool.black]
-line-length = 120
-preview = true
-target-version = ["py310", "py311"]
-
-# https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
 ignore_missing_imports = true
 python_version = "3.11"
 
 # https://beta.ruff.rs/docs/configuration/#using-pyprojecttoml
-[tool.ruff]
-exclude = ["__init__.py"]
-line-length = 120
-select = ["E", "F", "I", "N", "PL"]
-target-version = "py311"
-
-# https://toml-sort.readthedocs.io/en/latest/#configuration-file
 [tool.tomlsort]
 no_sort_tables = true
 spaces_indent_inline_array = 4
@@ -93,3 +80,10 @@ testpaths = ["test"]
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+extend-exclude = "^(vendor/|cicd/pulumi/)"
+
+[tool.ruff]
+exclude = ["vendor", "cicd/pulumi"]
