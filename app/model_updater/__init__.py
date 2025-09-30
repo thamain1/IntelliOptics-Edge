@@ -69,4 +69,3 @@ def get_container_images() -> str:
     # Convert the containers dict to a JSON string to prevent opensearch from indexing all
     # the individual container fields
     return json.dumps(containers)
-

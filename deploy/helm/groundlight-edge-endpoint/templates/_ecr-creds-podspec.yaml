@@ -6,16 +6,8 @@ containers:
   - name: azure-cli
     image: {{ .Values.registryCredentials.azureCliImage }}
     command:
-
-      - /bin/bash
-      - -c
-      - |
-        # ConfigMap mounts lack the execute bit, so run the script through bash.
-        exec /bin/bash /app/init-aws-access-retrieve.sh
-
       - /bin/sh
       - /app/init-azure-access-retrieve.sh
-
     env:
       - name: INTELLIOPTICS_ENDPOINT
         value: "{{ .Values.upstreamEndpoint }}"
@@ -24,13 +16,10 @@ containers:
           secretKeyRef:
             name: IntelliOptics-api-token
             key: INTELLIOPTICS_API_TOKEN
-      - name: REGISTRY_PROVIDER
-        value: "azure"
       - name: ACR_NAME
         value: "{{ .Values.acrName }}"
       - name: ACR_LOGIN_SERVER
         value: "{{ .Values.acrLoginServer }}"
-
     volumeMounts:
       - name: shared-volume
         mountPath: /shared
@@ -56,4 +45,3 @@ volumes:
   - name: shared-volume
     emptyDir: {}
 {{- end }}
-

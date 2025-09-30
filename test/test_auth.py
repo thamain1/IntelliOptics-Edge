@@ -5,6 +5,7 @@ import json
 import pathlib
 import sys
 from datetime import datetime, timedelta, timezone
+
 import pytest
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -79,7 +80,9 @@ def _b64url_bytes(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
 
-def _make_token(rsa_key: rsa.RSAPrivateKey, issuer: str, *, audience: str, kid: str = "test-kid", subject: str = "user-123") -> str:
+def _make_token(
+    rsa_key: rsa.RSAPrivateKey, issuer: str, *, audience: str, kid: str = "test-kid", subject: str = "user-123"
+) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "aud": audience,
