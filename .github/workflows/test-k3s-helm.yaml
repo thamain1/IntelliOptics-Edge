@@ -1,15 +1,74 @@
 name: Test K3s & Helm (manual)
 
 on:
-  # Disable on PR/push for now; run manually when needed
   workflow_dispatch:
+    inputs:
+      helm_action:
+        description: "What to do"
+        type: choice
+        required: true
+        default: lint
+        options: [lint, dry-run]
+      chart_path:
+        description: "Path to Helm chart (e.g., deploy/helm/edge)"
+        type: string
+        required: true
+        default: deploy/helm/edge
+      namespace:
+        description: "K8s namespace for dry-run rendering"
+        type: string
+        required: false
+        default: default
+      values_file:
+        description: "Optional values file (relative path)"
+        type: string
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  noop:
-    name: No-op (disabled for PRs)
+  helm:
+    name: Helm ${{ inputs.helm_action }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Print note
-        run: echo "K3s/Helm test workflow is disabled for PRs; use 'workflow_dispatch' to run it manually."
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Show Helm version
+        run: helm version
+
+      - name: Helm lint
+        if: inputs.helm_action == 'lint'
+        run: |
+          set -e
+          CHART="${{ inputs.chart_path }}"
+          if [ -n "${{ inputs.values_file }}" ]; then
+            helm lint "$CHART" -f "${{ inputs.values_file }}"
+          else
+            helm lint "$CHART"
+          fi
+
+      - name: Helm template (dry-run render)
+        if: inputs.helm_action == 'dry-run'
+        run: |
+          set -e
+          CHART="${{ inputs.chart_path }}"
+          NS="${{ inputs.namespace }}"
+          if [ -n "${{ inputs.values_file }}" ]; then
+            helm template edge "$CHART" -n "$NS" -f "${{ inputs.values_file }}" > rendered.yaml
+          else
+            helm template edge "$CHART" -n "$NS" > rendered.yaml
+          fi
+          echo "Rendered manifest size:"; wc -c rendered.yaml
+          echo "::group::Preview (first 400 lines)"; head -n 400 rendered.yaml; echo "::endgroup::"
