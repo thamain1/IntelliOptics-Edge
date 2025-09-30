@@ -1,24 +1,22 @@
-# This Dockerfile is used to build the edge-endpoint container image.
+# This Dockerfile builds the IntelliOptics Edge Endpoint image (production).
 
-# Build args
+# ---------- Build Args ----------
 ARG NGINX_PORT=30101
 ARG NGINX_PORT_OLD=6717
 ARG UVICORN_PORT=6718
 ARG APP_ROOT="/intellioptics-edge"
 ARG POETRY_HOME="/opt/poetry"
-ARG POETRY_VERSION=1.5.1
+ARG POETRY_VERSION=1.8.3
 
-#############
-# Build Stage
-#############
-FROM python:3.11-slim-bullseye AS production-dependencies-build-stage
+# ---------- Base / Build Stage ----------
+FROM python:3.11-slim-bullseye AS base-build
 
-# Args that are needed in this stage
+# Bring args into this stage
 ARG APP_ROOT
 ARG POETRY_HOME
 ARG POETRY_VERSION
 
-# System deps + Azure CLI (keyring), Poetry, kubectl, AWS CLI v2
+# System deps, Azure CLI (signed keyring), Poetry, kubectl, AWS CLI v2
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -34,7 +32,7 @@ RUN set -eux; \
       sqlite3 \
       unzip; \
     \
-    # Azure CLI via signed keyring
+    # Azure CLI via keyring
     mkdir -p /usr/share/keyrings; \
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
       | gpg --dearmor -o /usr/share/keyrings/azure-cli-archive-keyring.gpg; \
@@ -43,10 +41,10 @@ RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends azure-cli; \
     \
-    # Poetry
+    # Poetry (pin via POETRY_VERSION)
     curl -fsSL https://install.python-poetry.org | POETRY_HOME=${POETRY_HOME} python -; \
     \
-    # kubectl
+    # kubectl (latest stable)
     curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"; \
     chmod 0755 /usr/local/bin/kubectl; \
     \
@@ -57,40 +55,42 @@ RUN set -eux; \
     ./aws/install --update; \
     rm -rf aws awscliv2.zip; \
     \
-    # cleanup
+    # Clean
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-# Set Python and Poetry ENV vars
+# Global env (shared by both stages)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     POETRY_HOME=${POETRY_HOME} \
     POETRY_VERSION=${POETRY_VERSION} \
     PATH=${POETRY_HOME}/bin:$PATH
 
-# Copy only required files first to leverage Docker caching
+# Leverage Docker cache: copy only dependency files first
+WORKDIR ${APP_ROOT}
 COPY ./pyproject.toml ./poetry.lock ${APP_ROOT}/
 
-WORKDIR ${APP_ROOT}
+# Configure Poetry for Docker-friendly installs (system env) and install deps
+RUN set -eux; \
+    poetry --version; \
+    poetry config virtualenvs.create false; \
+    # Ensure PyPI is explicitly present even if custom sources exist (future-proof)
+    poetry source add pypi https://pypi.org/simple || true; \
+    poetry install --no-interaction --no-root --without dev --without lint; \
+    poetry cache clear --all pypi || true
 
-# Install production dependencies only
-RUN poetry install --no-interaction --no-root --without dev --without lint && \
-    poetry cache clear --all pypi
-
-# Create expected directories
+# Create expected directories used at runtime
 RUN mkdir -p /etc/intellioptics/edge-config \
              /etc/intellioptics/inference-deployment \
              /opt/intellioptics/edge/sqlite
 
-# Copy configs
+# Copy configs that may be needed in final stage
 COPY configs ${APP_ROOT}/configs
 COPY deploy/k3s/inference_deployment/inference_deployment_template.yaml \
-    /etc/intellioptics/inference-deployment/
+     /etc/intellioptics/inference-deployment/
 
-##################
-# Production Stage
-##################
-FROM production-dependencies-build-stage AS production-image
+# ---------- Final / Production Image ----------
+FROM base-build AS production-image
 
 ARG APP_ROOT
 ARG NGINX_PORT
@@ -103,21 +103,22 @@ ENV PATH=${POETRY_HOME}/bin:$PATH \
 
 WORKDIR ${APP_ROOT}
 
-# Copy the remaining files
+# App code & artifacts
 COPY /app ${APP_ROOT}/app/
 COPY /deploy ${APP_ROOT}/deploy/
 COPY /licenses ${APP_ROOT}/licenses/
 COPY /README.md ${APP_ROOT}/README.md
 
-# Nginx config
-COPY --from=production-dependencies-build-stage ${APP_ROOT}/configs/nginx.conf /etc/nginx/nginx.conf
+# Nginx config from the copied configs
+COPY --from=base-build ${APP_ROOT}/configs/nginx.conf /etc/nginx/nginx.conf
 
 # Remove default nginx site and route logs to STDOUT/STDERR
-RUN rm -f /etc/nginx/sites-enabled/default && \
-    ln -sf /dev/stdout /var/log/nginx/access.log && \
+RUN set -eux; \
+    rm -f /etc/nginx/sites-enabled/default; \
+    ln -sf /dev/stdout /var/log/nginx/access.log; \
     ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Launch
+# Entrypoint: launches your edge logic server (which should start nginx/uvicorn as needed)
 CMD ["/bin/bash", "-c", "./app/bin/launch-edge-logic-server.sh"]
 
 # Document the exposed ports
