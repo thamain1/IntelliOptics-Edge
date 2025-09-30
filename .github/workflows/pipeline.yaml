@@ -47,19 +47,7 @@ jobs:
           fi
           python -m pip install yamllint
 
-      - name: Validate workflow YAML
-        working-directory: .github/workflows
-        run: |
-          set -e
-          yamllint -c ../.yamllint.yaml \
-            pipeline.yaml \
-            format-lite.yaml \
-            validate-workflow-files.yaml \
-            build-push-ee-image.yaml \
-            edge-build-push.yml \
-            sweeper-eeut.yaml \
-            test-k3s-helm.yaml \
-            auto-assign.yaml
+\\ \\ \\ \\ \\ \\ -\\ name:\\ Validate\\ workflow\\ YAML\\ \\(dynamic\\)\\n\\ \\ \\ \\ \\ \\ \\ \\ working-directory:\\ \\.github/workflows\\n\\ \\ \\ \\ \\ \\ \\ \\ run:\\ \\|\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ set\\ -e\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ files="\\$\\(ls\\ \\*\\.yml\\ \\*\\.yaml\\ 2>/dev/null\\ \\|\\|\\ true\\)"\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ if\\ \\[\\ -n\\ "\\$files"\\ ];\\ then\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ echo\\ "Linting\\ files:"\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ echo\\ "\\$files"\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ yamllint\\ -c\\ \\.\\./\\.yamllint\\.yaml\\ \\$files\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ else\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ echo\\ "No\\ workflow\\ YAML\\ files\\ found\\."\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ fi
 
   test:
     name: Unit & Integration Tests
