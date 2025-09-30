@@ -1,41 +1,10 @@
 #!/bin/bash
 
-# This script will build the edge-endpoint image and add it to the local k3s cluster
-# for development and testing. If the image already exists in the k3s cluster, it will
-# skip the upload step.
-#
-# It creates a single-platform image with the full registry-style name, but it always uses
-
-# It creates a single-platform image with the registry-qualified name, but it always uses
-
-
-# It creates a single-platform image with the full ACR-style name, but it always uses
-
-
-# It creates a single-platform image with the full ACR-style name, but it always uses
-
-# It creates a single-platform image with the full registry-style name, but it always uses
-
-
-# the 'dev' tag. When deploying application to your local test k3s cluster, add the
-# following Helm value:
-# `--set edgeEndpointTag=dev (or add it to your values.yaml file)
+# Build the edge-endpoint image locally and load it into the k3s cluster for testing.
 
 set -euo pipefail
 
-REGISTRY_PROVIDER=${REGISTRY_PROVIDER:-aws}
-# This works by:
-# 1. Building the image with the local Docker daemon
-# 2. Checking the image SHA in the local Docker daemon and in k3s
-# 3. If they are the same, exit successfully
-# 4. If they are different, export the image to stdout (it's a compressed tarball)
-#    and pipe it to import it into k3s using the containerd CLI connectied to k3s's
-#    containerd.
-# The last step is kind of slow.
-#
-# Note than when you use an image tagged "dev" in your Kubernetes app, helm will set
-# imagePullPolicy=Never so K8s doesn't try to pull the image from a remote registry.
-# imagePullPolicy=Never so K8s doesn't try to pull the image from ACR.
+REGISTRY_PROVIDER=${REGISTRY_PROVIDER:-azure}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,68 +19,38 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-cd "$(dirname "$0")"
-source ./registry.sh
+if [[ "$REGISTRY_PROVIDER" != "azure" ]]; then
+  echo "Error: only the Azure registry workflow is supported. Set REGISTRY_PROVIDER=azure." >&2
+  exit 1
+fi
 
-TAG=dev # In local mode, we always use the 'dev' tag
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-REGISTRY_URL=$(registry_get_url)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "${SCRIPT_DIR}"
 
-
+# shellcheck disable=SC1091
 source ./registry.sh
 
-TAG=dev # In local mode, we always use the 'dev' tag
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-REGISTRY_URL=$(registry_url)
-ACR_NAME=${ACR_NAME:-acrintellioptics}
-ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-${ACR_NAME}.azurecr.io}
-TAG=dev # In local mode, we always use the 'dev' tag
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
+registry_require_command docker
+registry_require_command jq
 
-ACR_LOGIN_SERVER=${ACR_LOGIN_SERVER:-acrintellioptics.azurecr.io}
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ACR_REPOSITORY=${ACR_REPOSITORY:-intellioptics/${EDGE_ENDPOINT_IMAGE}}
-TAG=dev # In local mode, we always use the 'dev' tag
-IMAGE_REPO="${ACR_LOGIN_SERVER}/${ACR_REPOSITORY}"
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/lib-azure-acr-login.sh"
-TAG=dev # In local mode, we always use the 'dev' tag
-EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}  # v0.2.0 (fastapi inference server) compatible images
-ACR_URL="${ACR_LOGIN_SERVER}"
-# The socket that's used by the k3s containerd
+TAG=dev
+EDGE_ENDPOINT_IMAGE=${EDGE_ENDPOINT_IMAGE:-edge-endpoint}
+REGISTRY_REF=$(registry_repository_ref "${EDGE_ENDPOINT_IMAGE}")
+IMAGE_NAME="${REGISTRY_REF}:${TAG}"
+
+PROJECT_ROOT="$(realpath "${SCRIPT_DIR}/../..")"
 SOCK=/run/k3s/containerd/containerd.sock
 
-project_root="$(readlink -f "../../")"
+cd "${PROJECT_ROOT}"
 
-build_and_upload() {
-    local path=. # Edge endpoint is built from the root directory
-    echo "Building and uploading ${name} to ${REGISTRY_URL} (provider=${REGISTRY_PROVIDER})..."
-    cd "${project_root}/${path}"
-    local repo=$(registry_repository_ref "${name}")
-    local full_name=${repo}:${TAG}
-    echo "Building and uploading ${IMAGE_REPO}:${TAG}..."
-    cd "${project_root}/${path}"
-    local full_name=${REGISTRY_URL}/${name}:${TAG}
+docker build -t "${IMAGE_NAME}" .
 
-    local full_name=${IMAGE_REPO}:${TAG}
+IMAGE_ID=$(docker image inspect "${IMAGE_NAME}" | jq -r '.[0].Id')
+if ! sudo crictl images -q | grep -Fxq "${IMAGE_ID}"; then
+  echo "Image not found in k3s, importing ${IMAGE_NAME}"
+  docker save "${IMAGE_NAME}" | sudo ctr -a "${SOCK}" -n k8s.io images import -
+else
+  echo "Image already present in k3s, skipping import"
+fi
 
-    local full_name=${ACR_LOGIN_SERVER}/${name}:${TAG}
-
-    local full_name=${ACR_URL}/${name}:${TAG}
-
-    docker build -t ${full_name} .
-    local id=$(docker image inspect ${full_name} | jq -r '.[0].Id')
-    local on_server=$(sudo crictl images -q | grep $id || true)
-    if [ -z "$on_server" ]; then
-        echo "Image not found in k3s, uploading..."
-        docker save ${full_name} | sudo ctr -a ${SOCK} -n k8s.io images import -
-    else
-        echo "Image exists in k3s, skipping upload."
-    fi
-}
-
-build_and_upload "${EDGE_ENDPOINT_IMAGE}"
-build_and_upload
-
+echo "Local build complete: ${IMAGE_NAME}"
