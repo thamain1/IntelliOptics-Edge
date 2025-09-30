@@ -11,4 +11,3 @@ async def ping():
     Ping the server to make sure it's running.
     """
     return Ping()
-

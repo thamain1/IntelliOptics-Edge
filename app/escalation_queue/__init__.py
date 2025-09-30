@@ -85,8 +85,8 @@ def create_iq(  # noqa: PLR0913
 
     result_type, result = _mode_to_result_and_type(mode, mode_configuration, confidence, result_value)
 
-    ImageQuery = getattr(model, 'ImageQuery')
-    ImageQueryTypeEnum = getattr(model, 'ImageQueryTypeEnum')
+    ImageQuery = getattr(model, "ImageQuery")
+    ImageQueryTypeEnum = getattr(model, "ImageQueryTypeEnum")
 
     return ImageQuery(
         metadata={"is_from_edge": True},
@@ -105,20 +105,17 @@ def create_iq(  # noqa: PLR0913
     )
 
 
-
-
-
 def _mode_to_result_and_type(
     mode: "ModeEnum", mode_configuration: dict[str, Any] | None, confidence: float, result_value: int
 ) -> tuple["ResultTypeEnum", "BinaryClassificationResult | CountingResult | MultiClassificationResult"]:
     model = _load_model_module()
-    ModeEnum = getattr(model, 'ModeEnum')
-    ResultTypeEnum = getattr(model, 'ResultTypeEnum')
-    BinaryClassificationResult = getattr(model, 'BinaryClassificationResult')
-    CountingResult = getattr(model, 'CountingResult')
-    MultiClassificationResult = getattr(model, 'MultiClassificationResult')
-    Label = getattr(model, 'Label')
-    Source = getattr(model, 'Source')
+    ModeEnum = getattr(model, "ModeEnum")
+    ResultTypeEnum = getattr(model, "ResultTypeEnum")
+    BinaryClassificationResult = getattr(model, "BinaryClassificationResult")
+    CountingResult = getattr(model, "CountingResult")
+    MultiClassificationResult = getattr(model, "MultiClassificationResult")
+    Label = getattr(model, "Label")
+    Source = getattr(model, "Source")
 
     """
     Maps the detector mode to the corresponding result type and generates the result object
@@ -421,4 +418,3 @@ def parse_model_info(
         )
 
     return edge_model_info, oodd_model_info
-
