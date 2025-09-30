@@ -1,11 +1,12 @@
-from sqlalchemy.orm import Mapped, mapped_column, declarative_base
-from sqlalchemy import String, Float, Boolean, JSON
-
+from sqlalchemy import JSON, Boolean, Float, String
 # Cross-dialect JSON: use JSON on SQLite, JSONB on Postgres
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column
+
 JSONType = JSON().with_variant(JSONB, "postgresql")
 
 Base = declarative_base()
+
 
 class ImageQueryRow(Base):
     __tablename__ = "image_queries"

@@ -2,17 +2,14 @@ import logging
 import random
 from typing import Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query,
+                     Request, status)
 from intellioptics import IntelliOptics
 from model import ImageQuery
 
-from app.core.app_state import (
-    AppState,
-    get_app_state,
-    get_detector_metadata,
-    get_intellioptics_sdk_instance,
-    refresh_detector_metadata_if_needed,
-)
+from app.core.app_state import (AppState, get_app_state, get_detector_metadata,
+                                get_intellioptics_sdk_instance,
+                                refresh_detector_metadata_if_needed)
 from app.core.edge_inference import get_edge_inference_model_name
 from app.core.utils import create_iq, generate_metadata_dict, safe_call_sdk
 from app.metrics.iq_activity import record_activity_for_metrics

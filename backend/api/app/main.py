@@ -1,18 +1,15 @@
 # backend/api/app/main.py
 from __future__ import annotations
 
-import os
 import logging
+import os
 from pathlib import Path
 from typing import List
 
 from fastapi import Depends, FastAPI
-
-from sqlalchemy import create_engine
-
-from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import create_engine
 from starlette.responses import JSONResponse
 
 # ------------------------------------------------------------------------------
@@ -36,9 +33,7 @@ DISABLE_OPENAPI = os.getenv("DISABLE_OPENAPI", "auto").lower()  # auto|true|fals
 if DISABLE_OPENAPI not in {"auto", "true", "false"}:
     DISABLE_OPENAPI = "auto"
 
-hide_docs = (DISABLE_OPENAPI == "true") or (
-    DISABLE_OPENAPI == "auto" and APP_ENV == "prod"
-)
+hide_docs = (DISABLE_OPENAPI == "true") or (DISABLE_OPENAPI == "auto" and APP_ENV == "prod")
 
 docs_url = None if hide_docs else "/docs"
 redoc_url = None if hide_docs else "/redoc"
@@ -47,17 +42,13 @@ openapi_url = None if hide_docs else "/openapi.json"
 # CORS
 _raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "*")
 ALLOW_ORIGINS: List[str] = (
-    ["*"]
-    if _raw_origins.strip() == "*"
-    else [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    ["*"] if _raw_origins.strip() == "*" else [o.strip() for o in _raw_origins.split(",") if o.strip()]
 )
 
 # ------------------------------------------------------------------------------
 # DB bootstrap (kept compatible with your existing setup)
 # ------------------------------------------------------------------------------
-DB_URL = os.getenv("DB_URL") or os.getenv("POSTGRES_DSN") or os.getenv(
-    "DATABASE_URL", ""
-)
+DB_URL = os.getenv("DB_URL") or os.getenv("POSTGRES_DSN") or os.getenv("DATABASE_URL", "")
 if not DB_URL:
     DB_URL = "sqlite:///./data/dev.db"
 if DB_URL.startswith("postgres://"):
@@ -65,6 +56,7 @@ if DB_URL.startswith("postgres://"):
 
 try:
     from .db import engine as _shared_engine
+
     engine = _shared_engine
     log.info("DB engine imported from app.db")
 except Exception as exc:
@@ -78,6 +70,7 @@ log.info(f"DB_URL resolved to: {DB_URL}")
 # ------------------------------------------------------------------------------
 try:
     from .security import require_api_key  # optional
+
     _has_security = True
     log.info("security.require_api_key available")
 except Exception as e:  # pragma: no cover
@@ -90,6 +83,7 @@ if ALERTS_REQUIRE_API_KEY not in {"auto", "true", "false"}:
 
 INTELLIOPTICS_API_KEY = os.getenv("INTELLIOPTICS_API_KEY", "")
 
+
 def _alerts_dependencies():
     if not _has_security:
         return []
@@ -99,6 +93,7 @@ def _alerts_dependencies():
         return []
     # auto
     return [Depends(require_api_key)] if INTELLIOPTICS_API_KEY else []
+
 
 # ------------------------------------------------------------------------------
 # App
@@ -124,6 +119,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Tidy up headers safely
 @app.middleware("http")
 async def strip_server_header(request, call_next):
@@ -135,6 +131,7 @@ async def strip_server_header(request, call_next):
     response.headers["x-app"] = APP_NAME
     response.headers["x-env"] = APP_ENV
     return response
+
 
 # ------------------------------------------------------------------------------
 # Routers — mount priority: email, alerts, annotated, then iq_* (last)
@@ -151,6 +148,7 @@ def _mount_router(name: str, import_path: str, include_kwargs: dict | None = Non
     except Exception as e:
         # Log full exception string for easier diagnosis
         log.warning(f"{name} router not mounted: {e}")
+
 
 # 1) Email first (independent of DB)
 _mount_router("email", "app.emails")
@@ -179,6 +177,7 @@ _mount_router("stream_ui", "app.stream_ui")
 _mount_router("iq_read", "app.iq_read")
 _mount_router("iq_create", "app.iq_create")
 
+
 # ------------------------------------------------------------------------------
 # Health Endpoints
 # ------------------------------------------------------------------------------
@@ -190,6 +189,7 @@ def health_v1():
         "docs_hidden": hide_docs,
         "db_url_scheme": DB_URL.split(":", 1)[0],
     }
+
 
 @app.get("/")
 def root():

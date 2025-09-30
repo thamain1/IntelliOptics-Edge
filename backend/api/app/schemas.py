@@ -1,8 +1,10 @@
 from pydantic import BaseModel, Field
 
+
 class SubmitQueryResponse(BaseModel):
     image_query_id: str
     status: str
+
 
 class QueryStatusResponse(BaseModel):
     id: str
@@ -12,6 +14,7 @@ class QueryStatusResponse(BaseModel):
     result_type: str | None = None
     count: float | None = None
     extra: dict | None = None
+
 
 class HumanLabelRequest(BaseModel):
     label: str = Field(description="YES | NO | COUNT | UNCLEAR")

@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 if TYPE_CHECKING:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
     from app.metrics.metric_reporting import MetricsReporter
 
 ONE_HOUR_IN_SECONDS = 3600
@@ -22,6 +23,7 @@ reporter: "MetricsReporter | None" = None
 async def startup_event():
     """Lifecycle event that is triggered when the application starts."""
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
     from app.metrics.iq_activity import clear_old_activity_files
     from app.metrics.metric_reporting import MetricsReporter
 

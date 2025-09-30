@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import io
 import os
 import re
 import ssl
@@ -31,6 +30,7 @@ MAX_INLINE_BYTES = int(os.getenv("EMAIL_MAX_INLINE_BYTES", str(3 * 1024 * 1024))
 # Snapshot overlay (disabled per request)
 DRAW_QUERY = False  # Do not draw on image
 # ---------------------------
+
 
 class EmailSendRequest(BaseModel):
     to: List[str] = Field(..., description="List of recipient emails")
@@ -67,6 +67,7 @@ def _safe_fetch_bytes(url: str, timeout: float = 10.0) -> Optional[FetchedAsset]
             content = resp.read()
             ctype = resp.headers.get_content_type() or "application/octet-stream"
             from urllib.parse import urlparse
+
             fname = os.path.basename(urlparse(url).path) or "image"
             return FetchedAsset(content=content, mime=ctype, filename=fname)
     except Exception:
@@ -79,11 +80,7 @@ def _b64(data: bytes) -> str:
 
 def _html_escape(s: str) -> str:
     return (
-        s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&#39;")
+        s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;")
     )
 
 
@@ -114,12 +111,10 @@ def _build_email_html(
             f'style="height:96px;display:block;margin:0 auto;border:0;" />'
         )
     else:
-        logo_html = (
-            f'<span style="font-weight:700;font-size:20px;letter-spacing:.5px;display:block;text-align:center">{title}</span>'
-        )
+        logo_html = f'<span style="font-weight:700;font-size:20px;letter-spacing:.5px;display:block;text-align:center">{title}</span>'
 
     # Centered “query pill” (outside the image, not covering it)
-    query_pill = f'''
+    query_pill = f"""
       <div style="text-align:center;margin:10px 0 4px 0">
         <span style="
           display:inline-block;padding:8px 14px;border-radius:999px;
@@ -128,14 +123,14 @@ def _build_email_html(
           {question}
         </span>
       </div>
-    '''
+    """
 
     # Detector line (centered)
-    detector_line = f'''
+    detector_line = f"""
       <div style="font-size:13px;color:#bdbdbd;margin-bottom:8px;text-align:center">
         Detector: <span style="font-family:Consolas,Menlo,monospace">{_html_escape(detector_id)}</span>
       </div>
-    '''
+    """
 
     # Snapshot block (centered)
     if use_cid_snapshot:
@@ -254,11 +249,7 @@ def send_email(req: EmailSendRequest):
     Layout shows only the centered query pill above the image (no large headline).
     """
     # Plain-text alt (kept minimal; no big headline)
-    text = (
-        f"{req.query_text}?\n"
-        f"Detector: {req.detector_id}\n"
-        f"Answer: {req.answer.upper()}\n"
-    )
+    text = f"{req.query_text}?\n" f"Detector: {req.detector_id}\n" f"Answer: {req.answer.upper()}\n"
     if req.consecutive and req.consecutive > 1:
         text += f"Consecutive: {req.consecutive}\n"
     if req.snapshot_url:

@@ -1,10 +1,11 @@
 # backend/api/app/alerts.py
 from __future__ import annotations
 
+import datetime as dt
+# --- Logging ---------------------------------------------------------------
+import logging
 import os
 import uuid
-import json
-import datetime as dt
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -12,21 +13,14 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 
-# --- Logging ---------------------------------------------------------------
-import logging
-
 logger = logging.getLogger("intellioptics.api")
 logger.setLevel(logging.INFO)
 
 # --- Optional Azure SDK ----------------------------------------------------
 _AZURE_OK = True
 try:
-    from azure.storage.blob import (
-        BlobServiceClient,
-        BlobSasPermissions,
-        ContentSettings,
-        generate_blob_sas,
-    )
+    from azure.storage.blob import (BlobSasPermissions, BlobServiceClient,
+                                    ContentSettings, generate_blob_sas)
 except Exception as e:  # pragma: no cover
     _AZURE_OK = False
     logger.warning("[alerts] Azure SDK import failed: %s", e)
@@ -41,6 +35,7 @@ from .models import AlertEvent, ensure_alert_events_table
 # =============================================================================
 # Models
 # =============================================================================
+
 
 class SimulateIn(BaseModel):
     detector_id: str
@@ -65,6 +60,7 @@ class SimulateOut(BaseModel):
 # =============================================================================
 # Helpers
 # =============================================================================
+
 
 def _env(name: str, default: Optional[str] = None) -> Optional[str]:
     v = os.getenv(name)
@@ -206,6 +202,7 @@ def _store_event_best_effort(payload: dict) -> Optional[str]:
 # =============================================================================
 # Routes
 # =============================================================================
+
 
 @router.post("/simulate", response_model=SimulateOut)
 def simulate_alert(body: SimulateIn) -> SimulateOut:

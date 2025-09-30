@@ -12,13 +12,15 @@ from .db import engine
 
 router = APIRouter()
 
+
 def _now_utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 def _row_to_dict(row: Any) -> Dict[str, Any]:
     image_uri = row.blob_url
 
-    cnt = (row.count or 0)
+    cnt = row.count or 0
     answer = "YES" if cnt > 0 else "NO"
 
     status = row.status or "QUEUED"
@@ -51,8 +53,10 @@ def _row_to_dict(row: Any) -> Dict[str, Any]:
         "answer": answer,
     }
 
+
 def _fetch_one(iq_id: str) -> Optional[Dict[str, Any]]:
-    sql = text("""
+    sql = text(
+        """
         SELECT
             id, detector_id,
             blob_url,
@@ -62,7 +66,8 @@ def _fetch_one(iq_id: str) -> Optional[Dict[str, Any]]:
         FROM image_queries
         WHERE id = :id
         LIMIT 1
-    """)
+    """
+    )
     with engine.connect() as conn:
         res = conn.execute(sql, {"id": iq_id})
         row = res.mappings().first()
@@ -70,12 +75,14 @@ def _fetch_one(iq_id: str) -> Optional[Dict[str, Any]]:
             return None
         return _row_to_dict(row)
 
+
 @router.get("/v1/image-queries/{iq_id}")
 def get_image_query(iq_id: str):
     doc = _fetch_one(iq_id)
     if not doc:
         raise HTTPException(status_code=404, detail="not found")
     return doc
+
 
 @router.get("/v1/image-queries/{iq_id}/wait")
 async def wait_image_query(

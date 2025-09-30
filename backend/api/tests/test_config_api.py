@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.api.app import configuration, config_store, db, migrations  # noqa: E402
+from backend.api.app import (config_store, configuration, db,  # noqa: E402
+                             migrations)
 
 
 @pytest.fixture

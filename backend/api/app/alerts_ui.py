@@ -10,9 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from .config import settings
 
-_templates = Jinja2Templates(
-    directory=str(Path(__file__).resolve().parent / "templates")
-)
+_templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
 
 router = APIRouter()
 

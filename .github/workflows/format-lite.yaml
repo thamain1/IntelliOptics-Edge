@@ -1,0 +1,64 @@
+name: format-lite
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  format:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install formatters (no Poetry)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install black ruff isort yamllint
+
+      - name: Run formatters (exclude vendor/ and cicd/pulumi/)
+        run: |
+          set -e
+          EXCL='(vendor/|cicd/pulumi/)'
+
+          # Black: do not fail the job even if it exits non-zero
+          set +e
+          black --exclude "$EXCL" .
+          BLACK_EC=$?
+          set -e
+
+          # Ruff + isort (also tolerant)
+          set +e
+          ruff check . --fix --exclude vendor --exclude cicd/pulumi
+          RUFF_EC=$?
+          isort . --skip vendor --skip cicd/pulumi
+          ISORT_EC=$?
+          set -e
+
+          echo "BLACK_EC=$BLACK_EC RUFF_EC=$RUFF_EC ISORT_EC=$ISORT_EC"
+
+      - name: Commit changes back to PR
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format (format-lite, excludes vendor/ and cicd/pulumi/)"
+          branch: ${{ github.head_ref }}
+          file_pattern: |
+            **/*.py
+            **/*.yaml
+            **/*.yml
+            **/*.toml
+            **/*.md

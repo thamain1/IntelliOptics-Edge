@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_auth
 from app.db import get_db
-from app.models import Detector  # SQLAlchemy model: id (UUID), public_id, name, mode, query, confidence_threshold, status, created_at
+from app.models import \
+    Detector  # SQLAlchemy model: id (UUID), public_id, name, mode, query, confidence_threshold, status, created_at
 
 router = APIRouter(prefix="/v1/detectors", tags=["detectors"])
 
 
 # ========= Pydantic Schemas =========
+
 
 class DetectorCreate(BaseModel):
     name: str
@@ -35,6 +37,7 @@ class DetectorOut(BaseModel):
 
 
 # ========= Helpers =========
+
 
 def _normalize_create_payload(raw: Dict[str, Any]) -> DetectorCreate:
     """
@@ -74,6 +77,7 @@ def _get_by_any_id(db: Session, detector_id: str) -> Optional[Detector]:
 
 
 # ========= Routes =========
+
 
 @router.get("", response_model=List[DetectorOut], dependencies=[Depends(require_auth)])
 def list_detectors(db: Session = Depends(get_db)):
@@ -126,6 +130,8 @@ def create_detector(raw: Dict[str, Any] = Body(...), db: Session = Depends(get_d
         db.rollback()
         # If unique index exists on public_id, collisions are astronomically unlikely,
         # but we still present a clean 502 on any DB error.
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"create_detector failed: {type(e).__name__}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=f"create_detector failed: {type(e).__name__}"
+        )
 
     return _row_to_out(det)

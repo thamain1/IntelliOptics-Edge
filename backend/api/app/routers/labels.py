@@ -1,14 +1,20 @@
+import json
+import os
+import pathlib
+import threading
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter
 from pydantic import BaseModel
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
-import os, json, threading, pathlib, time
 
 router = APIRouter(prefix="/v1", tags=["labels"])
 
 LABELS_PATH = os.getenv("IO_LABELS_PATH", "data/labels.jsonl")
 _lock = threading.Lock()
 pathlib.Path(os.path.dirname(LABELS_PATH) or ".").mkdir(parents=True, exist_ok=True)
+
 
 class LabelIn(BaseModel):
     image_query_id: str
@@ -18,9 +24,11 @@ class LabelIn(BaseModel):
     user_id: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+
 class LabelOut(LabelIn):
     id: str
     ts: str
+
 
 @router.post("/labels", response_model=LabelOut)
 def create_label(body: LabelIn) -> LabelOut:
@@ -35,6 +43,7 @@ def create_label(body: LabelIn) -> LabelOut:
         f.write(json.dumps(rec) + "\n")
     return rec  # type: ignore[return-value]
 
+
 @router.get("/labels")
 def list_labels(limit: int = 100, offset: int = 0):
     items: List[Dict[str, Any]] = []
@@ -48,4 +57,4 @@ def list_labels(limit: int = 100, offset: int = 0):
                     except Exception:
                         pass
     total = len(items)
-    return {"items": items[offset:offset+limit], "total": total}
+    return {"items": items[offset : offset + limit], "total": total}

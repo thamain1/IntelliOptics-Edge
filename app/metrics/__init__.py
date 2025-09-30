@@ -6,12 +6,10 @@ from pathlib import Path
 import ksuid
 
 from app.core.utils import get_formatted_timestamp_str
-from app.escalation_queue.constants import (
-    DEFAULT_QUEUE_BASE_DIR,
-    IMAGE_DIR_SUFFIX,
-    MAX_QUEUE_FILE_LINES,
-    WRITING_DIR_SUFFIX,
-)
+from app.escalation_queue.constants import (DEFAULT_QUEUE_BASE_DIR,
+                                            IMAGE_DIR_SUFFIX,
+                                            MAX_QUEUE_FILE_LINES,
+                                            WRITING_DIR_SUFFIX)
 from app.escalation_queue.models import EscalationInfo
 
 logger = logging.getLogger(__name__)

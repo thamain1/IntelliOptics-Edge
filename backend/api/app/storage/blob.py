@@ -34,8 +34,8 @@ SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]")
 @dataclass
 class BlobRef:
     container: str
-    name: str       # path within container
-    url: str        # full HTTPS URL
+    name: str  # path within container
+    url: str  # full HTTPS URL
     content_type: str
     size: int
 
@@ -117,6 +117,7 @@ def upload_image_bytes(
 
 
 # ------------------ Replaced upload_starlette_file with requested version ------------------
+
 
 def _basename_no_path(name: str) -> str:
     name = (name or "").split("/")[-1].split("\\")[-1]

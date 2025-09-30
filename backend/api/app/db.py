@@ -7,11 +7,10 @@ from typing import Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from .config import settings
-
 
 logger = logging.getLogger("intellioptics.db")
 Base = declarative_base()
@@ -30,11 +29,7 @@ def _resolve_db_url(override: Optional[str] = None) -> str:
     if override:
         url = override
     else:
-        url = (
-            os.getenv("DATABASE_URL")
-            or os.getenv("POSTGRES_DSN")
-            or settings.pg_dsn
-        )
+        url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_DSN") or settings.pg_dsn
 
     if not url:
         url = f"sqlite:///{_default_sqlite_path()}"
@@ -68,9 +63,7 @@ def configure_engine(url: Optional[str] = None) -> Engine:
     except ModuleNotFoundError as exc:
         if exc.name in {"psycopg", "psycopg2"}:
             fallback = f"sqlite:///{_default_sqlite_path()}"
-            logger.warning(
-                "[db] psycopg driver missing; falling back to SQLite at %s", fallback
-            )
+            logger.warning("[db] psycopg driver missing; falling back to SQLite at %s", fallback)
             _engine = create_engine(fallback, **_engine_kwargs(fallback))
         else:  # pragma: no cover
             raise

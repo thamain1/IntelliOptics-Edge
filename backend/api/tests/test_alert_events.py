@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -41,16 +41,20 @@ def test_store_event_persists_payload(sqlite_alerts_db):
 
 
 def test_recent_events_returns_latest(sqlite_alerts_db):
-    alerts._store_event_best_effort({
-        "detector_id": "det-1",
-        "image_query_id": "iq-1",
-        "answer": "NO",
-    })
-    alerts._store_event_best_effort({
-        "detector_id": "det-2",
-        "image_query_id": "iq-2",
-        "answer": "YES",
-    })
+    alerts._store_event_best_effort(
+        {
+            "detector_id": "det-1",
+            "image_query_id": "iq-1",
+            "answer": "NO",
+        }
+    )
+    alerts._store_event_best_effort(
+        {
+            "detector_id": "det-2",
+            "image_query_id": "iq-2",
+            "answer": "YES",
+        }
+    )
 
     app = FastAPI()
     app.include_router(alerts.router)

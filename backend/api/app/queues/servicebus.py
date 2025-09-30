@@ -1,18 +1,20 @@
 # queues/servicebus.py  (drop-in replacement)
 
 from __future__ import annotations
+
 import json
 import logging
 
-from azure.servicebus.aio import ServiceBusClient
-from azure.servicebus import ServiceBusMessage
 from azure.identity.aio import DefaultAzureCredential
+from azure.servicebus import ServiceBusMessage
+from azure.servicebus.aio import ServiceBusClient
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
 
 # ----- Internal helper ---------------------------------------------------------
+
 
 async def _send_json(queue_name: str, payload: dict, *, kind: str) -> None:
     """Serialize payload to JSON and send as a single message.
@@ -44,13 +46,17 @@ async def _send_json(queue_name: str, payload: dict, *, kind: str) -> None:
 
     logger.info("Sent ServiceBus message to %s (%d bytes, kind=%s)", queue_name, len(body), kind)
 
+
 # ----- Public API --------------------------------------------------------------
+
 
 async def enqueue_image_query(payload: dict) -> None:
     await _send_json(settings.sb_image_queue, payload, kind="image-query")
 
+
 async def enqueue_result(payload: dict) -> None:
     await _send_json(settings.sb_results_queue, payload, kind="result")
+
 
 async def enqueue_feedback(payload: dict) -> None:
     await _send_json(settings.sb_feedback_queue, payload, kind="feedback")

@@ -6,12 +6,10 @@ from itertools import islice
 from pathlib import Path
 from typing import Generator
 
-from app.escalation_queue.constants import (
-    DEFAULT_QUEUE_BASE_DIR,
-    READING_DIR_SUFFIX,
-    TRACKING_FILE_NAME_PREFIX,
-    WRITING_DIR_SUFFIX,
-)
+from app.escalation_queue.constants import (DEFAULT_QUEUE_BASE_DIR,
+                                            READING_DIR_SUFFIX,
+                                            TRACKING_FILE_NAME_PREFIX,
+                                            WRITING_DIR_SUFFIX)
 
 logger = logging.getLogger(__name__)
 

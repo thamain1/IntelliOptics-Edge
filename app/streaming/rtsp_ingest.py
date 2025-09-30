@@ -18,7 +18,8 @@ except Exception:  # pragma: no cover - handled gracefully when missing
 
 from app.api.naming import API_BASE_PATH
 from app.core.app_state import AppState
-from app.core.configs import StreamBackend, StreamConfig, StreamSubmissionMethod
+from app.core.configs import (StreamBackend, StreamConfig,
+                              StreamSubmissionMethod)
 
 LOGGER = logging.getLogger(__name__)
 

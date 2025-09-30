@@ -21,9 +21,7 @@ class TriggerCondition(BaseModel):
         "equals",
         description="Comparison applied to the detector answer",
     )
-    answer: str = Field(
-        ..., description="Detector answer that should trip the alert", min_length=1
-    )
+    answer: str = Field(..., description="Detector answer that should trip the alert", min_length=1)
     consecutive: int = Field(
         1,
         ge=1,
@@ -42,12 +40,8 @@ class TriggerCondition(BaseModel):
 class Recipient(BaseModel):
     """Represents a downstream notification recipient."""
 
-    channel: str = Field(
-        ..., description="Notification channel", regex=r"^[a-zA-Z0-9_-]+$"
-    )
-    address: str = Field(
-        ..., description="Channel specific destination", min_length=3
-    )
+    channel: str = Field(..., description="Notification channel", regex=r"^[a-zA-Z0-9_-]+$")
+    address: str = Field(..., description="Channel specific destination", min_length=3)
     country_code: Optional[str] = Field(
         default=None,
         description="E.164 country code for SMS/voice destinations",
@@ -78,9 +72,7 @@ class NotificationSettings(BaseModel):
         regex=r"^[a-zA-Z0-9_-]+$",
     )
     primary_target: str = Field(..., description="Primary destination", min_length=3)
-    include_image: bool = Field(
-        False, description="Attach the annotated image in the notification"
-    )
+    include_image: bool = Field(False, description="Attach the annotated image in the notification")
     message_template: str = Field(
         "",
         description="Template used for notification bodies",
@@ -111,17 +103,11 @@ class NotificationSettings(BaseModel):
 class AlertRuleBase(BaseModel):
     name: str = Field(..., description="Human readable alert name", min_length=1)
     detector_id: str = Field(..., description="Detector identifier", min_length=3)
-    detector_name: Optional[str] = Field(
-        default=None, description="Friendly detector name"
-    )
+    detector_name: Optional[str] = Field(default=None, description="Friendly detector name")
     enabled: bool = Field(True, description="Whether the alert is active")
     condition: TriggerCondition = Field(..., description="Trigger condition")
-    confirm_with_cloud: bool = Field(
-        False, description="Require cloud labelers before alerting"
-    )
-    notification: NotificationSettings = Field(
-        ..., description="Notification delivery settings"
-    )
+    confirm_with_cloud: bool = Field(False, description="Require cloud labelers before alerting")
+    notification: NotificationSettings = Field(..., description="Notification delivery settings")
 
 
 class AlertRuleCreate(AlertRuleBase):

@@ -1,18 +1,16 @@
 # backend/api/app/azure_blob.py
 from __future__ import annotations
+
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from azure.storage.blob import (
-    BlobServiceClient,
-    ContentSettings,
-    BlobSasPermissions,
-    generate_blob_sas,
-)
+from azure.storage.blob import (BlobSasPermissions, BlobServiceClient,
+                                ContentSettings, generate_blob_sas)
 
 _ACCOUNT_CONN_STR_ENV = "AZURE_STORAGE_CONNECTION_STRING"
 _CONTAINER_ENV = "AZ_BLOB_CONTAINER"
+
 
 class AzureBlobClient:
     def __init__(self, connection_string: Optional[str] = None, container_name: Optional[str] = None):
