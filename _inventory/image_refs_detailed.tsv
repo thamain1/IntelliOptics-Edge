@@ -3,22 +3,22 @@ docker-base	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\balena-k3s\bastion\Docke
 docker-base	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\balena-k3s\gpu\Dockerfile	FROM balenalib/genericx86-64-ext:bullseye-run-20211030
 docker-base	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\balena-k3s\server\Dockerfile	FROM ubuntu:22.04
 docker-base	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\balena-k3s\server-jetson-orin\Dockerfile	FROM balenalib/jetson-agx-orin-devkit-ubuntu:jammy-20240401
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\files\inference-deployment-template.yaml	image: amazon/aws-cli:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\files\inference-deployment-template.yaml	image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "groundlight-edge-endpoint.inferenceTag" . }}
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\tests\test-cloud-connection.yaml	image: busybox
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\tests\test-local-connection.yaml	image: busybox
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\_ecr-creds-podspec.yaml	image: amazon/aws-cli:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\_ecr-creds-podspec.yaml	image: bitnami/kubectl:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\cleanup-old-jobs.yaml	image: bitnami/kubectl:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:{{ include "groundlight-edge-endpoint.edgeEndpointTag" . }}
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\k3s-memory-config.yaml	image: alpine:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\validate-api-token.yaml	image: amazon/aws-cli:latest
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\warmup-inference-model.yaml	image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "groundlight-edge-endpoint.inferenceTag" . }}
-k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\groundlight-edge-endpoint\templates\warmup-inference-model.yaml	image: amazon/aws-cli:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\files\inference-deployment-template.yaml	image: amazon/aws-cli:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\files\inference-deployment-template.yaml	image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "intellioptics-edge-endpoint.inferenceTag" . }}
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\tests\test-cloud-connection.yaml	image: busybox
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\tests\test-local-connection.yaml	image: busybox
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\_ecr-creds-podspec.yaml	image: amazon/aws-cli:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\_ecr-creds-podspec.yaml	image: bitnami/kubectl:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\cleanup-old-jobs.yaml	image: bitnami/kubectl:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\edge-deployment.yaml	image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:{{ include "intellioptics-edge-endpoint.edgeEndpointTag" . }}
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\edge-deployment.yaml	image: *edgeEndpointImage
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\k3s-memory-config.yaml	image: alpine:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\validate-api-token.yaml	image: amazon/aws-cli:latest
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\warmup-inference-model.yaml	image: 767397850842.dkr.ecr.us-west-2.amazonaws.com/gl-edge-inference:{{ include "intellioptics-edge-endpoint.inferenceTag" . }}
+k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\helm\intellioptics-edge-endpoint\templates\warmup-inference-model.yaml	image: amazon/aws-cli:latest
 k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\k3s\edge_deployment\edge_deployment.yaml	image: &edgeEndpointImage 767397850842.dkr.ecr.us-west-2.amazonaws.com/edge-endpoint:${IMAGE_TAG}
 k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\k3s\edge_deployment\edge_deployment.yaml	image: *edgeEndpointImage
 k8s-image	C:\Users\ThaMain1\IntelliOptics-Edge\deploy\k3s\edge_deployment\edge_deployment.yaml	image: *edgeEndpointImage
