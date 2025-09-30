@@ -1,4 +1,4 @@
-name: auto-format
+name: format-lite
 
 on:
   pull_request:
@@ -9,54 +9,38 @@ permissions:
   contents: write
   pull-requests: write
 
-env:
-  PYTHON_VERSION: "3.11"
-  POETRY_VERSION: "1.8.3"
-
 jobs:
   format:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Get Code
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Setup Python
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: "3.11"
           cache: "pip"
 
-      - name: Install Poetry ${{ env.POETRY_VERSION }} (via pip)
+      - name: Install formatters (no Poetry)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "poetry==${{ env.POETRY_VERSION }}"
-          poetry --version
-
-      - name: Install formatting deps
-        run: |
-          if [ -f Makefile ]; then
-            make install-lint || true
-          fi
-          python -m pip install black ruff isort yamllint || true
+          python -m pip install black ruff isort yamllint
 
       - name: Run formatters
         run: |
           set -e
-          if [ -f Makefile ]; then
-            make format || true
-          else
-            black .
-            ruff check . --fix || true
-            isort . || true
-          fi
+          black .
+          ruff check . --fix || true
+          isort . || true
 
       - name: Commit changes back to PR
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "style: auto-format via CI"
+          commit_message: "style: auto-format (format-lite)"
           branch: ${{ github.head_ref }}
           file_pattern: |
             **/*.py
