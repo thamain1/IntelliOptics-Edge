@@ -18,7 +18,13 @@ If you follow these instructions and something isn't working, please check the [
 
 ## Cloud and Container Registry Prerequisites
 
+The Edge Endpoint containers are published to Azure Container Registry (ACR), and the deployment scripts and Helm charts assume
+Azure as the default environment. This section collects the environment variables, CLI tooling, and registry authentication
+steps that are referenced throughout the rest of the document so you can prepare the Azure resources before running the install
+commands.
+
 The Edge Endpoint containers are published to Azure Container Registry (ACR). Configure the Azure environment and registry credentials before you start the Helm install. This section collects the environment variables, CLI tooling, and registry authentication steps that are referenced throughout the rest of the document.
+
 
 ### Azure requirements (ACR and AKS/AKS Edge Essentials)
 
@@ -79,6 +85,24 @@ With those steps complete, Helm will be able to pull images from ACR using the d
 templates at [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates). If you maintain your
 own ACR image tags, override the `edgeEndpointTag` and `inferenceTag` values in
 [`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) when you run Helm.
+
+
+### Azure deployment requirements (ACR and AKS/other Kubernetes distributions)
+
+The previously documented non-Azure workflows have been retired. Make sure the Azure prerequisites above are satisfied before you
+run the Helm commands:
+
+1. You have authenticated with `az login` (either interactively or using a service principal) and selected the subscription
+   that owns your cluster and registry.
+2. The `ACR_NAME`, `ACR_LOGIN_SERVER`, and related environment variables are exported so the helper scripts can locate your
+   registry.
+3. A Kubernetes image pull secret referencing your Azure Container Registry exists in the namespace where you will deploy the
+   chart (the default name is `registry-credentials`).
+
+If you are migrating from an older deployment that used a different registry, retag your existing images into ACR (for example,
+`docker tag <legacy-image> "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:<tag>"` and `docker push`) and update any
+automation to set `REGISTRY_PROVIDER=azure`.
+
 
 ### TL;DR - No fluff, just bash commands
 
@@ -176,6 +200,10 @@ If the server is not your Azure registry or the username is missing, rerun the c
    docker push "$ACR_LOGIN_SERVER/intellioptics/edge-endpoint:local"
    ```
    The Azure one-click provisioning scripts in [infra/azure-oneclick/deploy](../infra/azure-oneclick/deploy) show complete examples of using `az acr login` before pushing and of injecting the resulting tag into downstream workloads.
+
+
+After these prerequisites are in place you can follow the Helm instructions below. All registry pulls will use the Azure credentials you created earlier.
+
 
 ## Configuring RTSP streaming ingest
 
@@ -542,6 +570,20 @@ export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountNa
 
 
 
+If you are running the bootstrap script from an automation host (for example, CI/CD), configure a service principal with access
+to the registry and export the standard Azure environment variables before invoking the script:
+
+```bash
+export AZURE_CLIENT_ID="<app-id>"
+export AZURE_TENANT_ID="<directory-id>"
+export AZURE_CLIENT_SECRET="<client-secret>"
+export ACR_NAME="<your-acr-name>"
+export ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
+```
+
+These values allow the helper jobs to log into ACR and refresh the credentials without prompting for interactive Azure login.
+
+
 To install the edge-endpoint, run:
 ```shell
 ./deploy/bin/setup-ee.sh
@@ -724,6 +766,23 @@ If you're testing things locally and want to use a different docker image, you c
 by first creating a docker image locally, pushing it to your container registry, retrieving the image ID and
 then using that ID in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
 
+The build/push scripts default to Azure Container Registry (ACR):
+
+```shell
+# Build and push image to ACR
+./deploy/bin/build-push-edge-endpoint-image.sh
+```
+
+Ensure the Azure environment variables from the earlier sections are exported so the script can log into your registry. When
+tagging existing images, the same variables apply:
+
+```shell
+./deploy/bin/tag-edge-endpoint-image.sh latest
+```
+
+Both `build-push` and `tag` scripts share registry authentication helpers (`deploy/bin/registry.sh`) which standardize the `az
+acr login` and `az acr repository show-manifests` commands used during deployment.
+
 The build/push scripts target Azure Container Registry (ACR):
 
 ```shell
@@ -743,6 +802,7 @@ When tagging existing images, provide the desired tag after configuring the same
 
 Both `build-push` and `tag` scripts share registry authentication helpers (`deploy/bin/registry.sh`) which
 wrap the Azure CLI (`az acr login`, `az acr repository show-manifests`, and `az acr manifest create`).
+
 ## Container registry configuration
 
 The Edge Endpoint images must live in a container registry that your Kubernetes
@@ -814,6 +874,35 @@ configure Helm to use that registry and secret.
 
 ## Container registry configuration
 
+
+The helper scripts in [`deploy/bin`](./bin) default to Azure Container Registry. You can override the target provider and
+registry coordinates with the following environment variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REGISTRY_PROVIDER` | `azure` | Selects the registry backend. Keep the default (`azure`) unless you are targeting a different OCI registry. |
+| `ACR_NAME` | `acrintellioptics` | Azure Container Registry name (e.g. `myregistry`). |
+| `ACR_LOGIN_SERVER` | `acrintellioptics.azurecr.io` | Fully-qualified Azure registry login server (e.g. `myregistry.azurecr.io`). |
+| `ACR_RESOURCE_GROUP` | `intellioptics-edge` | Resource group that hosts the Azure Container Registry. Useful for CI credentials and Azure CLI logins. |
+
+When deploying from CI, supply a service principal with access to ACR along with the variables above so that the build/push and
+tagging scripts can authenticate without user interaction.
+
+## Pushing/Pulling Images from Container Registries
+
+We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
+If you're testing things locally and want to use a different docker image, you can do so
+by first creating a docker image locally, pushing it to your registry, retrieving the
+image ID and then using that ID in the
+[edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+
+## Pushing/Pulling Images from Azure Container Registry (ACR)
+
+We currently have a hard-coded docker image in our k3s deployment, which is not ideal.
+If you're testing things locally and want to use a different docker image, you can do so
+by first creating a docker image locally, pushing it to ACR, retrieving the image name and
+then using that image reference in the [edge_deployment](k3s/edge_deployment/edge_deployment.yaml) file.
+
 The helper scripts in [`deploy/bin`](./bin) target Azure Container Registry. Configure them
 with the following environment variables before building, tagging, or pushing images:
 
@@ -828,6 +917,7 @@ with the following environment variables before building, tagging, or pushing im
 For other OCI-compatible registries, follow the same pattern: build and push
 the image, create a Docker registry secret with appropriate credentials, and
 configure Helm to use that registry and secret.
+
 
 
 ## Pushing/Pulling Images from Azure Container Registry (ACR)
