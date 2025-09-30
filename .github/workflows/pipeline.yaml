@@ -67,10 +67,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install "poetry==${{ env.POETRY_VERSION }}"
 
-      - name: Configure Poetry to avoid virtualenv in project
-        run: |
-          poetry config virtualenvs.in-project false
-
       - name: Install project (no dev if Makefile not present)
         run: |
           if [ -f Makefile ]; then
