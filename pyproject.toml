@@ -10,7 +10,7 @@ license = "MIT"
 # and keep your private simple index as supplemental.
 [[tool.poetry.source]]
 name = "pypi"
-priority = "default"
+priority = "primary"
 
 [[tool.poetry.source]]
 name = "intellioptics"
