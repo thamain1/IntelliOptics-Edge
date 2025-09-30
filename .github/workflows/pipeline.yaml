@@ -46,7 +46,17 @@ jobs:
       - name: Validate workflow YAML
         working-directory: .github/workflows
         run: |
-          yamllint -c ../.yamllint.yaml pipeline.yaml auto-format.yaml
+          set -e
+          # Lint only the workflows that exist in repo now (auto-format.yaml was removed)
+          yamllint -c ../.yamllint.yaml \
+            pipeline.yaml \
+            format-lite.yaml \
+            validate-workflow-files.yaml \
+            build-push-ee-image.yaml \
+            edge-build-push.yml \
+            sweeper-eeut.yaml \
+            test-k3s-helm.yaml \
+            auto-assign.yaml
 
   test:
     name: Unit & Integration Tests
@@ -69,7 +79,6 @@ jobs:
 
       - name: Regenerate lock (no updates)
         run: |
-          # Keep lock file consistent with pyproject modifications
           poetry lock --no-update
 
       - name: Install project (no dev if Makefile not present)
