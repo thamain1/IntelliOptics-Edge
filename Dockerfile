@@ -20,10 +20,10 @@ RUN set -eux; \
 
 WORKDIR /app
 
-# Copy lockfiles first for better build caching
+# Copy lockfiles first for better cache behavior
 COPY pyproject.toml poetry.lock ./
 
-# Install Poetry and project dependencies (no venv, no dev/lint)
+# Install Poetry and prod dependencies (no venv, no dev/lint) — no config writes
 RUN set -eux; \
     python -m pip install --upgrade pip; \
     python -m pip install "poetry==${POETRY_VERSION}"; \
@@ -32,10 +32,8 @@ RUN set -eux; \
     poetry check --lock; \
     poetry install --no-interaction --no-root --without dev --without lint
 
-# Now copy the rest of the source
+# Copy the rest of the source
 COPY . .
 
-# Default command (adjust if your app entry changes)
-# For FastAPI API:
-#   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Default command (FastAPI API)
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
