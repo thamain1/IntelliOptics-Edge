@@ -84,9 +84,9 @@ The Edge Endpoint containers are published to Azure Container Registry (ACR). Co
    ```
 
 With those steps complete, Helm will be able to pull images from ACR using the default repositories embedded in the chart
-templates at [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates). If you maintain your
+templates at [`helm/intellioptics-edge-endpoint/templates`](helm/intellioptics-edge-endpoint/templates). If you maintain your
 own ACR image tags, override the `edgeEndpointTag` and `inferenceTag` values in
-[`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) when you run Helm.
+[`helm/intellioptics-edge-endpoint/values.yaml`](helm/intellioptics-edge-endpoint/values.yaml) when you run Helm.
 
 
 ### Azure deployment requirements (ACR and AKS/other Kubernetes distributions)
@@ -184,7 +184,7 @@ If you're deploying the Edge Endpoint into Azure Kubernetes Service (AKS) or ano
      --docker-username "$ACR_USERNAME" \
      --docker-password "$ACR_PASSWORD"
    ```
-   The same secret is referenced by [deploy/aci/edge-endpoint.yaml](aci/edge-endpoint.yaml) when running the Edge Endpoint in Azure Container Instances, and by the Helm chart values in [deploy/helm/groundlight-edge-endpoint/values.yaml](helm/groundlight-edge-endpoint/values.yaml).
+   The same secret is referenced by [deploy/aci/edge-endpoint.yaml](aci/edge-endpoint.yaml) when running the Edge Endpoint in Azure Container Instances, and by the Helm chart values in [deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint/values.yaml](helm/intellioptics-edge-endpoint/values.yaml).
 
 #### Smoke check: verify the Azure pull secret
 
@@ -994,7 +994,7 @@ echo "Pushed ${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint:$(./deploy/bin/git-
 
 If you are running entirely on Azure infrastructure, you can follow similar steps using the `az` CLI and the environment
 variables set up in [Azure requirements (ACR and AKS/AKS Edge Essentials)](#azure-requirements-acr-and-aksaks-edge-essentials).
-The defaults in [`helm/groundlight-edge-endpoint/values.yaml`](helm/groundlight-edge-endpoint/values.yaml) reference the
+The defaults in [`helm/intellioptics-edge-endpoint/values.yaml`](helm/intellioptics-edge-endpoint/values.yaml) reference the
 `acrintellioptics.azurecr.io/intellioptics/edge-endpoint:latest` image, but you can publish your own builds with:
 
 ```bash
@@ -1022,7 +1022,7 @@ helm upgrade -i -n default edge-endpoint edge-endpoint/IntelliOptics-edge-endpoi
 
 > [!TIP]
 > The Helm chart expects the registry pull secret to be named `registry-credentials`. If you use a different
-> name in your cluster, update the manifests under [`helm/groundlight-edge-endpoint/templates`](helm/groundlight-edge-endpoint/templates)
+> name in your cluster, update the manifests under [`helm/intellioptics-edge-endpoint/templates`](helm/intellioptics-edge-endpoint/templates)
 > or create a second secret with that name that reuses the same token.
 
 If you prefer declarative secret management, the sample manifest at [`aci/edge-endpoint.yaml`](aci/edge-endpoint.yaml)

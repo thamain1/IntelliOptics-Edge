@@ -1,7 +1,7 @@
 """Synchronize edge stream configuration into the Kubernetes ConfigMap used by the edge pods."""
 
 # NOTE: The Helm chart ships a byte-for-byte copy of this script at
-# deploy/helm/groundlight-edge-endpoint/files/edge-config-sync.py. Update both copies when
+# deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint/files/edge-config-sync.py. Update both copies when
 # making changes.
 
 from __future__ import annotations

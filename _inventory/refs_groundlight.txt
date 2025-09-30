@@ -10,7 +10,7 @@
 .github\workflows\pipeline.yaml:478:          repository: groundlight/glhub
 .github\workflows\pipeline.yaml:491:          git push https://edge-glhub-bot:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/groundlight/glhub.git main
 .github\workflows\pipeline.yaml:521:    #   https://github.com/groundlight/edge-endpoint/settings/environments/5838966020/edit
-.github\workflows\pipeline.yaml:574:          helm package ./deploy/helm/groundlight-edge-endpoint --destination .deploy
+.github\workflows\pipeline.yaml:574:          helm package ./deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint --destination .deploy
 .github\workflows\pipeline.yaml:579:            --url https://code.groundlight.ai/edge-endpoint/ \
 app\api\routes\image_queries.py:6:from groundlight import Groundlight
 app\api\routes\image_queries.py:63:    gl: Groundlight = Depends(get_groundlight_sdk_instance),
@@ -48,4 +48,4 @@ app\metrics\metric_reporting.py:22:def _groundlight_client() -> Groundlight:
 app\metrics\metric_reporting.py:23:    """Returns a Groundlight client instance with EE-wide credentials for reporting metrics."""
 app\metrics\metric_reporting.py:25:    return Groundlight()
 ARCHITECTURE.md:5:The edge endpoint provides a way for clients to use the existing Groundlight API in a hybrid mode: most inference requests will be handled locally while all other requests will be forwarded to the Groundlight cloud service. This enables client programs to get low-latency results for most requests while still being able to use the full Groundlight API.
-ARCHITECTURE.md:9:The edge endpoint is implemented as a set of Kubernetes resources (defined by the helm chart in the [helm directory](deploy/helm/groundlight-edge-endpoint/)).
+ARCHITECTURE.md:9:The edge endpoint is implemented as a set of Kubernetes resources (defined by the helm chart in the [helm directory](deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint/)).

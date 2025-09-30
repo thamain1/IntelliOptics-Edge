@@ -21,7 +21,7 @@ Detector configurations are specified in [edge-config.yaml](configs/edge-config.
 
 NOTE: After modifying the config file, you'll have to re-run helm to change the configuration:
 ```shell
-helm install -n default edge-endpoint deploy/helm/groundlight-edge-endpoint \
+helm install -n default edge-endpoint deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint \
   --set intelliopticsApiToken="${INTELLIOPTICS_API_TOKEN}" --set-file configFile=./configs/edge-config.yaml
 ```
 
