@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: ["**"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PYTHON_VERSION: "3.11"
   POETRY_VERSION: "1.8.3"
@@ -47,7 +51,6 @@ jobs:
         working-directory: .github/workflows
         run: |
           set -e
-          # Lint only the workflows that exist in repo now (auto-format.yaml was removed)
           yamllint -c ../.yamllint.yaml \
             pipeline.yaml \
             format-lite.yaml \

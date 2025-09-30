@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -34,22 +38,11 @@ jobs:
         run: |
           set -e
           EXCL='(vendor/|cicd/pulumi/)'
-
-          # Black: do not fail the job even if it exits non-zero
           set +e
           black --exclude "$EXCL" .
-          BLACK_EC=$?
-          set -e
-
-          # Ruff + isort (also tolerant)
-          set +e
           ruff check . --fix --exclude vendor --exclude cicd/pulumi
-          RUFF_EC=$?
-          isort . --skip vendor --skip cicd/pulumi
-          ISORT_EC=$?
+          isort . --profile=black --line-length=120 --skip vendor --skip cicd/pulumi
           set -e
-
-          echo "BLACK_EC=$BLACK_EC RUFF_EC=$RUFF_EC ISORT_EC=$ISORT_EC"
 
       - name: Commit changes back to PR
         uses: stefanzweifel/git-auto-commit-action@v5
