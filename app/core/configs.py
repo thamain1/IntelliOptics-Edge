@@ -93,15 +93,11 @@ class StreamCredentialConfig(BaseModel):
     password: str | None = Field(default=None, description="Inline password for the RTSP source.")
     username_env: str | None = Field(
         default=None,
-        description=(
-            "Environment variable that contains the RTSP username. Overrides `username` when set."
-        ),
+        description=("Environment variable that contains the RTSP username. Overrides `username` when set."),
     )
     password_env: str | None = Field(
         default=None,
-        description=(
-            "Environment variable that contains the RTSP password. Overrides `password` when set."
-        ),
+        description=("Environment variable that contains the RTSP password. Overrides `password` when set."),
     )
 
     @model_validator(mode="after")
@@ -189,9 +185,7 @@ class RootEdgeConfig(BaseModel):
     detectors: dict[str, DetectorConfig]
     streams: dict[str, StreamConfig] = Field(
         default_factory=dict,
-        description=(
-            "Streaming ingest configuration keyed by stream name."
-        ),
+        description=("Streaming ingest configuration keyed by stream name."),
     )
 
     @model_validator(mode="after")

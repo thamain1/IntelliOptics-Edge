@@ -12,4 +12,3 @@ def tag(name: str) -> str:
 
 def full_path(name: str) -> str:
     return f"{API_BASE_PATH}{path_prefix(name)}"
-

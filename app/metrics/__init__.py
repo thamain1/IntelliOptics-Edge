@@ -103,4 +103,3 @@ class QueueWriter:
         new_path = self._generate_new_path()
         self.last_file_path = new_path
         self.num_lines_written_to_file = 0
-
