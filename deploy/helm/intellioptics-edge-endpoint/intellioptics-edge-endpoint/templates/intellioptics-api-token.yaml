@@ -1,13 +1,11 @@
-{{- $check := required "You must supply a IntelliOptics API token!" .Values.intelliopticsApiToken }}
----
+{{- $check := required "You must supply a IntelliOptics API token!" .Values.intelliopticsApiToken -}}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: IntelliOptics-api-token
-  namespace: "{{ .Values.namespace }}"
+  name: intellioptics-api-token
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "IntelliOptics-edge-endpoint.labels" . | nindent 4 }}
 type: Opaque
-data:
-  INTELLIOPTICS_API_TOKEN: {{ .Values.intelliopticsApiToken | b64enc | quote }}
-
+stringData:
+  INTELLIOPTICS_API_TOKEN: {{ .Values.intelliopticsApiToken | quote }}
