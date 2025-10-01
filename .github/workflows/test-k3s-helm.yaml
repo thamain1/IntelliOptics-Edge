@@ -10,7 +10,7 @@ on:
         default: lint
         options: [lint, dry-run]
       chart_path:
-        description: "Path to Helm chart (e.g., deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint)"
+        description: "Path to Helm chart"
         type: string
         required: true
         default: deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint
@@ -25,7 +25,12 @@ on:
         required: false
         default: ""
       blob_url:
-        description: "Optional override for pinamodStorage.blobUrl (paste SAS URL)"
+        description: "Optional override: pinamodStorage.blobUrl (paste full SAS URL)"
+        type: string
+        required: false
+        default: ""
+      api_token:
+        description: "Optional override: IntelliOptics API token"
         type: string
         required: false
         default: ""
@@ -41,6 +46,10 @@ jobs:
   helm:
     name: Helm ${{ inputs.helm_action }}
     runs-on: ubuntu-latest
+    env:
+      # Fallback secrets (configure these in Settings → Secrets and variables → Actions)
+      API_TOKEN_SECRET: ${{ secrets.INTELLIOPTICS_API_TOKEN }}
+      BLOB_URL_SECRET: ${{ secrets.INTELLIOPTICS_MODEL_URI }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,12 +80,30 @@ jobs:
           CHART="${{ inputs.chart_path }}"
           NS="${{ inputs.namespace }}"
           EXTRA=""
+
+          # values file (optional)
           if [ -n "${{ inputs.values_file }}" ]; then
             EXTRA="$EXTRA -f '${{ inputs.values_file }}'"
           fi
-          if [ -n "${{ inputs.blob_url }}" ]; then
-            EXTRA="$EXTRA --set-string pinamodStorage.blobUrl='${{ inputs.blob_url }}'"
+
+          # blob url: prefer input, else secret
+          BLOB_URL_IN="${{ inputs.blob_url }}"
+          if [ -z "$BLOB_URL_IN" ] && [ -n "$BLOB_URL_SECRET" ]; then
+            BLOB_URL_IN="$BLOB_URL_SECRET"
           fi
+          if [ -n "$BLOB_URL_IN" ]; then
+            EXTRA="$EXTRA --set-string pinamodStorage.blobUrl='$BLOB_URL_IN'"
+          fi
+
+          # api token: prefer input, else secret
+          API_TOKEN_IN="${{ inputs.api_token }}"
+          if [ -z "$API_TOKEN_IN" ] && [ -n "$API_TOKEN_SECRET" ]; then
+            API_TOKEN_IN="$API_TOKEN_SECRET"
+          fi
+          if [ -n "$API_TOKEN_IN" ]; then
+            EXTRA="$EXTRA --set-string intelliopticsApiToken='$API_TOKEN_IN'"
+          fi
+
           # Render
           eval helm template edge "$CHART" -n "$NS" $EXTRA > rendered.yaml
           echo "Rendered manifest size:"; wc -c rendered.yaml
