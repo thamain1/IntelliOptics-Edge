@@ -10,10 +10,10 @@ on:
         default: lint
         options: [lint, dry-run]
       chart_path:
-        description: "Path to Helm chart (e.g., deploy/helm/edge)"
+        description: "Path to Helm chart (e.g., deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint)"
         type: string
         required: true
-        default: deploy/helm/edge
+        default: deploy/helm/intellioptics-edge-endpoint/intellioptics-edge-endpoint
       namespace:
         description: "K8s namespace for dry-run rendering"
         type: string
@@ -21,6 +21,11 @@ on:
         default: default
       values_file:
         description: "Optional values file (relative path)"
+        type: string
+        required: false
+        default: ""
+      blob_url:
+        description: "Optional override for pinamodStorage.blobUrl (paste SAS URL)"
         type: string
         required: false
         default: ""
@@ -65,10 +70,14 @@ jobs:
           set -e
           CHART="${{ inputs.chart_path }}"
           NS="${{ inputs.namespace }}"
+          EXTRA=""
           if [ -n "${{ inputs.values_file }}" ]; then
-            helm template edge "$CHART" -n "$NS" -f "${{ inputs.values_file }}" > rendered.yaml
-          else
-            helm template edge "$CHART" -n "$NS" > rendered.yaml
+            EXTRA="$EXTRA -f '${{ inputs.values_file }}'"
           fi
+          if [ -n "${{ inputs.blob_url }}" ]; then
+            EXTRA="$EXTRA --set-string pinamodStorage.blobUrl='${{ inputs.blob_url }}'"
+          fi
+          # Render
+          eval helm template edge "$CHART" -n "$NS" $EXTRA > rendered.yaml
           echo "Rendered manifest size:"; wc -c rendered.yaml
           echo "::group::Preview (first 400 lines)"; head -n 400 rendered.yaml; echo "::endgroup::"
