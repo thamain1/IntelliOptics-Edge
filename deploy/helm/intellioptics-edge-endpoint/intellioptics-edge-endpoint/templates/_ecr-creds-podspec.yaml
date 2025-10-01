@@ -14,7 +14,7 @@ containers:
       - name: INTELLIOPTICS_API_TOKEN
         valueFrom:
           secretKeyRef:
-            name: IntelliOptics-api-token
+            name: intellioptics-api-token
             key: INTELLIOPTICS_API_TOKEN
       - name: ACR_NAME
         value: "{{ .Values.acrName }}"

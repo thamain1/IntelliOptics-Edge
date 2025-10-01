@@ -154,7 +154,7 @@ spec:
         - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
-              name: IntelliOptics-api-token
+              name: intellioptics-api-token
               key: INTELLIOPTICS_API_TOKEN
               optional: true
         - name: INFERENCE_FLAVOR
@@ -185,7 +185,7 @@ spec:
         - name: INTELLIOPTICS_API_TOKEN
           valueFrom:
             secretKeyRef:
-              name: IntelliOptics-api-token
+              name: intellioptics-api-token
               key: INTELLIOPTICS_API_TOKEN
         volumeMounts:
         - name: edge-config-volume
