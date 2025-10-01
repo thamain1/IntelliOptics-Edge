@@ -23,6 +23,10 @@ WORKDIR /app
 # Copy lockfiles first for better cache behavior
 COPY pyproject.toml poetry.lock ./
 
+# Copy path dependency so Poetry can resolve it
+# (must exist before `poetry install` since pyproject points to vendor/intellioptics-sdk)
+COPY vendor/intellioptics-sdk ./vendor/intellioptics-sdk
+
 # Install Poetry and prod dependencies (no venv, no dev/lint) — no config writes
 RUN set -eux; \
     python -m pip install --upgrade pip; \
