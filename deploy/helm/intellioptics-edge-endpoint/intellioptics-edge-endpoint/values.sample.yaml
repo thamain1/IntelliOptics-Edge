@@ -1,0 +1,20 @@
+# Sample values for IntelliOptics Edge Endpoint
+# Copy this file to values.local.yaml and fill in real values; do NOT commit secrets.
+
+namespace: default
+
+# Required: API token (for dry-run/tests/deploy).
+# Prefer passing via GitHub Actions secret INTELLIOPTICS_API_TOKEN or helm --set-string.
+intelliopticsApiToken: "__REPLACE_WITH_TOKEN_OR_USE_SECRET__"
+
+# Required: model location. Full SAS URL is acceptable for dry-run; in prod prefer managed identity.
+pinamodStorage:
+  blobUrl: "https://example.blob.core.windows.net/models/sample.onnx?sv=..."
+  # sasTokenSecretRef: ""   # Optional: if you store only the query string as a secret
+
+# Optional image overrides
+image:
+  repository: "${ACR_LOGIN_SERVER}/intellioptics/edge-endpoint"
+  tag: "latest"
+
+# Other chart-specific toggles can go here as needed
