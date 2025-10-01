@@ -22,12 +22,13 @@ spec:
   selector:
     app: edge-logic-server
   ports:
-    # Service port for NGINX / main HTTP
+    # Main HTTP (fronted by nginx)
     - name: http
       protocol: TCP
       port: 30101
+      targetPort: http
       nodePort: {{ .Values.edgeEndpointPort }}
-    # Optional status monitor port
+    # Status monitor port
     - name: status
       protocol: TCP
       port: 30102
@@ -54,8 +55,6 @@ spec:
       annotations:
         checksum/config: {{ include "IntelliOptics-edge-endpoint.edgeConfig" . | sha256sum }}
     spec:
-      # This service account is used by the edge logic to access the Kubernetes API
-      # from within the pod. See templates/service_account.yaml for more details.
       serviceAccountName: edge-endpoint-service-account
 
       imagePullSecrets:
@@ -92,9 +91,9 @@ spec:
           command: ["/bin/bash", "/intellioptics-edge/deploy/bin/setup_db.sh"]
 
       containers:
-        # ---------------------------------------------------------
-        # NGINX front-end (temporary until nginx is removed)
-        # ---------------------------------------------------------
+        # --------------------------
+        # NGINX front-end container
+        # --------------------------
         - name: nginx
           image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
           imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
@@ -131,9 +130,9 @@ spec:
             periodSeconds: 10
             failureThreshold: 4
 
-        # ---------------------------------------------------------
-        # Main edge logic
-        # ---------------------------------------------------------
+        # --------------------------
+        # Main edge logic container
+        # --------------------------
         - name: edge-endpoint
           image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
           imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
@@ -143,7 +142,6 @@ spec:
           env:
             - name: LOG_LEVEL
               value: {{ .Values.logLevel | quote }}
-            # Feature flag for detector-level inference in K8s
             - name: DEPLOY_DETECTOR_LEVEL_INFERENCE
               value: "1"
             - name: INTELLIOPTICS_ENDPOINT
@@ -151,6 +149,7 @@ spec:
           volumeMounts:
             - name: edge-config-volume
               mountPath: /etc/intellioptics/edge-config
+            # TODO: Remove once nginx is fully eliminated from the image
             - name: nginx-config-volume
               mountPath: /etc/nginx/nginx.conf
               subPath: dummy-nginx.conf
@@ -159,9 +158,9 @@ spec:
             - name: device-info-volume
               mountPath: /opt/intellioptics/device
 
-        # ---------------------------------------------------------
-        # Status monitor sidecar (serves /status and /status/metrics.json)
-        # ---------------------------------------------------------
+        # --------------------------
+        # Status monitor sidecar
+        # --------------------------
         - name: status-monitor
           image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
           imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
@@ -201,9 +200,9 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 20
 
-        # ---------------------------------------------------------
-        # Inference model updater sidecar
-        # ---------------------------------------------------------
+        # --------------------------
+        # Inference model updater
+        # --------------------------
         - name: inference-model-updater
           image: {{ .Values.acrLoginServer }}/intellioptics/edge-endpoint:{{ include "IntelliOptics-edge-endpoint.edgeEndpointTag" . }}
           imagePullPolicy: "{{ include "IntelliOptics-edge-endpoint.edgeEndpointPullPolicy" . }}"
@@ -234,7 +233,7 @@ spec:
               mountPath: /etc/intellioptics/kubernetes-namespace
             - name: inference-deployment-template-volume
               mountPath: /etc/intellioptics/inference-deployment
-            # Access both sqlite DB and model repo paths from the same PVC
+            # Share the same PVC for DB and model-repo
             - name: edge-endpoint-persistent-volume
               mountPath: /opt/intellioptics/edge/sqlite
             - name: edge-endpoint-persistent-volume
