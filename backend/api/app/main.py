@@ -1,100 +1,102 @@
-# backend/api/app/main.py
-import logging
-import os
-from typing import Any, Dict
+# intellioptics
+import uuid
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-log = logging.getLogger("intellioptics.api")
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+from .auth import require_auth
+from .config import settings
+from .db import Base, engine
+from .models import ImageQueryRow
 
+router = APIRouter()
 
-def env_bool(name: str, default: bool = False) -> bool:
-    v = os.getenv(name)
-    if v is None:
-        return default
-    return v.strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-APP_ENV = os.getenv("APP_ENV", "prod")
-DISABLE_OPENAPI = env_bool("DISABLE_OPENAPI", default=(APP_ENV != "dev"))
-
-app = FastAPI(
-    title="IntelliOptics API",
-    version="dev" if APP_ENV == "dev" else "prod",
-    openapi_url=None if DISABLE_OPENAPI else "/openapi.json",
-    docs_url=None if DISABLE_OPENAPI else "/docs",
-    redoc_url=None if DISABLE_OPENAPI else "/redoc",
-)
-
-
-# -------- Security/diagnostic middleware --------
-@app.middleware("http")
-async def _headers(request: Request, call_next):
-    resp = await call_next(request)
-    # Tighten common security headers; avoid mutating with .pop (Starlette MutableHeaders has no pop)
-    for k, v in [
-        ("X-Content-Type-Options", "nosniff"),
-        ("Referrer-Policy", "no-referrer"),
-        ("X-Frame-Options", "DENY"),
-    ]:
-        resp.headers[k] = v
-    # Remove "server" header if present
-    try:
-        del resp.headers["server"]
-    except KeyError:
-        pass
-    return resp
-
-
-# -------- Health --------
-@app.get("/", summary="Root")
-async def root() -> Dict[str, Any]:
-    return {"ok": True, "env": APP_ENV}
-
-
-@app.get("/healthz", summary="Healthz")
-async def healthz() -> Dict[str, Any]:
-    return {"ok": True}
-
-
-@app.get("/v1/health", summary="V1 Health")
-async def v1_health() -> Dict[str, Any]:
-    return {"status": "ok", "env": APP_ENV}
-
-
-# -------- Routers (mount without extra prefix; routers define their own) --------
-# Alerts
+# Ensure tables exist when DB is present (don’t crash if not)
 try:
-    from app import alerts as alerts_module
+    Base.metadata.create_all(bind=engine)
+except Exception:
+    pass
 
-    app.include_router(alerts_module.router)
-    log.info("Mounted router: app.alerts")
-except Exception as e:
-    log.warning("Router 'alerts' not mounted (app.alerts): %s", e)
 
-# Detectors
+def create_app() -> FastAPI:
+    app = FastAPI(title="IntelliOptics Backend", version="0.2.0")
+
+    # CORS
+    origins = (
+        ["*"]
+        if settings.allowed_origins == "*"
+        else [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Liveness/Readiness
+    @app.get("/healthz")
+    async def healthz():
+        return {"ok": True}
+
+        # Submit an image query
+
+        try:
+            from sqlalchemy import inspect
+
+            pk_col = inspect(ImageQueryRow).primary_key[0]
+            _key = uuid.UUID(image_query_id) if "uuid" in str(pk_col.type).lower() else image_query_id
+        except Exception:
+            _key = image_query_id
+        row = db.get(ImageQueryRow, _key)
+        if not row:
+            raise HTTPException(404, detail="image_query not found")
+        row.human_label = body.label
+        row.human_confidence = body.confidence
+        row.human_notes = body.notes
+        row.human_user = body.user
+        db.commit()
+        return {"ok": True}
+
+
+async def human_label(image_query_id: str, body: dict = Body(...)):
+    """
+    Record a human label for an image query.
+    Body: {"label": "YES|NO|UNCLEAR", "reason": "..."}
+    """
+    label = (body or {}).get("label")
+    reason = (body or {}).get("reason")
+    return {"ok": True, "image_query_id": image_query_id, "label": label, "reason": reason}
+
+
+async def status():
+    return {"ok": True, "status": "ready"}
+
+
+# === IO ROUTER EXTENSIONS (AUTO) ===
+iorouter = APIRouter()
+
+
+@iorouter.post("/v1/image-queries/{image_query_id}/human-label", dependencies=[Depends(require_auth)])
+async def human_label(image_query_id: str, body: dict = Body(...)):
+    """
+    Record a human label for an image query.
+    Body: {"label": "YES|NO|UNCLEAR", "reason": "..."}
+    """
+    label = (body or {}).get("label")
+    reason = (body or {}).get("reason")
+    return {"ok": True, "image_query_id": image_query_id, "label": label, "reason": reason}
+
+
+@iorouter.get("/v1/status")
+async def status():
+    return {"ok": True, "status": "ready"}
+
+
+# Safely include if a FastAPI app is defined in this module
 try:
-    from app.features import detectors as detectors_module
-
-    app.include_router(detectors_module.router)
-    log.info("Mounted router: app.features.detectors")
-except Exception as e:
-    log.warning("Router 'detectors' not mounted (app.features.detectors): %s", e)
-
-# Image Queries (NEW)
-try:
-    from app.routers.image_queries import router as image_queries_router  # /v1/image-queries
-
-    app.include_router(image_queries_router)
-    log.info("Mounted router: app.routers.image_queries")
-except Exception as e:
-    log.warning("Router 'image-queries' not mounted (app.routers.image_queries): %s", e)
-
-
-# -------- Global error handler (optional, nicer 500s) --------
-@app.exception_handler(Exception)
-async def _unhandled_ex(e: Exception, req: Request):
-    log.exception("Unhandled error: %s", e)
-    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    app  # type: ignore[name-defined]
+except NameError:
+    pass
+else:
+    app.include_router(iorouter)
