@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-endpoint-noauth
+  namespace: intellioptics-edge
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          command: ["/bin/sh", "-lc"]
+          args:
+            - |
+              cat >/tmp/mini_app.py <<'PY'
+              from fastapi import FastAPI, Body
+              app = FastAPI()
+
+              @app.get("/v1/status")
+              async def status():
+                  return {"ok": True, "status": "ready"}
+
+              @app.post("/v1/image-queries/{image_query_id}/human-label")
+              async def human_label(image_query_id: str, body: dict = Body(...)):
+                  label = (body or {}).get("label")
+                  reason = (body or {}).get("reason")
+                  return {"ok": True, "image_query_id": image_query_id, "label": label, "reason": reason}
+              PY
+              exec uvicorn --app-dir /tmp mini_app:app --host 0.0.0.0 --port 8080
