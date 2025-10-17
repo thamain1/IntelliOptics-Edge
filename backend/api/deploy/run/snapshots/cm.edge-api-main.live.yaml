@@ -1,0 +1,39 @@
+apiVersion: v1
+data:
+  main.py: "# IntelliOptics API main (secure baseline with local bearer guard)\nfrom
+    typing import Dict, Optional\nimport os, hmac\n\nfrom fastapi import FastAPI,
+    APIRouter, Body, Depends, Header, HTTPException\nfrom fastapi.middleware.cors
+    import CORSMiddleware\n\n# ----- Config (tolerate missing settings in slim images)\ntry:\n
+    \   from .config import settings  # type: ignore\nexcept Exception:  # pragma:
+    no cover\n    class _S:\n        allowed_origins = \"*\"\n    settings = _S()
+    \ # type: ignore\n\n# ----- Optional DB init (no-op if DB not present)\ntry:\n
+    \   from .db import Base, engine  # type: ignore\n    Base.metadata.create_all(bind=engine)
+    \ # type: ignore\nexcept Exception:\n    pass\n\nrouter = APIRouter()\n\n# -----
+    Strict Bearer guard: requires INTELLIOPTICS_API_TOKEN if set\ndef _bearer_guard(authorization:
+    Optional[str] = Header(None)) -> None:\n    expected = os.getenv(\"INTELLIOPTICS_API_TOKEN\")\n
+    \   # If no token configured (true no-auth mode), allow\n    if not expected:\n
+    \       return\n    if not authorization or not authorization.startswith(\"Bearer
+    \"):\n        raise HTTPException(status_code=401, detail=\"Missing Bearer token\")\n
+    \   token = authorization.split(\" \", 1)[1].strip()\n    if not hmac.compare_digest(token,
+    expected):\n        raise HTTPException(status_code=401, detail=\"Invalid token\")\n\n@router.get(\"/v1/status\")\nasync
+    def v1_status():\n    return {\"ok\": True, \"status\": \"ready\"}\n\n@router.post(\"/v1/image-queries/{image_query_id}/human-label\",
+    dependencies=[Depends(_bearer_guard)])\nasync def human_label(image_query_id:
+    str, body: Dict = Body(...)):\n    label  = (body or {}).get(\"label\")\n    reason
+    = (body or {}).get(\"reason\")\n    return {\"ok\": True, \"image_query_id\":
+    image_query_id, \"label\": label, \"reason\": reason}\n\ndef create_app() -> FastAPI:\n
+    \   app = FastAPI(title=\"IntelliOptics Backend\", version=\"0.2.2\")\n    allowed
+    = getattr(settings, \"allowed_origins\", \"*\")\n    origins = [\"*\"] if allowed
+    == \"*\" else [o.strip() for o in str(allowed).split(\",\") if o.strip()]\n    app.add_middleware(CORSMiddleware,
+    allow_origins=origins, allow_methods=[\"*\"], allow_headers=[\"*\"])\n\n    @app.get(\"/healthz\")\n
+    \   async def healthz():\n        return {\"ok\": True}\n\n    app.include_router(router)\n
+    \   return app\n\napp = create_app()\r\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"main.py":"# IntelliOptics API main (secure baseline with local bearer guard)\nfrom typing import Dict, Optional\nimport os, hmac\n\nfrom fastapi import FastAPI, APIRouter, Body, Depends, Header, HTTPException\nfrom fastapi.middleware.cors import CORSMiddleware\n\n# ----- Config (tolerate missing settings in slim images)\ntry:\n    from .config import settings  # type: ignore\nexcept Exception:  # pragma: no cover\n    class _S:\n        allowed_origins = \"*\"\n    settings = _S()  # type: ignore\n\n# ----- Optional DB init (no-op if DB not present)\ntry:\n    from .db import Base, engine  # type: ignore\n    Base.metadata.create_all(bind=engine)  # type: ignore\nexcept Exception:\n    pass\n\nrouter = APIRouter()\n\n# ----- Strict Bearer guard: requires INTELLIOPTICS_API_TOKEN if set\ndef _bearer_guard(authorization: Optional[str] = Header(None)) -\u003e None:\n    expected = os.getenv(\"INTELLIOPTICS_API_TOKEN\")\n    # If no token configured (true no-auth mode), allow\n    if not expected:\n        return\n    if not authorization or not authorization.startswith(\"Bearer \"):\n        raise HTTPException(status_code=401, detail=\"Missing Bearer token\")\n    token = authorization.split(\" \", 1)[1].strip()\n    if not hmac.compare_digest(token, expected):\n        raise HTTPException(status_code=401, detail=\"Invalid token\")\n\n@router.get(\"/v1/status\")\nasync def v1_status():\n    return {\"ok\": True, \"status\": \"ready\"}\n\n@router.post(\"/v1/image-queries/{image_query_id}/human-label\", dependencies=[Depends(_bearer_guard)])\nasync def human_label(image_query_id: str, body: Dict = Body(...)):\n    label  = (body or {}).get(\"label\")\n    reason = (body or {}).get(\"reason\")\n    return {\"ok\": True, \"image_query_id\": image_query_id, \"label\": label, \"reason\": reason}\n\ndef create_app() -\u003e FastAPI:\n    app = FastAPI(title=\"IntelliOptics Backend\", version=\"0.2.2\")\n    allowed = getattr(settings, \"allowed_origins\", \"*\")\n    origins = [\"*\"] if allowed == \"*\" else [o.strip() for o in str(allowed).split(\",\") if o.strip()]\n    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=[\"*\"], allow_headers=[\"*\"])\n\n    @app.get(\"/healthz\")\n    async def healthz():\n        return {\"ok\": True}\n\n    app.include_router(router)\n    return app\n\napp = create_app()\r\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"edge-api-main","namespace":"intellioptics-edge"}}
+  creationTimestamp: "2025-10-17T00:15:16Z"
+  name: edge-api-main
+  namespace: intellioptics-edge
+  resourceVersion: "8951544"
+  uid: afed1470-de61-4612-a6a5-b9918afe5993
